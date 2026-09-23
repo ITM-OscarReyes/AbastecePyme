@@ -1,0 +1,7 @@
+# Registro de decisiones — AbastecePyme
+
+Registro centralizado de decisiones relevantes del proyecto. Ver reglas y responsables en `AGENTS.md`.
+
+| Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó |
+| ----- | ------ | ------- | ---------------- | -------------------- | ----------------- | ------ | ---------------- |
+| 2026-09-22 | architect | Configuración inicial | Configurar los seis agentes permanentes del proyecto | No existía configuración de agentes para coordinar el desarrollo por features | Se definen exactamente seis agentes en `.opencode/agent/` (analyst, orchestrator, backend-builder, frontend-builder, tester, auditor), con roles, límites y permisos separados. Reglas compartidas del proyecto en `AGENTS.md`. `orchestrator` es el punto de entrada con flujo analyst → backend-builder → frontend-builder → tester → auditor y ciclos de corrección vía orchestrator | Separar responsabilidades (especificar, coordinar, backend, frontend, verificar, auditar) evita solapamientos, define la autoridad de PASS/FAIL en `tester` y mantiene trazabilidad con `docs/brief.md` como fuente de verdad | Validación estática: existen exactamente los seis agentes con nombre correcto, frontmatter YAML válido (description, mode, permission), `opencode.json` válido, y coherencia entre agentes, `AGENTS.md` y `docs/brief.md`. No se desarrolló funcionalidad de la aplicación |
