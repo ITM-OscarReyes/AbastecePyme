@@ -134,6 +134,26 @@ Después de una nueva implementación o corrección:
 
 No consideres una funcionalidad PASS si la nueva implementación rompe otra funcionalidad previamente válida.
 
+## 6. Verificación de calidad de código y arquitectura
+
+Comprueba el cumplimiento de los principios obligatorios definidos en `AGENTS.md` y de las restricciones de arquitectura especificadas por `analyst`, en la medida en que sean verificables objetivamente:
+
+- separación de responsabilidades y respeto de la estructura de capas definida;
+- la lógica de negocio no depende del framework, del acceso a datos ni de la presentación;
+- dirección de dependencias entre capas;
+- bajo acoplamiento y alta cohesión;
+- ausencia de código duplicado relevante;
+- ausencia de clases, funciones o componentes innecesariamente grandes;
+- nomenclatura del lenguaje;
+- reutilización de componentes existentes;
+- inexistencia de funcionalidades modificadas sin razón justificada.
+
+Para cada hallazgo indica evidencia concreta (archivo, ubicación) y clasifícalo como hallazgo de calidad de código, no como criterio funcional, salvo que provoque un incumplimiento funcional.
+
+Aplica además estas mismas principios al código de prueba que escribas: pruebas pequeñas y enfocadas, nombres descriptivos, fixtures y helpers reutilizables en lugar de repetidos, y separación entre arrange/act/assert cuando ayude a la lectura.
+
+Este punto no sustituye a la verificación funcional: una implementación puede ser funcionalmente correcta y aun así incumplir estos principios. Reporta ambos planos por separado.
+
 # Criterios de veredicto
 
 Usa únicamente estos estados:

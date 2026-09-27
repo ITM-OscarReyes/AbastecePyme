@@ -35,6 +35,7 @@ Revisar:
 - integración frontend/backend;
 - uso de datos sintéticos;
 - manejo de casos límite;
+- cumplimiento de los principios de calidad de código y arquitectura definidos en `AGENTS.md` y de las restricciones de arquitectura especificadas en la documentación técnica;
 - documentación;
 - trazabilidad de decisiones en `docs/decisions.md`;
 - coherencia entre lo especificado, implementado y probado.
@@ -48,6 +49,7 @@ Identificar:
 - documentación desactualizada;
 - contradicciones;
 - violaciones de restricciones técnicas;
+- violaciones de Clean Architecture, SOLID, Clean Code, nomenclatura o separación de responsabilidades, incluida la modificación de funcionalidades existentes sin razón justificada;
 - problemas de trazabilidad.
 
 Cada hallazgo debe indicar, cuando sea posible:

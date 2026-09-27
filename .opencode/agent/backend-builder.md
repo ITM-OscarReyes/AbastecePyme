@@ -45,6 +45,22 @@ Antes de implementar:
 * revisar `docs/decisions.md` para conocer decisiones ya adoptadas;
 * inspeccionar la implementación backend existente antes de modificarla.
 
+# Calidad de código y arquitectura
+
+Todo el código Python que escribas debe cumplir los principios de calidad definidos en `AGENTS.md`. Aplícalos así:
+
+- **Clean Architecture**: separa el dominio, la aplicación y la infraestructura. La lógica de negocio (grafo, algoritmos, reglas) no debe conocer el framework HTTP, la persistencia ni la configuración.
+- **Dependencias hacia las capas internas**: las capas internas no importan implementaciones externas. La inversión de dependencias se resuelve inyectando colaboradores, no importando clases concretas.
+- **Interfaces con propósito real**: crea una abstracción (interfaz, protocolo o puerto) solo cuando aporte separación de capas, aislamiento para pruebas o posibilidad de sustituir una implementación. No generes abstracciones especulativas ni capas intermedias sin propósito.
+- **Responsabilidad única**: un módulo, clase o método resuelve un solo problema. Divide funciones largas en pasos con nombre descriptivo y extrae helpers privados cuando mejoren la lectura.
+- **Bajo acoplamiento y alta cohesión**: agrupa lo que cambia junto y evita que el dominio dependa de detalles de infraestructura.
+- **Nomenclatura Python (PEP 8)**: `snake_case` para módulos, funciones, métodos y variables; `PascalCase` para clases y excepciones; `UPPER_SNAKE_CASE` para constantes; prefijo `_` para elementos privados; anotaciones de tipo con nombres en `PascalCase`. Evita nombres abreviados o genéricos; usa términos del dominio del brief.
+- **Sin duplicación**: extrae el código repetido a funciones o módulos compartidos en lugar de copiarlo.
+- **Sin clases ni métodos innecesariamente grandes**: divide la responsabilidad cuando una unidad crezca demasiado.
+- **Sin complejidad innecesaria**: prefiere la solución más simple que cumpla el requisito definido.
+- **Reutilización**: revisa la implementación existente y reutiliza sus piezas antes de crear nuevas.
+- **No rompas lo que funciona**: no modifiques una funcionalidad existente sin una razón justificada. Si un cambio es necesario, verifica que las funcionalidades relacionadas siguen funcionando y no cambies contratos de API sin autorización de `analyst`.
+
 # Responsabilidades
 
 * Implementar o modificar únicamente lo necesario para cumplir la especificación definida por `analyst`..

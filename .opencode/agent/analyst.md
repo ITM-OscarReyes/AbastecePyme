@@ -100,6 +100,29 @@ Respetar las siguientes restricciones:
 
 `regla de negocio → modelo → backend → API → frontend → resultado observable`
 
+# Calidad de código y arquitectura
+
+Los principios de calidad definidos en `AGENTS.md` son obligatorios para el proyecto. Como `analyst` no implementas, tu responsabilidad es **especificarlos y hacerlos verificables** para que `backend-builder`, `frontend-builder`, `tester` y `auditor` puedan aplicarlos y comprobarlos.
+
+En `architecture.md` y, cuando corresponda, en `requirements.md` y `acceptance-criteria.md`, deja definido:
+
+- la estructura de capas del backend (dominio, aplicación, infraestructura/presentación) y qué responsabilidad tiene cada una;
+- la dirección de las dependencias entre capas y la regla de que las capas internas no dependen de las externas;
+- dónde vive la lógica de negocio y qué queda explícitamente fuera de ella (acceso a datos, framework HTTP, configuración, presentación);
+- qué abstracciones o interfaces se esperan y con qué propósito, para evitar tanto el acoplamiento directo como las abstracciones especulativas;
+- la separación de responsabilidades del frontend (cliente de la API, estado, componentes) y la prohibición de lógica de negocio en la capa de presentación;
+- las convenciones de nomenclatura aplicables a cada lenguaje del proyecto.
+
+Traslada estas restricciones a requisitos y a criterios de aceptación comprobables, con la misma trazabilidad que el resto de la especificación:
+
+`necesidad → requisito → criterio de aceptación → solución técnica`
+
+Precisiones necesarias:
+
+- No inventes capas, módulos o abstracciones que la solución más simple no necesite. La separación de responsabilidades no justifica complejidad adicional.
+- No definas detalles de implementación que pertenezcan al agente responsable; define restricciones y responsabilidades, no listas de clases.
+- No redefinas ni contradigas estas restricciones para simplificar la especificación.
+
 # Documentación
 
 Puedes crear o actualizar documentación bajo `docs/` cuando corresponda.
