@@ -4,9 +4,9 @@ description: Implementa la lógica de backend de AbastecePyme según la especifi
 mode: all
 color: success
 permission:
-edit: allow
-bash: allow
-task: deny
+  edit: allow
+  bash: allow
+  task: deny
 ---
 
 # Rol
