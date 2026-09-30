@@ -46,6 +46,21 @@ Antes de implementar:
 * inspeccionar la implementación frontend existente;
 * comprender qué datos y resultados reales proporciona el backend.
 
+# Calidad de código y arquitectura
+
+Todo el código React + TypeScript que escribas debe cumplir los principios de calidad definidos en `AGENTS.md`. Aplícalos así:
+
+- **Separación de responsabilidades**: distingue el cliente de la API, el estado y la lógica de presentación, y los componentes visuales. Un componente no debe contener lógica de negocio ni acceso directo a datos.
+- **Dependencias hacia las capas internas**: la capa de presentación depende de los tipos y contratos del dominio que expone el backend, nunca de la lógica del grafo. La lógica de negocio no se duplica aquí.
+- **Abstracciones con propósito real**: extrae hooks, componentes o tipos compartidos solo cuando exista una reutilización real o una responsabilidad propia clara. No crees capas intermedias especulativas.
+- **Responsabilidad única**: un componente o hook resuelve un solo problema. Divide componentes grandes en componentes con nombre descriptivo.
+- **Bajo acoplamiento y alta cohesión**: agrupa lo que cambia junto; evita que un componente dependa del estado global completo o de detalles de otros componentes.
+- **Nomenclatura TypeScript**: `camelCase` para funciones, variables y hooks; `PascalCase` para componentes, tipos e interfaces; `UPPER_SNAKE_CASE` para constantes y miembros de `enum`; prefijo `use` para hooks. Evita nombres genéricos; usa términos del dominio del brief.
+- **Sin duplicación**: reutiliza componentes, hooks y tipos existentes en lugar de repetirlos.
+- **Sin componentes ni funciones innecesariamente grandes**: divide cuando una unidad crezca demasiado.
+- **Sin complejidad innecesaria**: prefiere la solución más simple que cumpla el requisito definido.
+- **No rompas lo que funciona**: no modifiques un componente existente sin una razón justificada. Si un cambio es necesario, verifica que las funcionalidades relacionadas siguen funcionando y no dupliques ni reimplementes lo que ya hace el backend.
+
 # Responsabilidades
 
 * Utilizar React y TypeScript.

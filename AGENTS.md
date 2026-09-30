@@ -33,6 +33,42 @@ La especificación técnica puede agregar precisión técnica, pero **no puede c
 - **Datos**: solo sintéticos y coherentes con el dominio.
 - **Integración**: cada funcionalidad debe funcionar de extremo a extremo: regla de negocio → modelo → backend → API → frontend → resultado observable.
 
+## Calidad de código y arquitectura
+
+Estos principios son obligatorios para todo el código del proyecto, incluidos el de pruebas:
+
+- Respetar los principios SOLID: responsabilidad única, abierto/cerrado, sustitución de Liskov, segregación de interfaces e inversión de dependencias.
+- Aplicar buenas prácticas de Clean Code.
+- Respetar Clean Architecture.
+- Mantener una separación clara de responsabilidades.
+- Utilizar nombres descriptivos y consistentes.
+- Respetar las convenciones de nomenclatura del lenguaje.
+- Evitar código duplicado.
+- Evitar clases y métodos innecesariamente grandes.
+- No mezclar lógica de negocio con acceso a datos, presentación o infraestructura.
+- Mantener bajo acoplamiento y alta cohesión.
+- Utilizar interfaces cuando aporten una abstracción real.
+- Mantener las dependencias orientadas hacia las capas internas.
+- Evitar complejidad innecesaria.
+- Reutilizar componentes existentes cuando sea apropiado.
+- No modificar funcionalidades existentes sin una razón justificada.
+
+Convenciones de nomenclatura:
+
+- **Python** (backend y pruebas): `snake_case` para módulos, funciones, métodos y variables; `PascalCase` para clases y excepciones; `UPPER_SNAKE_CASE` para constantes; prefijo `_` para elementos privados; anotaciones de tipo con nombres en `PascalCase`.
+- **TypeScript/TSX** (frontend y pruebas): `camelCase` para funciones, variables y hooks; `PascalCase` para componentes, tipos e interfaces; `UPPER_SNAKE_CASE` para constantes y miembros de `enum`; prefijo `use` para hooks.
+
+Aplicación por agente:
+
+| Agente | Aplicación |
+| ------ | ---------- |
+| `analyst` | Especifica estas restricciones en la documentación técnica y las hace verificables. |
+| `backend-builder` | Las aplica en toda la implementación Python. |
+| `frontend-builder` | Las aplica en toda la implementación React + TypeScript. |
+| `tester` | Verifica su cumplimiento y las aplica en el código de prueba que escribe. |
+| `auditor` | Audita su cumplimiento y reporta hallazgos. |
+| `orchestrator` | No implementa ni revisa código; no le aplican. |
+
 ## Casos que el sistema debe manejar
 
 Datos válidos; datos duplicados; datos mal formados; pesos inválidos; elementos inexistentes; relaciones inexistentes; grafo vacío; elementos existentes sin dependencias; cadenas de dependencias; ciclos; configuraciones que no permitan producir un orden válido. Los errores no deben ocultarse ni convertirse en resultados aparentemente válidos.
