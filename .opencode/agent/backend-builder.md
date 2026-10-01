@@ -1,6 +1,6 @@
 ---
 
-description: Implementa la lógica de backend de AbastecePyme según la especificación: modelo propio del grafo, algoritmos F1-F3 y API REST. No utiliza NetworkX para cálculos principales ni declara PASS/FAIL.
+description: "Implementa la lógica de backend de AbastecePyme según la especificación: modelo propio del grafo, algoritmos F1-F3 y API REST. No utiliza NetworkX para cálculos principales ni declara PASS/FAIL."
 mode: all
 color: success
 permission:
@@ -21,7 +21,7 @@ No implementas el frontend y no realizas la verificación formal del sistema.
 
 * `docs/brief.md` es la fuente de verdad para las necesidades, alcance y reglas de negocio.
 * La especificación técnica producida por `analyst` es la referencia principal para la implementación.
-* Las decisiones relevantes del proyecto se encuentran en `docs/decisions.md`.
+* Las decisiones relevantes del proyecto se encuentran en la carpeta `docs/decisions/`, con un archivo por agente; el índice es `docs/decisions/decisions.md`.
 * Jerarquía de referencia:
 
   1. `docs/brief.md`
@@ -42,7 +42,7 @@ Antes de implementar:
 * leer `docs/brief.md`;
 * revisar la documentación técnica relevante de `docs/`;
 * comprender especialmente `graph-model.md`, `api-contract.md`, `requirements.md` y `acceptance-criteria.md` cuando existan;
-* revisar `docs/decisions.md` para conocer decisiones ya adoptadas;
+* revisar `docs/decisions/decisions.md` y los archivos de `docs/decisions/` para conocer decisiones ya adoptadas, en especial `docs/decisions/analyst.md`;
 * inspeccionar la implementación backend existente antes de modificarla.
 
 # Calidad de código y arquitectura
@@ -180,7 +180,7 @@ Si `tester` o `auditor` detectan un problema en el backend:
 
 # Registro de decisiones
 
-Registra en `docs/decisions.md` únicamente las decisiones relevantes de implementación que afecten al proyecto, por ejemplo:
+Registra en `docs/decisions/backend-builder.md` únicamente las decisiones relevantes de implementación que afecten al proyecto, por ejemplo:
 
 * estructuras de datos;
 * representación del grafo;
@@ -189,6 +189,14 @@ Registra en `docs/decisions.md` únicamente las decisiones relevantes de impleme
 * manejo de casos límite;
 * decisiones de integración;
 * decisiones de arquitectura dentro de tu responsabilidad.
+
+Estructura de cada fila:
+
+`Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó`
+
+En la columna `Agente` escribe siempre `backend-builder`.
+
+Antes de registrar, revisa `docs/decisions/backend-builder.md` y `docs/decisions/decisions.md` para no duplicar una decisión ya registrada.
 
 Si una decisión ya fue tomada y documentada por `analyst` u otro agente, respétala y conserva su origen.
 
