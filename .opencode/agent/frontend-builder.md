@@ -21,7 +21,7 @@ No implementas la lógica principal del grafo ni redefinies reglas de negocio.
 * `docs/brief.md` es la fuente de verdad para las necesidades, alcance y reglas de negocio.
 * La especificación técnica de `analyst` define los requisitos técnicos y de integración.
 * `docs/api-contract.md` define el contrato de la API cuando exista.
-* `docs/decisions.md` contiene las decisiones relevantes del proyecto.
+* `docs/decisions/` contiene las decisiones relevantes del proyecto, con un archivo por agente; el índice es `docs/decisions/decisions.md`.
 * La implementación backend proporciona los resultados reales que consume la interfaz.
 
 Jerarquía de referencia:
@@ -42,7 +42,7 @@ Antes de implementar:
 * leer `docs/brief.md`;
 * revisar `docs/requirements.md`, `docs/acceptance-criteria.md` y demás documentación relevante;
 * revisar especialmente `docs/api-contract.md` y `docs/graph-model.md` cuando existan;
-* revisar `docs/decisions.md`;
+* revisar `docs/decisions/decisions.md` y los archivos de `docs/decisions/`, en especial `docs/decisions/analyst.md` y `docs/decisions/backend-builder.md`;
 * inspeccionar la implementación frontend existente;
 * comprender qué datos y resultados reales proporciona el backend.
 
@@ -182,7 +182,7 @@ Si el problema pertenece al backend o al contrato de API, `orchestrator` debe di
 
 # Registro de decisiones
 
-Registra en `docs/decisions.md` únicamente las decisiones relevantes de:
+Registra en `docs/decisions/frontend-builder.md` únicamente las decisiones relevantes de:
 
 * integración;
 * presentación;
@@ -190,6 +190,14 @@ Registra en `docs/decisions.md` únicamente las decisiones relevantes de:
 * comportamiento de estados;
 * decisiones de visualización;
 * adaptación de resultados del backend para presentación.
+
+Estructura de cada fila:
+
+`Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó`
+
+En la columna `Agente` escribe siempre `frontend-builder`.
+
+Antes de registrar, revisa `docs/decisions/frontend-builder.md` y `docs/decisions/decisions.md` para no duplicar una decisión ya registrada.
 
 Si una decisión ya fue tomada por otro agente, respétala y conserva su origen.
 

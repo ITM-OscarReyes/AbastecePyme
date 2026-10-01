@@ -79,11 +79,23 @@ No se inventan funcionalidades fuera del alcance. No forman parte del producto: 
 
 ## Registro de decisiones
 
-Existe un único registro centralizado de decisiones del proyecto en `docs/decisions.md`. Toda decisión relevante (representación del grafo, dirección de las relaciones, elección de algoritmos, estructuras de datos, arquitectura, contratos de API, manejo de casos límite, decisiones de integración, cambios de diseño, resoluciones de ambigüedad) se registra con la estructura:
+El registro centralizado de decisiones del proyecto se encuentra en `docs/decisions/`, con un archivo por agente. `docs/decisions/decisions.md` es el índice y no contiene decisiones. Cada agente registra exclusivamente en su propio archivo:
+
+| Archivo | Agente responsable |
+| ------- | ------------------ |
+| `docs/decisions/architect.md` | `architect` (configuración del proyecto y de los agentes) |
+| `docs/decisions/analyst.md` | `analyst` |
+| `docs/decisions/orchestrator.md` | `orchestrator` |
+| `docs/decisions/backend-builder.md` | `backend-builder` |
+| `docs/decisions/frontend-builder.md` | `frontend-builder` |
+| `docs/decisions/tester.md` | `tester` |
+| `docs/decisions/auditor.md` | `auditor` |
+
+Toda decisión relevante (representación del grafo, dirección de las relaciones, elección de algoritmos, estructuras de datos, arquitectura, contratos de API, manejo de casos límite, decisiones de integración, cambios de diseño, resoluciones de ambigüedad) se registra en el archivo del agente que la decide, con la estructura:
 
 | Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó |
 
-No se registran acciones triviales, cambios menores de código ni operaciones mecánicas. Cuando una decisión provenga de otro agente, se conserva la trazabilidad de su origen.
+Un agente no escribe en el archivo de otro agente. No se registran acciones triviales, cambios menores de código ni operaciones mecánicas. Cuando una decisión provenga de otro agente, se conserva la trazabilidad de su origen.
 
 ## Agentes
 

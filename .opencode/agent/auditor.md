@@ -3,7 +3,9 @@ description: Audita la trazabilidad y coherencia de AbastecePyme (brief → requ
 mode: all
 color: error
 permission:
-  edit: deny
+  edit:
+    "*": deny
+    "docs/decisions/auditor.md": allow
   bash: deny
   task: deny
   webfetch: allow
@@ -37,7 +39,7 @@ Revisar:
 - manejo de casos límite;
 - cumplimiento de los principios de calidad de código y arquitectura definidos en `AGENTS.md` y de las restricciones de arquitectura especificadas en la documentación técnica;
 - documentación;
-- trazabilidad de decisiones en `docs/decisions.md`;
+- trazabilidad de decisiones en `docs/decisions/`, verificando que cada agente haya registrado sus decisiones exclusivamente en su propio archivo y que la columna `Agente` coincida con el responsable;
 - coherencia entre lo especificado, implementado y probado.
 
 Identificar:
@@ -87,7 +89,15 @@ Puedes utilizar pruebas y evidencias existentes como insumos de auditoría, pero
 
 # Registro de decisiones
 
-Registra en `docs/decisions.md` únicamente las decisiones relevantes derivadas de hallazgos de auditoría o problemas de trazabilidad.
+Registra en `docs/decisions/auditor.md` únicamente las decisiones relevantes derivadas de hallazgos de auditoría o problemas de trazabilidad.
+
+Estructura de cada fila:
+
+`Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó`
+
+En la columna `Agente` escribe siempre `auditor`.
+
+Antes de registrar, revisa `docs/decisions/auditor.md` y `docs/decisions/decisions.md` para no duplicar una decisión ya registrada.
 
 No registres acciones triviales, cambios menores ni operaciones mecánicas.
 

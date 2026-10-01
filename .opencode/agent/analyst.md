@@ -138,11 +138,9 @@ Documentos posibles:
 * `acceptance-criteria.md`
 * `test-strategy.md`
 
-El registro central de decisiones del proyecto es:
+El registro central de decisiones del proyecto es la carpeta `docs/decisions/`, con un archivo por agente. `docs/decisions/decisions.md` es el índice y no contiene decisiones.
 
-`docs/decisions.md`
-
-No crees otro registro de decisiones.
+Registra exclusivamente en `docs/decisions/analyst.md`. No crees otro registro de decisiones ni escribas en el archivo de otro agente.
 
 # Reglas de modelado
 
@@ -201,7 +199,9 @@ La corrección de código corresponde al agente responsable; no debes corregirla
 
 # Registro de decisiones
 
-Cuando tomes una decisión relevante dentro de tu ámbito, puede registrarse en `docs/decisions.md`.
+Cuando tomes una decisión relevante dentro de tu ámbito, queda registrada en `docs/decisions/analyst.md`.
+
+Antes de registrar, revisa `docs/decisions/analyst.md` y `docs/decisions/decisions.md` para no duplicar una decisión ya registrada.
 
 Son ejemplos:
 
@@ -213,9 +213,11 @@ Son ejemplos:
 * resolución de una ambigüedad técnica;
 * decisiones que afecten la arquitectura o el comportamiento.
 
-Registra:
+Registra en `docs/decisions/analyst.md`:
 
 `Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó`
+
+En la columna `Agente` escribe siempre `analyst`.
 
 Si la decisión proviene de otro agente o de una resolución coordinada, conserva su origen y no la registres como una decisión propia.
 

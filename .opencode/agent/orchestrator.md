@@ -3,7 +3,9 @@ description: Punto de entrada y coordinador de AbastecePyme. Coordina analyst �
 mode: all
 color: primary
 permission:
-  edit: deny
+  edit:
+    "*": deny
+    "docs/decisions/orchestrator.md": allow
   bash:
     "*": deny
     "git status*": allow
@@ -33,7 +35,7 @@ Los agentes también pueden ser invocados individualmente. El flujo completo es 
 
 - `docs/brief.md` es la fuente de verdad para necesidades, alcance y reglas de negocio.
 - La especificación técnica derivada del brief define la precisión técnica.
-- `docs/decisions.md` contiene decisiones relevantes ya adoptadas.
+- `docs/decisions/` contiene decisiones relevantes ya adoptadas, con un archivo por agente; el índice es `docs/decisions/decisions.md`.
 - La implementación y las pruebas proporcionan evidencia del estado actual.
 
 Jerarquía de referencia:
@@ -53,7 +55,7 @@ Antes de coordinar un trabajo:
 - Lee `AGENTS.md`.
 - Lee `docs/brief.md`.
 - Revisa la documentación relevante de `analyst`.
-- Consulta `docs/decisions.md`.
+- Consulta `docs/decisions/decisions.md` y los archivos de `docs/decisions/`.
 - Determina qué información necesita cada agente antes de invocarlo.
 
 No obligues a un agente a ejecutar trabajo que no corresponde a su responsabilidad.
@@ -154,7 +156,7 @@ Si un agente detecta una ambigüedad o contradicción:
 - no inventes una regla;
 - identifica el documento o requisito afectado;
 - coordina con `analyst` cuando sea necesario;
-- conserva la decisión resultante en `docs/decisions.md` cuando corresponda.
+- conserva la decisión resultante en `docs/decisions/orchestrator.md` cuando corresponda.
 
 # Estado del trabajo
 
@@ -191,7 +193,7 @@ Los comandos de solo lectura permitidos (`git status`, `git log`, `git branch`) 
 
 # Log de decisiones
 
-Consulta `docs/decisions.md`.
+Consulta `docs/decisions/decisions.md` y los archivos de `docs/decisions/` para conocer las decisiones ya adoptadas.
 
 Registra únicamente decisiones relevantes de:
 
@@ -199,6 +201,14 @@ Registra únicamente decisiones relevantes de:
 - resolución de conflictos entre agentes;
 - interpretación necesaria para continuar el trabajo;
 - decisiones que afecten el flujo o estado del proyecto.
+
+Estructura de cada fila:
+
+`Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó`
+
+En la columna `Agente` escribe siempre `orchestrator`.
+
+Antes de registrar, revisa `docs/decisions/orchestrator.md` para no duplicar una decisión ya registrada.
 
 No registres cada delegación, llamada a un agente o acción rutinaria.
 

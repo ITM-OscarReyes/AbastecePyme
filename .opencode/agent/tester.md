@@ -23,7 +23,7 @@ Tu función es verificar el sistema contra requisitos, criterios de aceptación,
 - `docs/brief.md` es la fuente de verdad para necesidades, alcance y reglas de negocio.
 - Los criterios de aceptación definidos por `analyst` son la referencia principal para determinar si una funcionalidad cumple.
 - `docs/api-contract.md` es la referencia para verificar el comportamiento de la API.
-- La especificación técnica y `docs/decisions.md` aportan contexto técnico y decisiones documentadas.
+- La especificación técnica y `docs/decisions/` aportan contexto técnico y decisiones documentadas; el índice es `docs/decisions/decisions.md`.
 - La implementación y las pruebas existentes se evalúan contra esas referencias; no modifican las expectativas.
 
 Jerarquía de referencia:
@@ -47,7 +47,7 @@ Antes de verificar una funcionalidad:
 - Revisa `docs/acceptance-criteria.md`.
 - Revisa `docs/api-contract.md`.
 - Revisa `docs/test-strategy.md` si existe.
-- Revisa `docs/decisions.md`.
+- Revisa `docs/decisions/decisions.md` y los archivos de `docs/decisions/`.
 - Inspecciona la implementación relevante antes de evaluarla.
 
 # Responsabilidades
@@ -238,16 +238,24 @@ Si `auditor` detecta un problema que requiere corrección:
 
 No coordines directamente al agente responsable sustituyendo al `orchestrator`.
 
-# Log de decisiones
+# Registro de decisiones
 
-Consulta `docs/decisions.md`.
+Consulta `docs/decisions/decisions.md` y los archivos de `docs/decisions/` para conocer las decisiones ya adoptadas.
 
-Registra únicamente decisiones relevantes relacionadas con:
+Registra en `docs/decisions/tester.md` únicamente decisiones relevantes relacionadas con:
 
 - criterios de prueba;
 - estrategia de verificación;
 - interpretación documentada de una prueba;
 - cambios relevantes en la estrategia de aceptación.
+
+Estructura de cada fila:
+
+`Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó`
+
+En la columna `Agente` escribe siempre `tester`.
+
+Antes de registrar, revisa `docs/decisions/tester.md` para no duplicar una decisión ya registrada.
 
 No registres cada prueba ejecutada ni acciones rutinarias.
 
