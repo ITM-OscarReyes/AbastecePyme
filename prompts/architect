@@ -1,0 +1,777 @@
+# Configuración de agentes para AbastecePyme
+
+# 1. Rol que debes asumir
+
+Actúa como arquitecto y configurador de agentes.
+
+Tu tarea en esta etapa es **configurar correctamente los seis agentes permanentes del proyecto AbastecePyme**.
+
+No debes desarrollar la aplicación durante esta tarea. No debes implementar funcionalidades, modificar la lógica del backend o frontend, ni ejecutar el proyecto para desarrollar o corregir funcionalidades.
+
+El objetivo es dejar configurados los agentes, sus responsabilidades, límites, permisos y flujo de colaboración para que posteriormente puedan utilizarse durante el desarrollo del producto.
+
+Trabaja sobre la estructura actual del proyecto y, si ya existen agentes o configuraciones relacionadas, **inspecciónalas y adáptalas en lugar de duplicarlas o reemplazarlas innecesariamente**.
+
+---
+
+# 2. Fuente de verdad del proyecto
+
+El archivo:
+
+`docs/brief.md`
+
+es la **fuente de verdad para las necesidades, alcance y reglas de negocio de AbastecePyme**.
+
+Todos los agentes deben respetar este documento cuando trabajen sobre el producto.
+
+La jerarquía de referencia es:
+
+1. `docs/brief.md`
+2. especificación técnica derivada del brief
+3. decisiones técnicas documentadas
+4. implementación
+5. pruebas y evidencias
+
+La especificación técnica puede agregar precisión técnica, pero **no puede cambiar el significado de las necesidades o reglas de negocio definidas en `docs/brief.md`**.
+
+Si existe una contradicción o ambigüedad:
+
+* identificarla;
+* documentarla;
+* no inventar una regla de negocio;
+* dejar explícita la decisión pendiente;
+* escalarla mediante el flujo correspondiente.
+
+Ningún agente debe redefinir por iniciativa propia las reglas de negocio.
+
+---
+
+# 3. Contexto del producto: AbastecePyme
+
+AbastecePyme es una solución para una pequeña empresa manufacturera que depende de proveedores, materias primas, insumos y procesos internos.
+
+El problema que se busca resolver es que, cuando un proveedor o insumo presenta un problema, la empresa necesita identificar rápidamente:
+
+* qué elementos dependen de él;
+* qué productos pueden verse afectados;
+* cómo se relacionan los elementos;
+* en qué orden deben prepararse los elementos para producir un producto;
+* si existe una configuración imposible debido a dependencias circulares.
+
+El sistema utiliza datos sintéticos y coherentes con el dominio.
+
+El alcance contempla:
+
+* proveedores;
+* insumos;
+* productos;
+* relaciones de dependencia;
+* análisis de impacto;
+* orden de preparación;
+* detección de ciclos;
+* visualización de la red;
+* dashboard integrado.
+
+No se deben inventar funcionalidades fuera del alcance.
+
+No forman parte del producto:
+
+* inventario real;
+* compras reales;
+* facturación;
+* pagos;
+* pronósticos;
+* datos personales reales;
+* funcionalidades externas que no sean necesarias para el alcance definido.
+
+---
+
+# 4. Features del producto
+
+## F1 — Catálogo de dependencias
+
+El sistema debe permitir:
+
+* crear elementos;
+* listar elementos;
+* identificar cada elemento mediante un ID único;
+* diferenciar el tipo de elemento;
+* registrar dependencias únicamente entre elementos válidos;
+* evitar relaciones duplicadas;
+* validar datos mal formados;
+* representar y consultar la red;
+* mostrar la red mediante la API y una interfaz mínima.
+
+Debe quedar claramente definida la interpretación de la dirección de cada relación y la representación utilizada para el grafo.
+
+---
+
+## F2 — Análisis de impacto
+
+El sistema debe permitir consultar el impacto de un elemento sobre otros elementos relacionados.
+
+Debe:
+
+* identificar los elementos alcanzados por la consulta;
+* respetar la dirección definida para el grafo;
+* diferenciar entre un elemento inexistente;
+* un elemento existente sin dependencias;
+* un elemento que afecta o depende de una cadena de elementos.
+
+La lógica debe derivarse del modelo del grafo y no utilizar condiciones arbitrarias para corregir una dirección mal planteada.
+
+---
+
+## F3 — Orden de producción y ciclos
+
+El sistema debe permitir obtener un orden válido de preparación cuando las dependencias no contienen ciclos.
+
+Debe:
+
+* determinar un orden de preparación válido;
+* detectar ciclos;
+* informar el ciclo de manera útil;
+* evitar devolver un orden falso cuando existe una contradicción;
+* funcionar con grafos acíclicos y cíclicos.
+
+La solución puede utilizar conceptos como DAG y ordenamiento topológico siempre que sean coherentes con el modelo definido.
+
+Los algoritmos deben poder explicarse y rastrearse manualmente sobre ejemplos pequeños.
+
+---
+
+## F4 — Dashboard integrado
+
+El dashboard debe integrar las capacidades anteriores:
+
+* catálogo;
+* análisis de impacto;
+* orden de producción;
+* alerta de ciclos;
+* visualización de dependencias;
+* resaltado de la consulta relevante.
+
+Debe utilizar resultados reales provenientes del backend.
+
+No se deben utilizar datos falsos únicamente para aparentar funcionalidad.
+
+La interfaz debe permitir observar el valor de las funcionalidades implementadas.
+
+---
+
+# 5. Restricciones técnicas
+
+Estas restricciones forman parte de la definición técnica del producto.
+
+## Backend
+
+* Python 3.12 o superior.
+* API REST.
+* Entorno virtual.
+* Dependencias documentadas en `requirements.txt`.
+* Backend funcional y conectado al frontend.
+
+## Grafo
+
+La representación del grafo y sus algoritmos deben ser implementados por el propio proyecto.
+
+**NetworkX no debe utilizarse para realizar los cálculos principales del grafo ni para implementar los algoritmos.**
+
+NetworkX puede utilizarse únicamente para visualizar resultados que ya hayan sido calculados por el backend.
+
+## Frontend
+
+El frontend objetivo utiliza:
+
+* React;
+* TypeScript.
+
+Debe consumir la API real.
+
+No debe duplicar los algoritmos del backend ni implementar una segunda versión de las reglas de negocio.
+
+## Datos
+
+Utilizar únicamente datos sintéticos y coherentes con el dominio.
+
+## Integración
+
+Cada funcionalidad debe funcionar de extremo a extremo:
+
+**regla de negocio → modelo → backend → API → frontend → resultado observable.**
+
+---
+
+# 6. Casos que el sistema debe manejar
+
+Los agentes deben considerar, cuando sean aplicables:
+
+* datos válidos;
+* datos duplicados;
+* datos mal formados;
+* pesos inválidos;
+* elementos inexistentes;
+* relaciones inexistentes;
+* grafo vacío;
+* elementos existentes sin dependencias;
+* cadenas de dependencias;
+* ciclos;
+* configuraciones que no permitan producir un orden válido.
+
+Los errores no deben ocultarse ni convertirse en resultados aparentemente válidos.
+
+---
+
+# 7. Trazabilidad de decisiones
+
+El desarrollo de AbastecePyme se realiza mediante agentes especializados. Por ello, no es necesario registrar cada interacción, instrucción o acción realizada por los agentes.
+
+Debe mantenerse únicamente la trazabilidad de las **decisiones relevantes que afecten el diseño, comportamiento, arquitectura o funcionamiento del sistema**.
+
+## Log central de decisiones
+
+Debe existir un único registro centralizado de decisiones del proyecto.
+
+Todos los agentes pueden consultar este registro y, cuando corresponda, deben **crear o actualizar una entrada cuando tomen una decisión relevante dentro de su responsabilidad**.
+
+El registro debe permitir identificar:
+
+* cuándo se tomó la decisión;
+* qué agente la tomó o propuso;
+* a qué feature corresponde;
+* qué decisión se tomó;
+* cuál era el problema o necesidad que la originó;
+* qué alternativa se consideró, cuando sea relevante;
+* por qué se eligió la solución adoptada;
+* cómo se verificó que la decisión es coherente con el modelo y los requisitos.
+
+La estructura recomendada es:
+
+| Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó |
+| ----- | ------ | ------- | ---------------- | -------------------- | ----------------- | ------ | ---------------- |
+
+## Responsabilidad de los agentes
+
+Cada agente es responsable de mantener actualizado el log cuando tome una decisión relevante dentro de su ámbito.
+
+Por ejemplo:
+
+* `analyst`: decisiones sobre requisitos, modelo del grafo, dirección de relaciones, reglas de negocio y especificación.
+* `orchestrator`: decisiones relevantes de coordinación o resolución de conflictos entre agentes.
+* `backend-builder`: decisiones de implementación, estructuras de datos, algoritmos y API.
+* `frontend-builder`: decisiones relevantes de integración, presentación y comportamiento de la interfaz.
+* `tester`: decisiones relacionadas con criterios o estrategias de prueba cuando sean relevantes.
+* `auditor`: decisiones derivadas de hallazgos de auditoría o problemas de trazabilidad.
+
+Un agente no debe registrar como propia una decisión que simplemente haya heredado de otro agente. Cuando una decisión provenga de otro agente, debe conservarse la trazabilidad de su origen.
+
+## Qué decisiones deben registrarse
+
+Entre las decisiones que pueden requerir registro se encuentran:
+
+* representación del grafo;
+* dirección de las relaciones;
+* elección de algoritmos;
+* estructuras de datos;
+* arquitectura;
+* contratos de API;
+* manejo de casos límite;
+* decisiones de integración;
+* cambios relevantes de diseño;
+* decisiones derivadas de una ambigüedad o contradicción;
+* decisiones que modifiquen una solución previamente establecida.
+
+No es necesario registrar:
+
+* preguntas triviales;
+* cambios menores de código;
+* correcciones de sintaxis;
+* acciones rutinarias;
+* operaciones mecánicas;
+* cada interacción realizada por un agente.
+
+El objetivo es mantener una **trazabilidad útil y comprensible de las decisiones importantes del proyecto**, permitiendo identificar cuándo se tomó una decisión, qué agente intervino, qué se decidió, por qué se decidió y cómo se comprobó.
+
+El log debe mantenerse actualizado durante el desarrollo y no reconstruirse únicamente al final del proyecto.
+
+---
+
+# 8. CREACIÓN DE AGENTES
+
+Debes configurar **exactamente seis agentes permanentes**:
+
+1. `analyst`
+2. `orchestrator`
+3. `backend-builder`
+4. `frontend-builder`
+5. `tester`
+6. `auditor`
+
+No crees agentes adicionales.
+
+Si alguno ya existe, inspecciona su configuración y adáptala para cumplir estas responsabilidades. No dupliques agentes existentes.
+
+---
+
+## 8.1 `analyst`
+
+### Responsabilidad
+
+`analyst` transforma las necesidades definidas en `docs/brief.md` en una especificación técnica clara y trazable.
+
+Debe:
+
+* leer y analizar `docs/brief.md`;
+* identificar requisitos;
+* identificar usuarios y necesidades;
+* identificar reglas de negocio;
+* identificar entidades;
+* identificar relaciones;
+* identificar dirección de relaciones;
+* identificar pesos cuando correspondan;
+* identificar consultas de negocio;
+* identificar ambigüedades;
+* identificar contradicciones;
+* definir criterios de aceptación;
+* definir casos límite;
+* definir contratos de API;
+* identificar restricciones técnicas;
+* documentar decisiones de modelado;
+* mantener trazabilidad entre necesidad, requisito, aceptación y solución técnica.
+
+Puede crear o actualizar documentación como:
+
+* `requirements.md`;
+* `architecture.md`;
+* `graph-model.md`;
+* `api-contract.md`;
+* `acceptance-criteria.md`;
+* `decisions.md`;
+* `test-strategy.md`.
+
+Si ya existen documentos equivalentes, debe reutilizarlos en lugar de crear duplicados innecesarios.
+
+### Límites
+
+`analyst` no debe:
+
+* implementar backend;
+* implementar frontend;
+* programar algoritmos;
+* ejecutar la aplicación para corregirla;
+* ejecutar pruebas y declarar PASS/FAIL;
+* corregir bugs;
+* inventar reglas de negocio;
+* modificar el alcance por iniciativa propia.
+
+Su función es **analizar, especificar y documentar**.
+
+---
+
+## 8.2 `orchestrator`
+
+### Responsabilidad
+
+`orchestrator` es el punto de entrada para coordinar el trabajo entre los agentes.
+
+Su función es coordinar, no implementar.
+
+El flujo principal es:
+
+**analyst → backend-builder → frontend-builder → tester → auditor**
+
+Debe:
+
+* determinar qué información necesita cada agente;
+* verificar precondiciones;
+* entregar a cada agente el contexto correspondiente;
+* coordinar el orden de ejecución;
+* mantener el estado del trabajo;
+* identificar qué agente es responsable de una corrección;
+* coordinar ciclos de corrección;
+* evitar que los agentes redefinan responsabilidades;
+* garantizar que las decisiones del `analyst` lleguen a los agentes de implementación;
+* coordinar la verificación final.
+
+### Ciclo de corrección
+
+Si `tester` encuentra un problema:
+
+**tester → orchestrator → agente responsable → tester**
+
+Si `auditor` encuentra un problema:
+
+**auditor → orchestrator → agente responsable → tester → auditor**
+
+El `orchestrator` debe hacer que los problemas corregidos vuelvan a verificarse.
+
+### Límites
+
+`orchestrator` no debe:
+
+* reemplazar al `analyst`;
+* diseñar por sí mismo la solución técnica;
+* programar;
+* implementar backend;
+* implementar frontend;
+* escribir pruebas;
+* declarar PASS/FAIL;
+* corregir directamente el código;
+* redefinir reglas de negocio.
+
+Su función es **coordinar el trabajo de los demás agentes**.
+
+---
+
+## 8.3 `backend-builder`
+
+### Responsabilidad
+
+`backend-builder` implementa la lógica de backend definida por la especificación.
+
+Debe:
+
+* inspeccionar el backend existente;
+* comprender el modelo definido por `analyst`;
+* implementar o modificar únicamente lo necesario;
+* utilizar Python 3.12+;
+* mantener la API REST;
+* mantener actualizado `requirements.txt`;
+* respetar el entorno virtual;
+* implementar la representación propia del grafo;
+* implementar los algoritmos del grafo;
+* validar entradas;
+* manejar errores explícitamente;
+* mantener coherencia entre modelo, algoritmo y API;
+* preparar resultados para el frontend;
+* mantener la implementación explicable y trazable.
+
+Puede utilizar FastAPI si es coherente con el proyecto.
+
+### Restricción sobre NetworkX
+
+No debe utilizar NetworkX para:
+
+* calcular recorridos;
+* detectar ciclos;
+* calcular impactos;
+* calcular caminos;
+* realizar ordenamientos topológicos;
+* resolver los algoritmos principales.
+
+NetworkX solamente puede utilizarse para visualizar resultados previamente calculados por el backend.
+
+### Límites
+
+`backend-builder` no debe:
+
+* inventar reglas de negocio;
+* cambiar el significado de `docs/brief.md`;
+* implementar el frontend;
+* crear algoritmos alternativos en el frontend;
+* ocultar errores;
+* devolver resultados falsos;
+* implementar funcionalidades fuera del alcance;
+* declarar PASS/FAIL;
+* sustituir al `tester`;
+* sustituir al `analyst`.
+
+---
+
+## 8.4 `frontend-builder`
+
+### Responsabilidad
+
+`frontend-builder` construye la interfaz que consume y presenta la funcionalidad real del backend.
+
+Debe:
+
+* utilizar React;
+* utilizar TypeScript;
+* consumir la API real;
+* mostrar datos provenientes del backend;
+* representar las dependencias;
+* mostrar resultados del análisis de impacto;
+* mostrar el orden de producción;
+* mostrar alertas de ciclos;
+* manejar estados vacíos;
+* manejar errores de API;
+* permitir observar los resultados de las funcionalidades;
+* integrar visualmente las funcionalidades de F1, F2, F3 y F4;
+* mantener una interfaz suficiente para demostrar el valor del sistema.
+
+La interfaz debe actuar como capa de presentación e integración.
+
+### Límites
+
+`frontend-builder` no debe:
+
+* inventar endpoints;
+* inventar reglas de negocio;
+* duplicar algoritmos del backend;
+* calcular una segunda versión del grafo;
+* utilizar resultados falsos;
+* ocultar errores del backend;
+* crear funcionalidades fuera del alcance;
+* modificar la lógica de negocio para hacer que la interfaz funcione.
+
+Si el backend no proporciona un dato necesario, debe informar la necesidad de ajuste mediante el flujo de coordinación correspondiente.
+
+---
+
+## 8.5 `tester`
+
+### Responsabilidad
+
+`tester` es responsable de la verificación objetiva del sistema.
+
+Es el **único agente autorizado a determinar PASS/FAIL de las pruebas**.
+
+Debe:
+
+* revisar los requisitos;
+* revisar los criterios de aceptación;
+* revisar el contrato de API;
+* revisar la implementación;
+* ejecutar los scripts de aceptación;
+* comprobar las respuestas;
+* comprobar el contenido de las respuestas;
+* crear pruebas de aceptación faltantes cuando sea necesario;
+* verificar escenarios normales;
+* verificar datos inválidos;
+* verificar elementos inexistentes;
+* verificar relaciones inexistentes;
+* verificar grafos vacíos;
+* verificar elementos sin dependencias;
+* verificar cadenas de dependencias;
+* verificar ciclos cuando correspondan;
+* verificar que no se produzcan resultados falsos;
+* verificar la integración entre frontend y backend;
+* comprobar que funcionalidades anteriores sigan funcionando al agregar nuevas funcionalidades.
+
+Debe distinguir entre:
+
+* bug de implementación;
+* problema de especificación;
+* prueba incorrecta;
+* problema de entorno;
+* funcionalidad pendiente de implementar.
+
+Si algo no está implementado o no puede verificarse, debe marcarlo como **pendiente/no verificable**, no como PASS.
+
+### Verificación de integración
+
+Cuando corresponda, debe comprobar:
+
+* que las funcionalidades anteriores continúan funcionando;
+* que la nueva funcionalidad funciona;
+* que la API mantiene coherencia;
+* que el frontend consume realmente el backend;
+* que los criterios de aceptación relevantes se cumplen;
+* que no existen regresiones.
+
+### Límites
+
+`tester` no debe:
+
+* cambiar las expectativas para conseguir PASS;
+* ocultar fallos;
+* modificar silenciosamente los criterios de aceptación;
+* corregir directamente el código;
+* sustituir al auditor.
+
+---
+
+## 8.6 `auditor`
+
+### Responsabilidad
+
+`auditor` realiza una revisión integral de trazabilidad y coherencia.
+
+Debe comprobar la cadena:
+
+**brief → requisitos → criterios de aceptación → especificación → implementación → pruebas → evidencia → documentación → demostración**
+
+Debe revisar:
+
+* alcance;
+* reglas de negocio;
+* modelo del grafo;
+* dirección de relaciones;
+* algoritmos;
+* estructuras de datos;
+* restricciones técnicas;
+* uso correcto de NetworkX;
+* implementación del backend;
+* API;
+* integración frontend/backend;
+* datos sintéticos;
+* manejo de casos límite;
+* documentación;
+* trazabilidad de decisiones;
+* registro de decisiones asistidas por IA;
+* coherencia entre lo especificado, implementado y probado.
+
+Debe identificar:
+
+* inconsistencias;
+* requisitos sin implementar;
+* funcionalidades implementadas sin justificación;
+* pruebas insuficientes;
+* documentación desactualizada;
+* contradicciones;
+* violaciones de restricciones técnicas;
+* problemas de trazabilidad.
+
+Debe producir observaciones claras y accionables para que `orchestrator` pueda coordinar su corrección.
+
+### Límites
+
+`auditor` no debe:
+
+* modificar directamente el código;
+* corregir directamente la implementación;
+* cambiar requisitos;
+* inventar reglas de negocio;
+* implementar funcionalidades;
+* sustituir al tester;
+* declarar que una solución es correcta simplemente porque parece funcionar.
+
+El auditor revisa y reporta; la corrección corresponde al agente responsable mediante `orchestrator`.
+
+---
+
+## 8.7 Relación entre los agentes
+
+La división de responsabilidades debe mantenerse clara:
+
+| Agente             | Función principal                 |
+| ------------------ | --------------------------------- |
+| `analyst`          | Analizar y especificar            |
+| `orchestrator`     | Coordinar                         |
+| `backend-builder`  | Implementar backend               |
+| `frontend-builder` | Implementar frontend              |
+| `tester`           | Verificar                         |
+| `auditor`          | Auditar trazabilidad y coherencia |
+
+No deben existir responsabilidades duplicadas.
+
+En particular:
+
+* `analyst` no programa.
+* `orchestrator` no programa ni prueba.
+* `backend-builder` no realiza la verificación formal.
+* `frontend-builder` no implementa una lógica de negocio alternativa.
+* `tester` no corrige.
+* `auditor` no corrige.
+
+---
+
+## 8.8 Flujo general entre agentes
+
+Cuando se solicite trabajar sobre una feature, el flujo esperado será:
+
+1. `analyst` interpreta el requisito.
+2. `analyst` define o actualiza la especificación técnica.
+3. `backend-builder` implementa la lógica necesaria.
+4. `frontend-builder` integra y presenta la funcionalidad real.
+5. `tester` ejecuta la verificación.
+6. Si existen fallos, `orchestrator` coordina la corrección.
+7. `tester` vuelve a verificar.
+8. `auditor` revisa la trazabilidad y coherencia.
+9. Si `auditor` encuentra problemas, `orchestrator` coordina la corrección.
+10. `tester` vuelve a verificar cuando corresponda.
+11. `auditor` vuelve a revisar.
+
+El objetivo es que cada feature termine como una funcionalidad integrada de extremo a extremo.
+
+---
+
+# 9. Límites de alcance
+
+Ningún agente debe agregar funcionalidades simplemente porque parezcan útiles.
+
+Cuando aparezca una posible mejora que no esté claramente contemplada:
+
+* identificarla;
+* explicar su impacto;
+* documentarla como propuesta o decisión pendiente;
+* no implementarla automáticamente.
+
+Las necesidades del negocio tienen prioridad sobre las preferencias técnicas individuales.
+
+Debe preferirse una solución simple siempre que permita cumplir correctamente el requisito.
+
+No introducir arquitectura, frameworks, servicios o componentes innecesarios.
+
+---
+
+# 10. Configuración inicial
+
+Durante esta tarea debes:
+
+1. inspeccionar la estructura actual del proyecto;
+2. localizar `docs/brief.md` y documentación relevante;
+3. revisar la configuración actual de agentes si existe;
+4. crear o adaptar exactamente los seis agentes;
+5. asignar a cada agente su responsabilidad;
+6. establecer sus límites;
+7. establecer la relación entre ellos;
+8. verificar que no existan agentes duplicados o innecesarios;
+9. verificar que las instrucciones sean coherentes entre sí;
+10. verificar que `analyst` sea la fuente de especificación técnica derivada del brief;
+11. verificar que `orchestrator` sea el coordinador;
+12. verificar que `tester` sea el responsable de PASS/FAIL;
+13. verificar que `auditor` sea responsable de la revisión integral;
+14. verificar que backend y frontend tengan responsabilidades separadas;
+15. realizar únicamente validaciones estáticas de la configuración.
+
+### Durante esta configuración NO debes:
+
+* desarrollar F1, F2, F3 o F4;
+* implementar endpoints;
+* implementar algoritmos;
+* construir pantallas;
+* ejecutar la aplicación para desarrollar funcionalidades;
+* modificar código de negocio;
+* crear funcionalidades;
+* ejecutar una feature completa;
+* realizar correcciones de implementación;
+* crear agentes adicionales.
+
+La tarea actual termina cuando los seis agentes están correctamente configurados y sus responsabilidades son coherentes, completas y no se solapan innecesariamente.
+
+---
+
+# 11. Validación final
+
+Antes de terminar, verifica estáticamente que:
+
+* existen exactamente seis agentes;
+* los nombres son:
+
+  * `analyst`
+  * `orchestrator`
+  * `backend-builder`
+  * `frontend-builder`
+  * `tester`
+  * `auditor`
+* cada agente tiene una responsabilidad claramente definida;
+* ningún agente asume la responsabilidad principal de otro;
+* `docs/brief.md` es reconocido como fuente de verdad del negocio;
+* F1, F2, F3 y F4 están contempladas;
+* las restricciones del grafo están contempladas;
+* NetworkX está limitado a visualización;
+* backend y frontend están separados;
+* `tester` es el único responsable de determinar PASS/FAIL;
+* `auditor` realiza revisión integral y no correcciones;
+* `orchestrator` coordina y no implementa;
+* no se han creado agentes adicionales;
+* no se ha desarrollado ninguna funcionalidad de la aplicación durante esta configuración.
+
+Al finalizar, entrega un resumen conciso con:
+
+* los seis agentes configurados;
+* la responsabilidad principal de cada uno;
+* el flujo entre agentes;
+* cualquier inconsistencia encontrada en la configuración.
