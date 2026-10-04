@@ -69,3 +69,7 @@ Entregables esperados (ajústalos a la estructura ya existente en el repositorio
 - Actualiza el índice `docs/decisions/decisions.md` si el formato del repositorio lo requiere.
 
 Al finalizar, devuelve un resumen conciso con: (1) lista de archivos creados o modificados con su ruta, (2) IDs de requisitos y criterios de aceptación definidos, (3) lista de ambigüedades o decisiones pendientes escaladas, (4) confirmación explícita de que no se escribió código.
+
+## 03 — Backend de F1 con el agente backend-builder
+
+Hola, por favor con el agente backend-builder desarrolla todo el backend necesario únicamente para el feature 1 empleando python y fastapi, todo dentro del branch f1-Backend, así mismo almacena la documentación del prompt en el archivo prompts.md y trata de que el propio código quede con una documentación clara.
