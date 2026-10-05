@@ -72,4 +72,31 @@ Al finalizar, devuelve un resumen conciso con: (1) lista de archivos creados o m
 
 ## 03 — Backend de F1 con el agente backend-builder
 
-Hola, por favor con el agente backend-builder desarrolla todo el backend necesario únicamente para el feature 1 empleando python y fastapi, todo dentro del branch f1-Backend, así mismo almacena la documentación del prompt en el archivo prompts.md y trata de que el propio código quede con una documentación clara.
+Hola, por favor con el agente backend-builder desarrolla todo el backend necesario **únicamente para el feature 1 (F1 — Catálogo de dependencias)**, empleando Python y FastAPI, todo dentro del branch `f1-Backend`. Así mismo almacena la documentación del prompt en el archivo `prompts.md` y trata de que el propio código quede con una documentación clara.
+
+REQUISITOS ESTRICTOS DE ALCANCE:
+
+1. **Solo F1.** No implementes F2 (análisis de impacto), F3 (orden de producción y ciclos) ni F4 (dashboard integrado), aunque `docs/brief.md` las describa y aunque tu definición de agente las mencione.
+2. No crees endpoints, algoritmos, modelos, casos de uso ni datos de demostración de F2, F3 o F4. No los anticipes "para dejarlos listos".
+3. `GET /api/v1/grafo` expone la estructura del catálogo tal como está. No le agregues recorridos, niveles, Degrees, ciclos, orden ni veredictos.
+4. F1 **no rechaza ciclos**: una dependencia que cierre un ciclo es un dato válido de F1. No la trates como error.
+5. Los endpoints del backend deben coincidir exactamente con `docs/api-contract.md`.
+6. La verificación de F1 la realiza `tester`. Tú no declares PASS/FAIL.
+
+## 04 — Frontend de F1 con el agente frontend-builder
+
+Hola, por favor con el agente frontend-builder desarrolla la interfaz necesaria **únicamente para el feature 1 (F1 — Catálogo de dependencias)**, con React + TypeScript, consumiendo la API real del backend, todo dentro del branch `f1-Frontend`. Así mismo almacena la documentación del prompt en el archivo `prompts.md`.
+
+REQUISITOS ESTRICTOS DE ALCANCE:
+
+1. **Solo F1.** No implementes F2 (análisis de impacto), F3 (orden de producción y ciclos) ni F4 (dashboard integrado). No crees componentes, vistas, tipos, servicios, estados ni datos de demostración de esas features, ni siquiera "dejando la estructura lista".
+2. El menú y las vistas deben corresponder solo a F1: catálogo de elementos, catálogo de dependencias y visualización de la red.
+3. **No calcules nada sobre el grafo en el cliente.** Está prohibido implementar recorridos BFS/DFS, detección de ciclos, orden topológico (Kahn o similar), cálculo de impacto, caminos o niveles. No existe backend para F2/F3, así que cualquier cálculo de ese tipo en el frontend es una segunda versión de los algoritmos y una violation de `docs/architecture.md`.
+4. **No dupliques reglas de negocio.** El backend valida formato de `id`, tipo, `nombre`, `descripcion`, campos desconocidos, aristas reflexivas, duplicados y elementos inexistentes. El frontend no recorta, no pasa a mayúsculas y no valida longitudes por su cuenta: envía lo que el usuario escribió y muestra el error que devuelve la API.
+5. **No inventes endpoints.** Consume solo los de `docs/api-contract.md`: `POST/GET /api/v1/elementos`, `GET /api/v1/elementos/{id}`, `POST/GET /api/v1/dependencias` y `GET /api/v1/grafo`.
+6. **No simules datos.** No generes elementos, dependencias ni veredictos falsos. Si un dato no está en la API, repórtalo a `orchestrator` como faltante.
+7. Cytoscape está permitido **solo para dibujar** los datos que devuelve el backend. No lo uses para calcular.
+8. Maneja de forma explícita: carga, respuesta exitosa, grafo vacío, elemento inexistente, elemento sin dependencias, cadena de dependencias, errores de validación, errores de API y backend no disponible. Los errores se muestran, no se convierten en estado vacío.
+9. No declares PASS/FAIL; la verificación la hace `tester`.
+
+Al finalizar, reporta qué components creaste, qué endpoints consumes, qué decisiones registraste en `docs/decisions/frontend-builder.md` y qué necesita verificación de `tester`.

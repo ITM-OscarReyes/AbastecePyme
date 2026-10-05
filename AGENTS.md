@@ -25,6 +25,28 @@ La especificación técnica puede agregar precisión técnica, pero **no puede c
 - **F3 — Orden de producción y ciclos**: obtener un orden de preparación válido cuando no hay ciclos; detectar y reportar los ciclos de manera útil; no devolver un orden falso cuando existe contradicción. Puede usar conceptos como DAG y ordenamiento topológico.
 - **F4 — Dashboard integrado**: integrar catálogo, análisis de impacto, orden de producción, alerta de ciclos y visualización de dependencias usando resultados reales del backend, sin datos falsos.
 
+## Alcance por feature
+
+El proyecto se trabaja **una feature a la vez**. La feature en alcance es la única que se puede especificar, implementar, probar y dar por terminada.
+
+- La feature en alcance se declara explícitamente en la tarea o en el prompt que invoca al agente.
+- Las demás features del brief **no se implementan**, ni siquiera parcialmente, ni "para completar la interfaz", ni "porque el diseño lo parezca", ni "porque el brief las describe".
+- No se crean endpoints, algoritmos, componentes, vistas, tipos, datos de demostración ni documentación técnica de una feature que no está en alcance.
+- No se anticipa el backend de una feature futura. Si la interfaz de la feature en alcance necesita un dato que el backend no expone, el dato se reporta como faltante; no se calcula en el cliente ni se simula.
+- Un agente puede conocer el brief completo, pero su trabajo se limita a la feature en alcance.
+- Cuando la feature en alcance termina y es verificada, se solicita explícitamente la siguiente.
+
+**Feature en alcance actualmente: F1 — Catálogo de dependencias.** F2, F3 y F4 están pendientes de solicitud.
+
+## Estado actual
+
+| Feature | Especificación | Backend | Frontend | Verificación |
+| ------- | -------------- | ------- | -------- | ------------ |
+| F1 | Documentada en `docs/` | Implementado | Implementado | Pendiente de `tester` |
+| F2 | No especificada | No implementada | No implementada | Fuera de alcance |
+| F3 | No especificada | No implementada | No implementada | Fuera de alcance |
+| F4 | No especificada | No implementada | No implementada | Fuera de alcance |
+
 ## Restricciones técnicas
 
 - **Backend**: Python 3.12 o superior, API REST, entorno virtual, dependencias documentadas en `requirements.txt`, backend funcional y conectado al frontend.

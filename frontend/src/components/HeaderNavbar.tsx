@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, Database, ShieldAlert, Play, Plus, GitCommitHorizontal, Activity } from 'lucide-react';
+import { Share2, Database, Plus, GitCommitHorizontal, Activity } from 'lucide-react';
 
-export type TabActiva = 'dashboard' | 'catalogo' | 'impacto' | 'orden';
+export type TabActiva = 'red' | 'catalogo';
 
 interface HeaderNavbarProps {
   tabActiva: TabActiva;
@@ -41,15 +41,15 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           {/* Navegación por Pestañas */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
-              onClick={() => onTabChange('dashboard')}
+              onClick={() => onTabChange('red')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                tabActiva === 'dashboard'
+                tabActiva === 'red'
                   ? 'bg-slate-800 text-sky-400 shadow'
                   : 'text-slate-400 hover:text-white hover:bg-slate-900'
               }`}
             >
-              <LayoutDashboard size={14} />
-              <span>Dashboard Integrado</span>
+              <Share2 size={14} />
+              <span>Red de Dependencias</span>
             </button>
             <button
               onClick={() => onTabChange('catalogo')}
@@ -60,29 +60,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
               }`}
             >
               <Database size={14} />
-              <span>Catálogo F1</span>
-            </button>
-            <button
-              onClick={() => onTabChange('impacto')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                tabActiva === 'impacto'
-                  ? 'bg-slate-800 text-sky-400 shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
-              }`}
-            >
-              <ShieldAlert size={14} />
-              <span>Análisis Impacto F2</span>
-            </button>
-            <button
-              onClick={() => onTabChange('orden')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                tabActiva === 'orden'
-                  ? 'bg-slate-800 text-sky-400 shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
-              }`}
-            >
-              <Play size={14} />
-              <span>Orden & Ciclos F3</span>
+              <span>Catálogo</span>
             </button>
           </nav>
 

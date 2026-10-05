@@ -9,19 +9,15 @@ import { HeaderNavbar } from './components/HeaderNavbar';
 import type { TabActiva } from './components/HeaderNavbar';
 import { GraphCanvas } from './components/GraphCanvas';
 import { CatalogTable } from './components/CatalogTable';
-import { ImpactPanel } from './components/ImpactPanel';
-import { ProductionPlannerPanel } from './components/ProductionPlannerPanel';
 import { ModalCrearElemento } from './components/ModalCrearElemento';
 import { ModalCrearDependencia } from './components/ModalCrearDependencia';
 import {
   Box,
   GitCommitHorizontal,
-  ShieldCheck,
   AlertTriangle,
   RefreshCw,
   Layers,
-  Sparkles,
-  EyeOff
+  Sparkles
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -33,10 +29,8 @@ export const App: React.FC = () => {
   const [apiConectada, setApiConectada] = useState<boolean>(false);
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
 
-  const [tabActiva, setTabActiva] = useState<TabActiva>('orden');
+  const [tabActiva, setTabActiva] = useState<TabActiva>('red');
   const [nodoSeleccionadoId, setNodoSeleccionadoId] = useState<string | null>(null);
-  const [nodosAfectadosIds, setNodosAfectadosIds] = useState<string[]>([]);
-  const [nodosCicloIds, setNodosCicloIds] = useState<string[]>([]);
 
   const [modalElementoAbierto, setModalElementoAbierto] = useState<boolean>(false);
   const [modalDependenciaAbierto, setModalDependenciaAbierto] = useState<boolean>(false);
@@ -78,25 +72,19 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleLimpiarSimulacion = () => {
-    setNodosAfectadosIds([]);
-    setNodoSeleccionadoId(null);
+  const handleSelectNode = (nodoId: string | null) => {
+    setNodoSeleccionadoId(nodoId);
   };
 
   const nodoSeleccionado = grafo.elementos.find(e => e.id === nodoSeleccionadoId);
+  const tiposEnCatalogo = new Set(grafo.elementos.map(e => e.tipo));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white">
+    <div className="h-dvh overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white">
       {/* Header & Navbar */}
       <HeaderNavbar
         tabActiva={tabActiva}
-        onTabChange={(nuevaTab) => {
-          setTabActiva(nuevaTab);
-          // Si cambiamos a orden y veníamos de impacto, limpiamos el impacto para que el grafo de orden no se pinte de rojo por error
-          if (nuevaTab === 'orden' && nodosAfectadosIds.length > 0) {
-            setNodosAfectadosIds([]);
-          }
-        }}
+        onTabChange={setTabActiva}
         onAbrirModalElemento={() => setModalElementoAbierto(true)}
         onAbrirModalDependencia={() => setModalDependenciaAbierto(true)}
         apiConectada={apiConectada}
@@ -104,40 +92,27 @@ export const App: React.FC = () => {
 
       {/* Alerta de Error Global */}
       {errorGlobal && (
-        <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2.5 flex items-center justify-between text-xs text-red-400 max-w-7xl mx-auto w-full">
-          <div className="flex items-center gap-2">
+        <div className="shrink-0 bg-red-500/10 border-b border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-400 max-w-7xl mx-auto w-full">
+          <div className="flex items-center gap-2 min-w-0">
             <AlertTriangle size={16} className="shrink-0 text-red-400" />
-            <span>{errorGlobal}</span>
+            <span className="truncate">{errorGlobal}</span>
           </div>
           <button
             onClick={cargarGrafo}
-            className="flex items-center gap-1 font-semibold hover:underline text-red-300"
+            className="shrink-0 flex items-center gap-1 font-semibold hover:underline text-red-300"
           >
             <RefreshCw size={12} /> Reintentar
           </button>
         </div>
       )}
 
-      {/* Barra de Notificación si hay simulación de impacto activa */}
-      {nodosAfectadosIds.length > 0 && tabActiva !== 'impacto' && (
-        <div className="bg-red-950/40 border-b border-red-800/40 px-4 py-2 text-xs flex items-center justify-between max-w-7xl mx-auto w-full">
-          <div className="flex items-center gap-2 text-red-300">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-            <span>Simulación de falla activa ({nodosAfectadosIds.length} elementos resaltados).</span>
-          </div>
-          <button
-            onClick={handleLimpiarSimulacion}
-            className="text-xs text-slate-300 hover:text-white font-semibold underline flex items-center gap-1"
-          >
-            <EyeOff size={13} /> Limpiar y ver colores normales
-          </button>
-        </div>
-      )}
-
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* `min-h-0` en `main` y en la fila del grafo es lo que permite que el flex los encoja por
+          debajo de su contenido; sin eso, la altura del lienzo empuja el borde inferior fuera del
+          viewport. El área del grafo ocupa el espacio restante en vez de una altura fija. */}
+      <main className="flex-1 min-h-0 overflow-y-auto max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* KPI Summary Cards Glassmorphic */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Elementos</span>
@@ -160,13 +135,11 @@ export const App: React.FC = () => {
 
           <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Estado de la Red</span>
-              <p className={`text-sm font-extrabold mt-1 ${nodosCicloIds.length > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {nodosCicloIds.length > 0 ? '¡Ciclo Detectado!' : 'Red Acíclica Saludable'}
-              </p>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tipos en Catálogo</span>
+              <p className="text-2xl font-black text-white mt-1">{tiposEnCatalogo.size}</p>
             </div>
-            <div className={`p-3 rounded-xl border ${nodosCicloIds.length > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 glow-alert' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 glow-success'}`}>
-              {nodosCicloIds.length > 0 ? <AlertTriangle size={22} /> : <ShieldCheck size={22} />}
+            <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+              <Layers size={22} />
             </div>
           </div>
 
@@ -181,24 +154,21 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Pestaña 1: Dashboard Integrado */}
-        {tabActiva === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[620px]">
+        {/* Pestaña 1: Red de Dependencias */}
+        {tabActiva === 'red' && (
+          <div className="flex-1 min-h-[420px] grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Lienzo del Grafo */}
-            <div className="lg:col-span-2 relative h-full">
+            <div className="lg:col-span-2 relative min-h-0">
               <GraphCanvas
                 elementos={grafo.elementos}
                 dependencias={grafo.dependencias}
                 nodoSeleccionadoId={nodoSeleccionadoId}
-                nodosAfectadosIds={nodosAfectadosIds}
-                nodosCicloIds={nodosCicloIds}
-                onSelectNode={setNodoSeleccionadoId}
-                onLimpiarResaltados={handleLimpiarSimulacion}
+                onSelectNode={handleSelectNode}
               />
             </div>
 
             {/* Panel de Detalles */}
-            <div className="space-y-4 overflow-y-auto pr-1">
+            <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
               {nodoSeleccionado ? (
                 <div className="glass-card p-5 rounded-2xl shadow-xl space-y-3 animate-in fade-in">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -251,71 +221,20 @@ export const App: React.FC = () => {
                   <p className="text-xs text-slate-400">Haz clic sobre cualquier elemento del grafo interactivo para inspeccionar sus relaciones directas de abastecimiento.</p>
                 </div>
               )}
-
-              {/* Acceso Rápido a Simulación */}
-              <ImpactPanel
-                grafo={grafo}
-                onImpactoCalculado={setNodosAfectadosIds}
-              />
             </div>
           </div>
         )}
 
-        {/* Pestaña 2: Catálogo F1 */}
+        {/* Pestaña 2: Catálogo */}
         {tabActiva === 'catalogo' && (
           <div className="space-y-6">
             <CatalogTable
               elementos={grafo.elementos}
               onSelectNode={(id) => {
                 setNodoSeleccionadoId(id);
-                setTabActiva('dashboard');
+                setTabActiva('red');
               }}
             />
-          </div>
-        )}
-
-        {/* Pestaña 3: Análisis de Impacto F2 */}
-        {tabActiva === 'impacto' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <ImpactPanel
-              grafo={grafo}
-              onImpactoCalculado={setNodosAfectadosIds}
-            />
-            <div className="h-[520px]">
-              <GraphCanvas
-                elementos={grafo.elementos}
-                dependencias={grafo.dependencias}
-                nodoSeleccionadoId={nodoSeleccionadoId}
-                nodosAfectadosIds={nodosAfectadosIds}
-                nodosCicloIds={nodosCicloIds}
-                onSelectNode={setNodoSeleccionadoId}
-                onLimpiarResaltados={handleLimpiarSimulacion}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Pestaña 4: Orden de Producción & Ciclos F3 */}
-        {tabActiva === 'orden' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <ProductionPlannerPanel
-              grafo={grafo}
-              onCicloDetectado={setNodosCicloIds}
-              onSelectNode={(id) => setNodoSeleccionadoId(id)}
-              nodoSeleccionadoId={nodoSeleccionadoId}
-            />
-            <div className="h-[520px]">
-              <GraphCanvas
-                elementos={grafo.elementos}
-                dependencias={grafo.dependencias}
-                nodoSeleccionadoId={nodoSeleccionadoId}
-                // En la vista de orden, el grafo muestra los colores normales de cada tipo salvo que haya un ciclo circular
-                nodosAfectadosIds={[]}
-                nodosCicloIds={nodosCicloIds}
-                onSelectNode={setNodoSeleccionadoId}
-                onLimpiarResaltados={handleLimpiarSimulacion}
-              />
-            </div>
           </div>
         )}
       </main>

@@ -211,7 +211,9 @@ corresponde a otras features y a decisiones posteriores de `analyst`.
 
 - Recorridos de grafo, impacto y elementos alcanzados: F2.
 - Detección de ciclos, orden topológico y orden de preparación: F3.
-- Tablero integrado, visualización completa de la red y simulación de indisponibilidad: F4.
+- Tablero integrado que reúna catálogo, impacto, orden de producción y alerta de ciclos: F4. La
+  visualización de la red que F1 sí exige (RF-F1-14) es la representación del catálogo, no un tablero
+  integrado: no incluye destacados de impacto, ni veredicto de ciclos, ni orden de trabajo.
 - Inventario, compras, facturación, pagos, pronósticos y datos personales: fuera del alcance del
   producto según `docs/brief.md` y `AGENTS.md`.
 - Modificación, actualización o eliminación de elementos y dependencias: el brief de F1 solo describe

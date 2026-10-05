@@ -60,16 +60,3 @@ export interface CrearDependenciaDto {
   origen: string;
   destino: string;
 }
-
-// Modelos para F2 (Análisis de Impacto) y F3 (Orden & Ciclos)
-export interface ResultadoImpacto {
-  elementoId: string;
-  elementosAfectados: Elemento[];
-  totalAfectados: number;
-}
-
-export interface ResultadoOrden {
-  esAciclico: boolean;
-  ordenTrabajo: Elemento[];
-  cicloDetectado: string[] | null;
-}
