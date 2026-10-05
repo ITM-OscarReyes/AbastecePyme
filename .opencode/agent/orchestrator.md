@@ -48,6 +48,17 @@ Jerarquía de referencia:
 
 No redefinas reglas de negocio ni sustituyas las decisiones del `analyst`.
 
+# Control de alcance por feature
+
+El proyecto se trabaja **una feature a la vez** (sección "Alcance por feature" de `AGENTS.md`).
+
+- Delega a cada agente **solo la feature en alcance**, nunca el brief completo.
+- Feature en alcance actualmente: **F1 — Catálogo de dependencias**. F2, F3 y F4 no están autorizadas.
+- Cuando delegues, indica explícitamente qué feature se implementa y cuáles quedan prohibidas, aunque el agente ya las conozca por el brief.
+- No autorices ni aceptes trabajo de una feature que no está en alcance, aunque haya sido entregado. Devuélvelo al agente responsable con la indicación de retirarlo.
+- Mantén el estado de avance por feature en la tabla de `AGENTS.md`.
+- No abras la siguiente feature hasta que la actual esté verificada y se solicite explícitamente.
+
 # Contexto obligatorio
 
 Antes de coordinar un trabajo:

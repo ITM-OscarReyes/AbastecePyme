@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import cytoscape from 'cytoscape';
 import type { Core, NodeSingular } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import type { Elemento, Dependencia } from '../types';
-import { Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut, EyeOff, Layers } from 'lucide-react';
+import { Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut, Layers } from 'lucide-react';
 
 try {
   cytoscape.use(dagre);
@@ -15,20 +16,14 @@ interface GraphCanvasProps {
   elementos: Elemento[];
   dependencias: Dependencia[];
   nodoSeleccionadoId?: string | null;
-  nodosAfectadosIds?: string[];
-  nodosCicloIds?: string[];
   onSelectNode?: (nodoId: string | null) => void;
-  onLimpiarResaltados?: () => void;
 }
 
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   elementos,
   dependencias,
   nodoSeleccionadoId,
-  nodosAfectadosIds = [],
-  nodosCicloIds = [],
-  onSelectNode,
-  onLimpiarResaltados
+  onSelectNode
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -41,6 +36,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const cyNodes = elementos.map(e => {
       let colorFondo = '#1e3a8a'; // Azul cobalto (PROVEEDOR)
       let colorBorde = '#60a5fa';
+      let borderWidth = 2;
       const icono = e.tipo === 'PROVEEDOR' ? '🏢' : e.tipo === 'INSUMO' ? '📦' : e.tipo === 'PROCESO' ? '⚙️' : '🏆';
 
       if (e.tipo === 'INSUMO') {
@@ -54,22 +50,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         colorBorde = '#34d399';
       }
 
-      const esAfectado = nodosAfectadosIds.includes(e.id);
-      const esCiclo = nodosCicloIds.includes(e.id);
       const esSeleccionado = nodoSeleccionadoId === e.id;
 
-      let borderWidth = 2;
-
-      if (esAfectado) {
-        colorFondo = '#991b1b'; // Rojo carmesí de alerta
-        colorBorde = '#f87171';
-        borderWidth = 3.5;
-      }
-      if (esCiclo) {
-        colorFondo = '#881337'; // Rosa neón de ciclo
-        colorBorde = '#fb7185';
-        borderWidth = 4;
-      }
       if (esSeleccionado) {
         colorBorde = '#38bdf8';
         borderWidth = 4;
@@ -89,35 +71,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     // Modelado de aristas dirigidas de abastecimiento
     const cyEdges = dependencias.map((d, index) => {
-      const esCadenaAfectada =
-        nodosAfectadosIds.includes(d.origen) && nodosAfectadosIds.includes(d.destino);
-      const esCadenaCiclo =
-        nodosCicloIds.includes(d.origen) && nodosCicloIds.includes(d.destino);
-
-      let lineColor = '#475569';
-      let arrowColor = '#64748b';
-      let width = 2.5;
-
-      if (esCadenaAfectada) {
-        lineColor = '#ef4444';
-        arrowColor = '#ef4444';
-        width = 4;
-      }
-      if (esCadenaCiclo) {
-        lineColor = '#f43f5e';
-        arrowColor = '#f43f5e';
-        width = 4.5;
-      }
-
       return {
         data: {
           id: `e_${d.origen}_${d.destino}_${index}`,
           source: d.origen,
           target: d.destino,
           label: 'habilita',
-          lineColor,
-          arrowColor,
-          width
+          lineColor: '#475569',
+          arrowColor: '#64748b',
+          width: 2.5
         }
       };
     });
@@ -221,11 +183,50 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, nodosCicloIds]);
+  }, [elementos, dependencias, nodoSeleccionadoId]);
 
   const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleFit = () => cyRef.current?.fit(undefined, 45);
+
+  // Al cambiar el tamaño del contenedor Cytoscape no reajusta su viewport: sin esto el grafo
+  // queda escalado con la medida anterior al entrar o salir de pantalla completa.
+  useEffect(() => {
+    cyRef.current?.resize();
+    cyRef.current?.fit(undefined, 45);
+  }, [esPantallaCompleta]);
+
+  // Cytoscape no reajusta su viewport cuando cambia el tamaño del contenedor. Como el lienzo ahora
+  // ocupa el espacio restante del viewport, hay que reajustarlo al redimensionar la ventana; si no,
+  // el grafo queda con la medida anterior.
+  useEffect(() => {
+    const reajustarAlRedimensionar = () => {
+      cyRef.current?.resize();
+      cyRef.current?.fit(undefined, 45);
+    };
+    window.addEventListener('resize', reajustarAlRedimensionar);
+    return () => window.removeEventListener('resize', reajustarAlRedimensionar);
+  }, []);
+
+  useEffect(() => {
+    const salirConEscape = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') {
+        setEsPantallaCompleta(false);
+      }
+    };
+    window.addEventListener('keydown', salirConEscape);
+    return () => window.removeEventListener('keydown', salirConEscape);
+  }, []);
+
+  // Al alternar entre `relative` y `fixed` hay que desactivar la transición de tamaño de
+  // `.glass-card`, o el reajuste de Cytoscape mide un contenedor todavía en movimiento.
+  // En pantalla completa `width`/`height` deben ser `auto`: con `w-full h-full` (`100vw`/`100vh`)
+  // y `inset-4` a la vez, el tamaño queda sobre-constreñido, CSS descarta `right` y `bottom`, y el
+  // panel sobresale 1rem por la derecha y 1rem por abajo.
+  const estiloContenedor: CSSProperties = esPantallaCompleta
+    ? { transition: 'none', width: 'auto', height: 'auto' }
+    : {};
+
   const handleRelayout = () => {
     cyRef.current?.layout({
       name: 'dagre',
@@ -238,10 +239,18 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     } as any).run();
   };
 
+// En pantalla completa el ancho y la altura los fijan los insets: ocupa el viewport menos el
+  // margen, sin desbordar. En modo normal el lienzo se estira al alto disponible y puede encogerse
+  // (`min-h-0`), en vez de imponer una altura fija que empujaría el borde inferior fuera del viewport.
+  const clasePosicion = esPantallaCompleta
+    ? 'fixed inset-4 z-50 shadow-2xl border-sky-500/50'
+    : 'relative w-full h-full min-h-0';
+
   return (
-    <div className={`relative w-full h-full rounded-2xl overflow-hidden glass-card transition-all duration-300 ${
-      esPantallaCompleta ? 'fixed inset-4 z-50 shadow-2xl border-sky-500/50' : 'min-h-[520px]'
-    }`}>
+    <div
+      style={estiloContenedor}
+      className={`rounded-2xl overflow-hidden glass-card ${clasePosicion}`}
+    >
       {/* Fondo Blueprint */}
       <div ref={containerRef} className="w-full h-full absolute inset-0 graph-canvas-bg" />
 
@@ -263,29 +272,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           <span className="w-3 h-3 rounded-md bg-emerald-600 border border-emerald-400 inline-block shadow-sm"></span>
           <span className="text-slate-300 font-semibold text-[11px]">Producto</span>
         </div>
-
-        {nodosAfectadosIds.length > 0 && (
-          <div className="flex items-center gap-2 border-l border-slate-700 pl-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block"></span>
-            <span className="text-red-400 font-bold text-[11px]">Impacto Activo ({nodosAfectadosIds.length})</span>
-            {onLimpiarResaltados && (
-              <button
-                onClick={onLimpiarResaltados}
-                className="ml-1 p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded-md text-[10px] flex items-center gap-1 transition-colors"
-                title="Limpiar Resaltado"
-              >
-                <EyeOff size={12} /> Limpiar
-              </button>
-            )}
-          </div>
-        )}
-
-        {nodosCicloIds.length > 0 && (
-          <div className="flex items-center gap-1.5 border-l border-slate-700 pl-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse inline-block"></span>
-            <span className="text-rose-400 font-bold text-[11px]">Ciclo Circular ({nodosCicloIds.length})</span>
-          </div>
-        )}
       </div>
 
       {/* Controles de Vista y Pantalla Completa */}

@@ -50,6 +50,7 @@ Identificar:
 - pruebas insuficientes;
 - documentación desactualizada;
 - contradicciones;
+- violaciones del alcance por feature: implementación, especificación o datos de demostración de una feature que no está autorizada;
 - violaciones de restricciones técnicas;
 - violaciones de Clean Architecture, SOLID, Clean Code, nomenclatura o separación de responsabilidades, incluida la modificación de funcionalidades existentes sin razón justificada;
 - problemas de trazabilidad.

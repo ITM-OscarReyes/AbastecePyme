@@ -8,8 +8,6 @@ import type {
   RespuestaColeccionDependencias,
   RespuestaColeccionElementos,
   RespuestaGrafo,
-  ResultadoImpacto,
-  ResultadoOrden,
   TipoElemento
 } from '../types';
 
@@ -73,104 +71,5 @@ export const apiService = {
   async crearDependencia(dto: CrearDependenciaDto): Promise<Dependencia> {
     const { data } = await apiClient.post<Dependencia>('/dependencias', dto);
     return data;
-  },
-
-  // F2: Análisis de Impacto (Cliente/Servidor)
-  calcularImpacto(elementoId: string, grafo: RespuestaGrafo): ResultadoImpacto {
-    const visitados = new Set<string>();
-    const cola: string[] = [elementoId];
-    
-    // Grafo dirigido: origen habilita destino.
-    // Si falla 'origen', se ven afectados los 'destino' directos e indirectos.
-    const mapaAdyacencia = new Map<string, string[]>();
-    grafo.dependencias.forEach(dep => {
-      if (!mapaAdyacencia.has(dep.origen)) {
-        mapaAdyacencia.set(dep.origen, []);
-      }
-      mapaAdyacencia.get(dep.origen)!.push(dep.destino);
-    });
-
-    while (cola.length > 0) {
-      const actual = cola.shift()!;
-      const vecinos = mapaAdyacencia.get(actual) || [];
-      for (const vecino of vecinos) {
-        if (!visitados.has(vecino)) {
-          visitados.add(vecino);
-          cola.push(vecino);
-        }
-      }
-    }
-
-    const elementosAfectados = grafo.elementos.filter(e => visitados.has(e.id));
-    return {
-      elementoId,
-      elementosAfectados,
-      totalAfectados: elementosAfectados.length
-    };
-  },
-
-  // F3: Orden Topológico & Detección de Ciclos
-  calcularOrdenYDetectarCiclos(grafo: RespuestaGrafo): ResultadoOrden {
-    const inDegree = new Map<string, number>();
-    const adj = new Map<string, string[]>();
-
-    grafo.elementos.forEach(e => {
-      inDegree.set(e.id, 0);
-      adj.set(e.id, []);
-    });
-
-    grafo.dependencias.forEach(dep => {
-      if (adj.has(dep.origen)) {
-        adj.get(dep.origen)!.push(dep.destino);
-      }
-      if (inDegree.has(dep.destino)) {
-        inDegree.set(dep.destino, (inDegree.get(dep.destino) || 0) + 1);
-      }
-    });
-
-    const cola: string[] = [];
-    inDegree.forEach((degree, id) => {
-      if (degree === 0) {
-        cola.push(id);
-      }
-    });
-
-    const ordenIds: string[] = [];
-    while (cola.length > 0) {
-      const actual = cola.shift()!;
-      ordenIds.push(actual);
-
-      const vecinos = adj.get(actual) || [];
-      vecinos.forEach(vecino => {
-        const actualDegree = inDegree.get(vecino) || 0;
-        inDegree.set(vecino, actualDegree - 1);
-        if (actualDegree - 1 === 0) {
-          cola.push(vecino);
-        }
-      });
-    }
-
-    const esAciclico = ordenIds.length === grafo.elementos.length;
-
-    if (esAciclico) {
-      const mapaElementos = new Map(grafo.elementos.map(e => [e.id, e]));
-      const ordenTrabajo = ordenIds.map(id => mapaElementos.get(id)!).filter(Boolean);
-      return {
-        esAciclico: true,
-        ordenTrabajo,
-        cicloDetectado: null
-      };
-    } else {
-      // Identificar nodos en el ciclo
-      const nodosEnCiclo = Array.from(inDegree.entries())
-        .filter(([_, degree]) => degree > 0)
-        .map(([id]) => id);
-
-      return {
-        esAciclico: false,
-        ordenTrabajo: [],
-        cicloDetectado: nodosEnCiclo
-      };
-    }
   }
 };

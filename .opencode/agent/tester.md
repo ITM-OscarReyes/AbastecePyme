@@ -56,15 +56,17 @@ Antes de verificar una funcionalidad:
 
 Comprueba que la implementación cumple los requisitos y criterios de aceptación aplicables.
 
-Verifica especialmente F1, F2, F3 y F4:
+Verifica **únicamente la feature que esté en alcance**, según la sección "Alcance por feature" de `AGENTS.md`. Feature en alcance actualmente: F1 — Catálogo de dependencias.
 
-- catálogo de dependencias;
-- análisis de impacto;
-- orden de producción;
-- detección de ciclos;
-- visualización de dependencias;
-- integración del dashboard;
+Para F1 verifica:
+
+- catálogo de elementos: alta, listado y consulta por id;
+- catálogo de dependencias: alta y listado;
+- validación de datos mal formados, duplicados e inexistentes;
+- visualización de la red con datos del backend;
 - integración real entre frontend y backend.
+
+F2, F3 y F4 no están autorizadas: no las verifiques, no declares PASS/FAIL sobre ellas y no reclames como defecto que no estén implementadas. Si una feature fuera de alcance aparece implementada, es un hallazgo de alcance, no una prueba fallida.
 
 ## 2. Pruebas funcionales
 
@@ -82,12 +84,12 @@ Verifica como mínimo, cuando sean aplicables:
 - elementos sin dependencias;
 - cadenas de dependencias;
 - múltiples dependencias;
-- ciclos;
-- configuraciones sin orden de producción válido;
 - ausencia de resultados falsos;
 - respuestas y errores de API;
 - integración frontend/backend;
 - regresiones de funcionalidades anteriores.
+
+Verifica ciclos y configuraciones sin orden de producción válido únicamente cuando la feature en alcance los incluya.
 
 No asumas que un caso funciona porque el código parece correcto. Cuando sea posible, ejecútalo y conserva evidencia.
 
@@ -116,10 +118,10 @@ Comprueba que:
 - los datos mostrados provienen del backend;
 - no existen datos falsos utilizados para aparentar funcionamiento;
 - los estados de carga, vacío y error se manejan correctamente;
-- los resultados de impacto provienen del backend;
-- el orden de producción proviene del backend;
-- los ciclos y errores se muestran correctamente;
+- el frontend no calcula resultados de negocio ni algoritmos del grafo;
 - la visualización representa los resultados reales del sistema.
+
+Cuando la feature en alcance incluya impacto, orden o ciclos, comprueba además que esos resultados provienen del backend.
 
 El frontend no debe implementar una versión alternativa de los algoritmos de grafos.
 
