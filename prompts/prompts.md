@@ -100,3 +100,38 @@ REQUISITOS ESTRICTOS DE ALCANCE:
 9. No declares PASS/FAIL; la verificación la hace `tester`.
 
 Al finalizar, reporta qué components creaste, qué endpoints consumes, qué decisiones registraste en `docs/decisions/frontend-builder.md` y qué necesita verificación de `tester`.
+
+## 05 — Verificación de F1 con el agente tester
+
+Hola, por favor con el agente tester verifica **únicamente la feature 1 (F1 — Catálogo de dependencias)** de extremo a extremo, tal como quedó implementada. Así mismo registra la documentación del prompt en este archivo `prompts.md` y deja las decisiones de estrategia de verificación en `docs/decisions/tester.md`.
+
+REQUISITOS ESTRICTOS:
+
+1. **No modifiques código de producción.** No corrijas backend ni frontend, aunque encuentres defectos. Es tu función reportarlos con evidencia reproducible; la corrección corresponde al agente responsable.
+2. **Solo F1.** No verifiques, no sugieras y no implementes F2, F3 ni F4.
+3. **Eres el único autorizado a declarar PASS/FAIL.** Ningún otro agente lo hace.
+4. **Verifica con ejecuciones reales, no por inspección.** Ningún criterio se declara PASS sin evidencia obtenida ejecutando el backend y el frontend.
+5. **Un criterio sin evidencia no es PASS.** Si el entorno impide verificarlo, decláralo BLOCKED indicando qué falta.
+6. **Un FAIL debe traer evidencia mínima reproducible:** criterio, caso, esperado, obtenido, evidencia y archivo relacionado.
+7. Respeta Clean Architecture, SOLID y Clean Code también en el código de pruebas que escribas.
+
+Antes de empezar:
+
+- Lee `AGENTS.md`, `docs/brief.md`, `docs/requirements.md`, `docs/acceptance-criteria.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/graph-model.md`.
+- Lee `docs/decisions/tester.md` si existe, para respetar el formato del registro ya establecido.
+- Revisa la implementación real de backend y frontend antes de escribir las pruebas.
+
+ENTREGABLES:
+
+1. **Ejecución real de extremo a extremo.** Levanta el backend con Uvicorn y el frontend, y ejercita la API y la interfaz contra los procesos reales. Nada de dobles de red que simulen respuestas.
+2. **Cobertura de todos los casos límite** de `docs/acceptance-criteria.md`: datos válidos, duplicados, mal formados, pesos inválidos, elementos inexistentes, relaciones inexistentes, grafo vacío, elementos sin dependencias, cadenas de dependencias, ciclos y dependencias inversas.
+3. **Verificación de los errores**, no solo del camino feliz: cada código de error del contrato, sus campos, sus mensajes y que el catálogo queda intacto tras un rechazo.
+4. **Verificación de la interfaz mínima**, incluida la propagatedión de errores y la visualizaicón de la red respetando la dirección definida. Si el render requiere un navegador real, usa uno.
+5. **Verificación del estado vacío** con el catálogo sin elementos, no solo con los datos de demostración.
+6. **Criterios de arquitectura como pruebas ejecutables.** Los criterios que piden una revisión (Clean Architecture, separación de responsabilidades, no duplicar reglas de negocio, nomenclatura) deben poder fallar de forma reproducible ante una regresión; una revisión manual no basta.
+7. **Rendimiento y determinismo:** el criterio de volumen de datos y la estabilidad de lecturas repetidas.
+8. **Revisión de la documentación** frente a la implementación: reporta contradicciones entre documentos, sin corregir la especificación por tu cuenta.
+9. Registra en `docs/decisions/tester.md` las decisiones de estrategia de verificación.
+10. Informe final con el conteo PASS/FAIL/BLOCKED, una matriz criterio → resultado → evidencia y una conclusión.
+
+Al finalizar, devuelve un resumen conciso con: (1) archivos de prueba creados, (2) conteo PASS/FAIL/BLOCKED, (3) matriz criterio → resultado → evidencia, (4) hallazgos con evidencia reproducible, y (5) conclusión explícita de F1.
