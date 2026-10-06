@@ -145,8 +145,8 @@ export const App: React.FC = () => {
 
           <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Motor Gráfico</span>
-              <p className="text-sm font-extrabold text-sky-400 mt-1">Cytoscape GPU + Dagre</p>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tipo de Grafo</span>
+              <p className="text-sm font-extrabold text-sky-400 mt-1">Dirigido · Origen → Destino</p>
             </div>
             <div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20">
               <Sparkles size={22} />

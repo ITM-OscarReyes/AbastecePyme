@@ -29,12 +29,11 @@ export const ModalCrearDependencia: React.FC<ModalCrearDependenciaProps> = ({
     e.preventDefault();
     setErrorLocal(null);
 
+    // La dirección, la existencia de los extremos y las relaciones inválidas se
+    // deciden en el backend; aquí solo se envía y se muestra el error recibido
+    // (docs/architecture.md, sección 2).
     if (!origen || !destino) {
       setErrorLocal('Debes seleccionar tanto el elemento de origen como el de destino.');
-      return;
-    }
-    if (origen === destino) {
-      setErrorLocal('El elemento origen y destino no pueden ser iguales (no se permiten autoreferencias).');
       return;
     }
 
@@ -111,7 +110,7 @@ export const ModalCrearDependencia: React.FC<ModalCrearDependenciaProps> = ({
               >
                 <option value="">Selecciona Destino...</option>
                 {elementos.map(e => (
-                  <option key={e.id} value={e.id} disabled={e.id === origen}>
+                  <option key={e.id} value={e.id}>
                     [{e.tipo}] {e.nombre} ({e.id})
                   </option>
                 ))}

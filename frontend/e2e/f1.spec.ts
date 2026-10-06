@@ -6,7 +6,8 @@
  * de red: cada aserción compara la pantalla con lo que devuelve la API.
  *
  * AC-F1-14c (dirección de la flecha) y AC-F1-14d (sin datos embebidos) se
- * comprueban en `direccion.test.tsx`; aquí se cubre la interacción visible.
+ * comprueban en las líneas 74 y 147 de este mismo archivo; aquí se cubre la
+ * interacción visible.
  */
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -25,7 +26,7 @@ const leerGrafo = async () => (await fetch(`${API}/api/v1/grafo`)).json() as Pro
 
 async function abrirAplicacion(page: Page): Promise<void> {
   await page.goto('/');
-  await expect(page.getByText('API FastAPI Conectada')).toBeVisible();
+  await expect(page.getByText('API Conectada')).toBeVisible();
 }
 
 async function crearElemento(

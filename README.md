@@ -18,6 +18,9 @@ reales.
 | [`docs/acceptance-criteria.md`](docs/acceptance-criteria.md) | Criterios de aceptación y casos límite |
 | [`docs/decisions/`](docs/decisions) | Registro de decisiones por agente |
 
+Los entregables de la feature viven aparte, en [`docs/entrega/`](docs/entrega): la bitácora de IA,
+la traza manual del ejemplo pequeño y la salida de la última ejecución del script de aceptación.
+
 ## Estado del proyecto
 
 Implementada únicamente la **F1 — Catálogo de dependencias**: alta y consulta de elementos y
@@ -87,6 +90,38 @@ El proxy de Vite (`frontend/vite.config.ts`) redirige las peticiones que empieza
 
 1. Abrir `http://localhost:3000` y comprobar que la red se dibuja con los datos que trae el backend.
 2. Abrir `http://127.0.0.1:8000/docs` y ejecutar `GET /api/v1/grafo`.
+
+### 4. Script de aceptación de F1
+
+El script de aceptación consume la API REST real con datos de prueba, sin frameworks añadidos.
+Necesita el backend recién arrancado con el catálogo de demostración intacto.
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe tests\verificacion_http.py http://127.0.0.1:8000
+```
+
+Imprime cada escenario con lo esperado, lo obtenido y si pasó o falló, y cierra con el recuento.
+Cubre un escenario normal de negocio, un ciclo, elementos inexistentes, una ruta inexistente,
+consultas sin datos y datos mal formados o repetidos. Sale con código `1` si algún escenario falla.
+
+La salida de la última ejecución queda guardada en
+`docs/entrega/salida-aceptacion-f1.txt`. Para regenerarla,
+con el backend recién arrancado:
+
+```powershell
+cd backend
+cmd /c ".venv\Scripts\python.exe -X utf8 tests\verificacion_http.py http://127.0.0.1:8000 > ..\docs\entrega\salida-aceptacion-f1.txt"
+```
+
+El resto de suites de F1:
+
+```powershell
+cd backend   ; .\.venv\Scripts\python.exe -m pytest      # 117 pruebas
+cd frontend  ; npm run test                              # 22 pruebas
+              npm run test:e2e                           # 11 pruebas (backend en 8000)
+              npm run test:e2e:vacio                     #  5 pruebas (catálogo vacío)
+```
 
 ## Otros comandos del frontend
 

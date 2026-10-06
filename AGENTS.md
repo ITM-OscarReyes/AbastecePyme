@@ -42,7 +42,7 @@ El proyecto se trabaja **una feature a la vez**. La feature en alcance es la ún
 
 | Feature | Especificación | Backend | Frontend | Verificación |
 | ------- | -------------- | ------- | -------- | ------------ |
-| F1 | Documentada en `docs/` | Implementado | Implementado | Pendiente de `tester` |
+| F1 | Documentada en `docs/` | Implementado | Implementado | Verificada por `tester` |
 | F2 | No especificada | No implementada | No implementada | Fuera de alcance |
 | F3 | No especificada | No implementada | No implementada | Fuera de alcance |
 | F4 | No especificada | No implementada | No implementada | Fuera de alcance |

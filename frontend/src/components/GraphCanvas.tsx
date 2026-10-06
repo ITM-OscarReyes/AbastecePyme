@@ -12,6 +12,22 @@ try {
   // Plugin ya cargado
 }
 
+/**
+ * Encuadra los elementos contra la esquina superior izquierda del lienzo, en vez de centrarlos.
+ * `fit` deja la red en la mitad del área de vista; al cargar la página debe aparecer en el
+ * principio. Si el grafo es más grande que el lienzo, la vista queda anclada en su esquina
+ * superior izquierda y el resto se alcanza desplazándose.
+ */
+const encuadrarAlInicio = (cy: Core, padding: number): void => {
+  if (cy.width() <= 0 || cy.height() <= 0 || cy.elements().length === 0) return;
+
+  cy.fit(undefined, padding);
+
+  const caja = cy.elements().boundingBox();
+  const zoom = cy.zoom();
+  cy.pan({ x: padding - caja.x1 * zoom, y: padding - caja.y1 * zoom });
+};
+
 interface GraphCanvasProps {
   elementos: Elemento[];
   dependencias: Dependencia[];
@@ -170,9 +186,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       }
     });
 
-    // Ajuste inicial limpio
+    // Ajuste inicial contra la esquina superior izquierda del lienzo
     cy.ready(() => {
-      cy.fit(undefined, 40);
+      encuadrarAlInicio(cy, 40);
     });
 
     cyRef.current = cy;
@@ -187,13 +203,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
   const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
-  const handleFit = () => cyRef.current?.fit(undefined, 45);
+  const handleFit = () => {
+    if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
+  };
 
   // Al cambiar el tamaño del contenedor Cytoscape no reajusta su viewport: sin esto el grafo
   // queda escalado con la medida anterior al entrar o salir de pantalla completa.
   useEffect(() => {
     cyRef.current?.resize();
-    cyRef.current?.fit(undefined, 45);
+    if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
   }, [esPantallaCompleta]);
 
   // Cytoscape no reajusta su viewport cuando cambia el tamaño del contenedor. Como el lienzo ahora
@@ -202,7 +220,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   useEffect(() => {
     const reajustarAlRedimensionar = () => {
       cyRef.current?.resize();
-      cyRef.current?.fit(undefined, 45);
+      if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
     };
     window.addEventListener('resize', reajustarAlRedimensionar);
     return () => window.removeEventListener('resize', reajustarAlRedimensionar);
@@ -292,7 +310,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </button>
         <button
           onClick={handleFit}
-          title="Centrar y Ajustar"
+          title="Ajustar vista"
           className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
         >
           <Layers size={17} />
