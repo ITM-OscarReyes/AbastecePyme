@@ -69,7 +69,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px] font-medium">
               <span className={`w-2 h-2 rounded-full ${apiConectada ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 animate-pulse'}`}></span>
               <span className={apiConectada ? 'text-emerald-400' : 'text-amber-400'}>
-                {apiConectada ? 'API FastAPI Conectada' : 'API Desconectada'}
+                {apiConectada ? 'API Conectada' : 'API Desconectada'}
               </span>
             </div>
 
