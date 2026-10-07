@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Interfaz con catálogo vacío', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('API FastAPI Conectada')).toBeVisible();
+    await expect(page.getByText('API Conectada')).toBeVisible();
   });
 
   test('AC-F1-13 los totales muestran cero sin errores', async ({ page }) => {

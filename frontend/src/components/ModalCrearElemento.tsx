@@ -26,28 +26,15 @@ export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = ({
     e.preventDefault();
     setErrorLocal(null);
 
-    const idNormalizado = id.trim().toUpperCase();
-    const nombreNormalizado = nombre.trim();
-    const descNormalizada = descripcion.trim() || undefined;
-
-    // Validación básica previa
-    const regexId = /^[A-Z0-9][A-Z0-9_-]{2,39}$/;
-    if (!regexId.test(idNormalizado)) {
-      setErrorLocal('El ID debe tener entre 3 y 40 caracteres alfanuméricos en mayúsculas (ej: INS-TORNILLO).');
-      return;
-    }
-    if (nombreNormalizado.length < 3 || nombreNormalizado.length > 80) {
-      setErrorLocal('El nombre debe tener entre 3 y 80 caracteres.');
-      return;
-    }
-
+    // El formulario no decide si el dato es válido: solo lo envía y muestra el
+    // error que devuelve la API (docs/architecture.md, sección 2).
     try {
       setCargando(true);
       await onSubmit({
-        id: idNormalizado,
+        id,
         tipo,
-        nombre: nombreNormalizado,
-        descripcion: descNormalizada
+        nombre,
+        descripcion: descripcion || undefined
       });
       // Limpiar y cerrar
       setId('');
@@ -99,7 +86,7 @@ export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = ({
               type="text"
               placeholder="ej: INS-TORNILLO, PROD-PANEL"
               value={id}
-              onChange={(e) => setId(e.target.value.toUpperCase())}
+              onChange={(e) => setId(e.target.value)}
               required
               className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 transition-all uppercase"
             />

@@ -135,3 +135,23 @@ ENTREGABLES:
 10. Informe final con el conteo PASS/FAIL/BLOCKED, una matriz criterio → resultado → evidencia y una conclusión.
 
 Al finalizar, devuelve un resumen conciso con: (1) archivos de prueba creados, (2) conteo PASS/FAIL/BLOCKED, (3) matriz criterio → resultado → evidencia, (4) hallazgos con evidencia reproducible, y (5) conclusión explícita de F1.
+
+## 06 — Auditoría de F1 con el agente auditor
+
+Hola, por favor con el agente auditor audita **únicamente la feature 1 (F1 — Catálogo de dependencias)** tal como quedó especificada, implementada, verificada y documentada. Registra la documentación del prompt en este archivo `prompts.md` y deja las decisiones derivadas de tus hallazgos en `docs/decisions/auditor.md`.
+
+REQUISITOS ESTRICTOS:
+
+1. **Revisas y reportas; no corriges.** No modifiques código, pruebas ni documentación. Los hallazgos se devuelven a `orchestrator`, que los deriva al agente responsable.
+2. **Solo F1.** F2, F3 y F4 están fuera de alcance: no las especifiques, no las pruebes y no las marques como pendientes ni como fallo.
+3. **No declaras PASS/FAIL.** Esa facultad es exclusiva de `tester`. Tu veredicto es de auditoría: `APTO` o `NO APTO`, con justificación.
+4. **Trazabilidad de extremo a extremo.** Cada `RF-F1` y cada `AC-F1` debe poder seguirse de `docs/brief.md` a la especificación, a la implementación, a la prueba y a la evidencia. Un criterio sin prueba o sin evidencia es un hallazgo.
+5. **Coherencia de la especificación.** Comprueba que `docs/requirements.md`, `docs/graph-model.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/acceptance-criteria.md` no contradigan `docs/brief.md` ni entre sí.
+6. **Contrato y alcance.** Verifica que `backend/app/api/rutas.py` exponga exactamente los seis endpoints de F1, sin endpoints de F2, F3 ni F4, y que no haya contaminación de esas features en código, prompts ni documentación.
+7. **Calidad de código.** Revisa el cumplimiento de `AGENTS.md`: Clean Architecture, SOLID, Clean Code, nomenclatura de Python y TypeScript, sin duplicación de reglas de negocio, sin NetworkX en los cálculos y frontend sin algoritmos propios del grafo.
+8. **Registro de decisiones.** Comprueba que `docs/decisions/*.md` sea coherente entre sí, con los documentos y con el brief. Reporta contradicciones sin reescribir decisiones ya registradas.
+9. **Entrega de F1.** Revisa que la entrega incluya el script de aceptación con escenario, esperado, obtenido y pasó o falló, la bitácora de IA, la traza manual, la salida de aceptación y un README con propósito, instalación, ejecución, endpoints y decisiones de diseño, separando lo que falta y es corregible por un agente de lo que es tarea humana (video, pitch, aportes, coevaluación).
+
+Lee antes `AGENTS.md`, `docs/brief.md`, toda la especificación de `docs/`, los registros de `docs/decisions/` y la implementación de `backend/` y `frontend/`.
+
+Al finalizar, devuelve un informe con: (1) hallazgos con severidad, archivo:lima y la comparación entre lo que dice la fuente de verdad y lo que existe, (2) matriz de trazabilidad RF/AC → especificación → implementación → prueba → evidencia con los faltantes, (3) lista de lo que falta para cerrar F1 separada en corregible por agente y tarea humana, y (4) veredicto de auditoría `APTO` o `NO APTO` con justificación.
