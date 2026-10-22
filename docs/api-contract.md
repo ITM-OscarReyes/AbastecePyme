@@ -1,11 +1,11 @@
-# Contrato de API — AbastecePyme (F1)
+# Contrato de API — AbastecePyme (F1 y F2)
 
-Contrato HTTP de **F1 — Catálogo de dependencias**.
+Contrato HTTP de **F1 — Catálogo de dependencias** y de **F2 — Análisis de impacto**.
 
 - Requisitos: `requirements.md`. Dirección y estructura: `graph-model.md`.
 - Verificación: `acceptance-criteria.md`.
-- Alcance: únicamente los endpoints de F1. Los endpoints de impacto (F2), de orden de producción y
-  ciclos (F3) y de tablero (F4) **no** se definen aquí.
+- Alcance: las secciones 1 a 7 son de F1 y la sección 8 es de F2. Los endpoints de orden de
+  producción y ciclos (F3) y de tablero (F4) **no** se definen aquí.
 
 Los ejemplos en JSON son ilustrativos del formato esperado; no son archivos de datos del proyecto.
 
@@ -79,7 +79,7 @@ La lectura es: «para producir el panel `PROD-PANEL` necesito el insumo `INS-TOR
 | `GET` | `/api/v1/grafo` | Obtener la representación del grafo del catálogo | RF-F1-10, RF-F1-15 |
 
 No hay endpoints de modificación ni de eliminación en F1 (ver `requirements.md`, sección 8).
-Cualquier otra ruta del API responde `404` con `ERR-09`.
+Cualquier otra ruta del API que no esté definida en este documento responde `404` con `ERR-09`.
 
 ### 3.1 `POST /api/v1/elementos`
 
@@ -384,3 +384,104 @@ parte del contrato y no se especifica aquí: pertenece a las features que lo con
 | `GET /grafo` | RF-F1-10, RF-F1-15 | AC-F1-10, AC-F1-15 | `graph-model.md`, sección 3 |
 
 Las decisiones que sustentan este contrato están registradas en `docs/decisions/analyst.md`.
+
+
+## 8. Contrato de API — F2: Análisis de impacto
+
+**Alcance:** únicamente F2. No se definen endpoints de F3 ni de F4. Los endpoints de F2 no están
+implementados todavía: este apartado fija el contrato que debe cumplir la implementación.
+
+- Requisitos: `requirements.md` §9. Dirección y estructura: `graph-model.md` §8.
+- Verificación: `acceptance-criteria.md` §7.
+
+### 8.1 Principios
+
+- Respeta la dirección `origen habilita destino` (sentido hacia adelante para el impacto).
+- Diferencia explícita: elemento inexistente / elemento existente sin dependencias o afectados /
+  elemento que afecta una cadena.
+- Elementos visitados de manera comprensible, cada uno una sola vez.
+- Recorrido propio (sin NetworkX para el cálculo).
+- Errores explícitos, sin convertir un fallo en un resultado válido o vacío engañoso.
+- No incluye información de ciclos ni de orden de preparación: eso es F3.
+
+### 8.2 Recurso `Impacto`
+
+| Campo | Tipo | Obligatorio en respuesta | Reglas |
+| ----- | ---- | ------------------------ | ------ |
+| `elemento` | objeto | Sí | Elemento consultado: `id`, `tipo` y `nombre`. |
+| `afectados` | lista de objetos | Sí | Elementos alcanzables siguiendo aristas hacia adelante. Cada uno con `id`, `tipo` y `nombre`. |
+| `total` | número | Sí | Cantidad de elementos de `afectados`. |
+
+El contenido de `afectados` no se filtra por tipo: un proveedor, un insumo, un proceso o un producto
+alcanzados son todos afectados (`RN-F2-02`).
+
+Ejemplo de respuesta `200`:
+
+```json
+{
+  "elemento": { "id": "INS-BARRA", "tipo": "INSUMO", "nombre": "Barra de acero" },
+  "afectados": [
+    { "id": "PROD-BANCO", "tipo": "PRODUCTO", "nombre": "Banco de montaje" },
+    { "id": "PROD-PANEL", "tipo": "PRODUCTO", "nombre": "Panel de montaje" },
+    { "id": "PROC-CORTE", "tipo": "PROCESO", "nombre": "Corte de panel" }
+  ],
+  "total": 3
+}
+```
+
+Ejemplo de respuesta `200` cuando el elemento no habilita a nadie:
+
+```json
+{
+  "elemento": { "id": "PROD-BANCO", "tipo": "PRODUCTO", "nombre": "Banco de montaje" },
+  "afectados": [],
+  "total": 0
+}
+```
+
+El formato de `elemento` y de cada elemento de `afectados` es el de `Elemento` de la sección 2.1.
+
+### 8.3 `GET /api/v1/impacto/{id}`
+
+Devuelve el impacto de la indisponibilidad del elemento `{id}`: los elementos que se ven afectados
+porque dependen de él, directa o indirectamente.
+
+Parámetro de ruta:
+
+| Parámetro | Obligatorio | Regla |
+| --------- | ----------- | ----- |
+| `id` | Sí | Identificador de elemento. Se normaliza a mayúsculas y debe cumplir el patrón de la sección 4.1. |
+
+Respuestas:
+
+| Código | Cuerpo | Cuándo |
+| ------ | ------ | ------ |
+| `200` | `Impacto` | El elemento existe. `afectados` puede estar vacía, con `total: 0`, cuando el elemento no habilita a nadie. |
+| `404` | Error `ERR-02` | El `id` cumple el formato pero no existe en el catálogo. |
+| `422` | Error `ERR-05` | El `id` de la ruta no cumple el formato de identificador. |
+| `404` | Error `ERR-09` | La ruta solicitada no existe en la API. |
+
+El endpoint no admite cuerpo ni parámetros de consulta.
+
+### 8.4 Reglas de la respuesta
+
+1. El conjunto de `afectados` es exactamente el conjunto de elementos alcanzables desde el elemento
+   consultado siguiendo aristas `origen habilita destino` (`RN-F2-02`). El grafo no se invierte.
+2. Los elementos que habilitan al elemento consultado no forman parte de `afectados`: son requisitos
+   de ese elemento, no consecuencias de su indisponibilidad.
+3. Cada alcanzable aparece una sola vez, aunque sea alcanzable por varios caminos.
+4. Con ciclos en el grafo, el recorrido termina y devuelve los alcanzables sin repetir.
+5. `afectados` se ordena por `id` ascendente, de forma estable y determinista.
+6. Un elemento inexistente nunca produce `200` con `afectados` vacía: produce `404` `ERR-02`. Un
+   `200` con `total: 0` corresponde a un elemento existente que no habilita a nadie.
+7. La respuesta no incluye ningún campo de veredicto de ciclo ni de orden de preparación.
+8. Una respuesta de error no contiene `elemento`, `afectados` ni `total`, como el resto de la API.
+
+### 8.5 Trazabilidad del contrato
+
+| Endpoint | Requisitos | Criterios de aceptación | Decisión de modelo |
+| -------- | ---------- | ----------------------- | ------------------ |
+| `GET /impacto/{id}` | RF-F2-01 a RF-F2-09, RNF-F2-01 a RNF-F2-03 | AC-F2-01 a AC-F2-15 | `graph-model.md` §8 |
+
+El significado de «alcanzar» que da origen a este contrato está documentado en `graph-model.md` §8 y
+en el `README.md` del repositorio (`RF-F2-09`).

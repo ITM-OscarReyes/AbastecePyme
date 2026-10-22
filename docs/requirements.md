@@ -3,9 +3,10 @@
 Especificación técnica derivada de `docs/brief.md`.
 
 - **Fuente de verdad:** `docs/brief.md`.
-- **Alcance de este documento:** únicamente **F1 — Catálogo de dependencias**.
-- **Features fuera de este documento:** F2, F3 y F4 **no** se especifican aquí. Solo se mencionan como
-  consumidores del modelo de datos cuando F1 deja una consecuencia que debe respetarse. Su
+- **Alcance de este documento:** **F1 — Catálogo de dependencias** (secciones 1 a 8) y **F2 — Análisis
+  de impacto** (sección 9).
+- **Features fuera de este documento:** F3 y F4 **no** se especifican aquí. Solo se mencionan como
+  consumidores del modelo de datos cuando F1 o F2 dejan una consecuencia que debe respetarse. Su
   especificación requerirá una ampliación posterior de este documento por `analyst`.
 - **Documentos relacionados:** `graph-model.md` (dirección y representación del grafo),
   `api-contract.md` (contrato HTTP), `architecture.md` (capas y calidad), `acceptance-criteria.md`
@@ -209,7 +210,7 @@ No se inventan reglas de negocio. Cada punto queda explícito y requiere coordin
 Los siguientes puntos se mencionan para evitar que se implementen dentro de F1. Su especificación
 corresponde a otras features y a decisiones posteriores de `analyst`.
 
-- Recorridos de grafo, impacto y elementos alcanzados: F2.
+- Recorridos de grafo, impacto y elementos alcanzados: F2 (especificado en la sección 9 de este documento).
 - Detección de ciclos, orden topológico y orden de preparación: F3.
 - Tablero integrado que reúna catálogo, impacto, orden de producción y alerta de ciclos: F4. La
   visualización de la red que F1 sí exige (RF-F1-14) es la representación del catálogo, no un tablero
@@ -218,5 +219,135 @@ corresponde a otras features y a decisiones posteriores de `analyst`.
   producto según `docs/brief.md` y `AGENTS.md`.
 - Modificación, actualización o eliminación de elementos y dependencias: el brief de F1 solo describe
   creación y consulta. Si el cliente necesita edición o borrado, es un requisito nuevo que debe
-  especificarse antes de implementarse.
+  especificarse antes de implementarse (ver sección 9.7).
 - Datos de ejemplo fijados dentro del frontend: prohibidos por RF-F1-14.
+
+
+## 9. Requisitos técnicos — F2: Análisis de impacto
+
+Especificación técnica derivada de `docs/brief.md` (Feature 2). Únicamente F2. F3 y F4 fuera de alcance.
+
+- **Fuente de verdad:** `docs/brief.md`.
+- **Alcance:** consulta de impacto respetando la dirección definida del grafo; diferenciación de casos (elemento inexistente, elemento existente sin dependencias, elemento que afecta o depende de una cadena); recorrido propio; documentación del significado de «alcanzar».
+- **Sin interfaz:** el brief de F2 no pide interfaz. La consulta se expone por API; la visualización del impacto en un tablero pertenece a F4 («integrar catálogo, impacto y orden/alerta de ciclo»).
+- **Documentos relacionados:** `graph-model.md` §8 (dirección y representación), `api-contract.md` §8 (contrato HTTP de F2), `acceptance-criteria.md` §7 (criterios de F2), `architecture.md` §7 (dónde vive el recorrido).
+
+### 9.1 Convenciones
+| Prefijo | Significado |
+| ------- | ----------- |
+| `RF-F2-nn` | Requisito funcional de F2 |
+| `RNF-F2-nn` | Requisito no funcional de F2 |
+| `RN-F2-nn` | Regla de negocio o semántica de F2 |
+| `AC-F2-nn` | Criterio de aceptación de F2 |
+| `AMB-F2-nn` | Ambigüedad o decisión pendiente de F2 |
+
+F2 no introduce códigos de error nuevos: reutiliza `ERR-02` (`ELEMENTO_NO_ENCONTRADO`, `404`) y
+`ERR-05` (`IDENTIFICADOR_INVALIDO`, `422`) del catálogo de `api-contract.md` §5.
+
+### 9.2 Necesidades de negocio de F2
+| Necesidad | Origen |
+| --------- | ------ |
+| N9. Ante indisponibilidad de un elemento, identificar qué productos o procesos quedan afectados | brief F2, valor de negocio |
+| N10. Consultar impacto desde un proveedor/insumo o hacia un producto, según su dirección definida | brief F2, «Debe permitir», primer punto |
+| N11. Usar un recorrido propio y devolver elementos visitados de manera comprensible | brief F2, «Debe permitir», segundo punto |
+| N12. Diferenciar entre elemento inexistente, elemento sin dependencias y elemento que afecta una cadena | brief F2, «Debe permitir», tercer punto |
+| N13. Explicar en el README qué significa «alcanzar» en este negocio | brief F2, «Debe permitir», cuarto punto |
+| N14. Aplicar reglas de dominio sobre elementos dependientes, sin deshacer la dirección definida | brief F2, «Pistas, no receta» |
+
+N9, N10, N12 y N13 proceden literalmente de los puntos de «Debe permitir» y del valor de negocio de
+F2. N14 traduce la instrucción del brief de no «arreglar una dirección confusa con condicionales»:
+la dirección es la del modelo y F2 no la modifica.
+
+### 9.3 Modelo y grafo relevantes para F2 (dirección)
+Con base en `graph-model.md` (decisión de F1, que F2 no modifica):
+- Grafo dirigido `G = (V, E)` con arista `origen ──habilita──▶ destino` que significa: «para producir o preparar el destino, necesito que el origen esté disponible».
+- **Alcanzar:** existe un camino dirigido desde un elemento hasta otro siguiendo aristas en la dirección definida.
+- **Impacto por indisponibilidad:** si un elemento `X` deja de estar disponible, se ven afectados todos los elementos `Y` tales que exista un camino dirigido `X → … → Y`, es decir, los alcanzables desde `X` siguiendo aristas hacia adelante.
+- **Predecesores no afectados:** los elementos que habilitan a `X` son requisitos de `X`, no consecuencias de su indisponibilidad. No forman parte del conjunto de afectados.
+- F1 no calcula recorridos; F2 los calcula con un recorrido propio del proyecto.
+- F2 no invierte el grafo, no inventa reglas por tipo de elemento y no modifica el modelo.
+
+### 9.4 Reglas de negocio de F2
+| ID | Regla | Necesidad | Criterio |
+| -- | ----- | --------- | -------- |
+| RN-F2-01 | El análisis de impacto se realiza respetando estrictamente la dirección `origen habilita destino` definida en `graph-model.md`. No se invierte el grafo para forzar el recorrido. | N10 | AC-F2-01, AC-F2-01b |
+| RN-F2-02 | «Alcanzar» significa existencia de camino dirigido desde el elemento consultado siguiendo aristas hacia adelante. El conjunto de afectados es exactamente el conjunto de alcanzables hacia adelante, sin filtrar por tipo de elemento. | N9, N11, N13 | AC-F2-02 |
+| RN-F2-03 | Si el elemento consultado no existe en el catálogo, la respuesta lo distingue como «elemento inexistente» con el error `404` `ERR-02`. No devuelve lista vacía ni resultado válido. | N12 | AC-F2-03 |
+| RN-F2-04 | Si el elemento consultado existe pero no alcanza ningún otro elemento, la respuesta lo distingue como «elemento existente sin dependencias/afectados»: `200` con el elemento consultado identificado y total cero. No se confunde con «elemento inexistente». | N12 | AC-F2-04 |
+| RN-F2-05 | Si el elemento consultado afecta una cadena, se devuelven los elementos alcanzados de manera comprensible, cada uno una sola vez, y se puede identificar la cadena de afectados. | N9, N11, N12 | AC-F2-05, AC-F2-05b |
+| RN-F2-06 | El recorrido es propio del proyecto: NetworkX no se usa para recorridos, caminos ni impacto. Solo se permite NetworkX para visualizar resultados ya calculados. | Restricción técnica | AC-F2-06, AC-F2-06b |
+| RN-F2-07 | Un elemento es dependiente si existe al menos una arista entrante (es destino de alguna arista). El análisis de impacto opera hacia adelante desde la causa y no invierte esa definición. | N14 | AC-F2-07 |
+| RN-F2-08 | Solo datos sintéticos y coherentes con el dominio. Los errores no se ocultan ni se convierten en resultados aparentemente válidos. | Restricciones | AC-F2-08 |
+| RN-F2-09 | Un identificador mal formado y un elemento inexistente son situaciones distintas: el primero se responde `422` `ERR-05`, el segundo `404` `ERR-02`. | N12 | AC-F2-11 |
+| RN-F2-10 | Con el catálogo vacío, toda consulta de impacto responde como elemento inexistente. Un total cero solo puede corresponder a un elemento existente que no alcanza a nadie. | N12 | AC-F2-12 |
+| RN-F2-11 | El resultado es determinista: el mismo estado del catálogo produce la misma respuesta, con los mismos afectados y en el mismo orden. | N11 | AC-F2-13 |
+| RN-F2-12 | La respuesta de impacto no incluye veredicto de ciclo ni orden de preparación: la detección de ciclos y el orden topológico pertenecen a F3. | Alcance por feature | AC-F2-14 |
+| RN-F2-13 | El significado de «alcanzar» en este negocio queda escrito en el `README.md` del repositorio, con la dirección y un ejemplo sobre la red sintética. | N13 | AC-F2-15 |
+
+### 9.5 Puntos solicitados que no se especifican en F2
+
+Dos puntos se han planteado sobre F2 que **no** aparecen en `docs/brief.md` y que, por tanto, no se
+especifican aquí. Ninguno se convierte en requisito ni en criterio de aceptación de F2.
+
+| Punto | Base en el brief | Por qué no se especifica | Pregunta escalada | Registro |
+| ----- | ----------------- | ------------------------ | ----------------- | -------- |
+| Gestión de relaciones: eliminar o modificar dependencias | El brief de F1 solo describe crear y listar; el brief de F2 es una consulta de impacto | F2 ni crea ni modifica relaciones: no hay ninguna operación de escritura en su alcance. Añadirla sería inventar un requisito | ¿Se requiere habilitar eliminar/modificar relaciones? ¿Es corrección de F1 o feature nueva? | `AMB-F2-04`; `docs/decisions/analyst.md` |
+| Suministro sin proveedor asignado: todo suministro debe tener proveedor, y un proceso que requiera un suministro sin proveedor no se puede crear | Ninguna: la regla no aparece en `docs/brief.md` ni en F1 ni en F2 | Es una regla de validación de escritura, no de consulta, y no está en el brief. Definirla sería inventar una regla de negocio | ¿Debe existir una regla que exija que todo suministro tenga proveedor asignado y que rechace crear procesos que lo requieran si no lo tiene? ¿Aplica a F1 (validación al crear/relacionar) o a F2? | `AMB-F2-03`; `docs/decisions/analyst.md` |
+
+### 9.6 Casos límite de F2
+| Caso | Resultado esperado | Criterio |
+| ---- | ------------------ | -------- |
+| Elemento consultado inexistente | `404` `ERR-02`, sin contenido de negocio | AC-F2-03 |
+| Identificador mal formado en la ruta | `422` `ERR-05`, nunca `404` | AC-F2-11 |
+| Catálogo vacío (grafo vacío) | `404` `ERR-02`; nunca `200` con lista vacía | AC-F2-12 |
+| Elemento existente sin aristas salientes | `200`, elemento consultado identificado, total cero | AC-F2-04 |
+| Elemento que habilita a una cadena | Devuelve alcanzables directos e indirectos | AC-F2-05 |
+| Cadena larga / múltiples caminos | Cada alcanzable aparece una sola vez | AC-F2-05b |
+| Grafo con ciclo (permitido por F1) | El recorrido propio termina y devuelve los alcanzables sin repetir | AC-F2-05c |
+| Consulta desde diferentes tipos (PROVEEDOR/INSUMO/PRODUCTO/PROCESO) | Respeta la dirección definida con independencia del tipo | AC-F2-01, AC-F2-01b, AC-F2-07 |
+| Dos consultas idénticas seguidas | Misma respuesta y mismo orden de afectados | AC-F2-13 |
+
+### 9.7 Requisitos funcionales de F2
+| ID | Requisito | Necesidad | Criterio |
+| -- | --------- | --------- | -------- |
+| RF-F2-01 | El sistema debe permitir consultar el impacto de un elemento dado, respetando la dirección definida (`origen habilita destino`) para determinar qué elementos son afectados. | N9, N10 | AC-F2-01, AC-F2-01b, AC-F2-07 |
+| RF-F2-02 | La consulta debe diferenciar explícitamente: elemento inexistente; elemento existente sin dependencias/afectados; elemento que afecta una cadena; e identificador mal formado. | N12 | AC-F2-03, AC-F2-04, AC-F2-11 |
+| RF-F2-03 | El resultado debe listar los elementos visitados/alcanzados de manera comprensible (identificadores y tipo cuando proceda), reflejando el recorrido propio sobre el grafo dirigido. | N11 | AC-F2-05, AC-F2-05b, AC-F2-05c |
+| RF-F2-04 | «Alcanzar» debe entenderse como camino dirigido desde el elemento consultado hacia adelante siguiendo las aristas, y el conjunto de afectados es el conjunto de alcanzables. | N13 | AC-F2-02 |
+| RF-F2-05 | El cálculo de impacto usa recorrido propio del proyecto, sin utilizar NetworkX para recorridos, caminos o impacto. | Restricción | AC-F2-06, AC-F2-06b |
+| RF-F2-06 | Con el catálogo vacío, la consulta de impacto debe responder como elemento inexistente y nunca como lista vacía. | N12 | AC-F2-12 |
+| RF-F2-07 | El resultado de impacto debe ser determinista, con un orden estable de los afectados. | N11 | AC-F2-13 |
+| RF-F2-08 | La respuesta de impacto no debe incluir información de ciclos ni de orden de preparación. | Alcance por feature | AC-F2-14 |
+| RF-F2-09 | El significado de «alcanzar» en este negocio debe quedar documentado en el `README.md` del repositorio. | N13 | AC-F2-15 |
+
+### 9.8 Requisitos no funcionales de F2
+| ID | Requisito | Criterio |
+| -- | --------- | -------- |
+| RNF-F2-01 | El análisis respeta la arquitectura: el recorrido de impacto vive en el dominio (o en la aplicación si es orquestación), sin mezclarlo con la presentación; el frontend no duplica algoritmos. | AC-F2-09 |
+| RNF-F2-02 | Solo datos sintéticos. Errores explícitos, sin convertirlos en resultados válidos. | AC-F2-03, AC-F2-08 |
+| RNF-F2-03 | Trazabilidad: regla de negocio → modelo → solución técnica verificable. | AC-F2-10 |
+
+### 9.9 Ambigüedades y decisiones pendientes de F2
+| ID | Ambigüedad o decisión pendiente | Por qué no se resuelve aquí | Impacto si se resuelve distinto | Pregunta escalada |
+| -- | ------------------------------- | ---------------------------- | ------------------------------ | ---------------- |
+| AMB-F2-01 | ¿El resultado debe presentar solo los productos y procesos afectados, o todos los elementos alcanzados (proveedores, insumos, procesos y productos)? La especificación actual devuelve **todos** los alcanzables, sin filtrar por tipo, porque es lo que se deduce de la dirección del modelo. | El brief dice «qué productos o procesos quedan afectados», pero la dirección `origen habilita destino` hace que un proveedor o un insumo alcanzados también se vean afectados. Filtrar por tipo sería una regla que el brief no declara. | Un filtro por tipo cambiaría el conjunto de afectados esperado y los criterios AC-F2-01, AC-F2-02 y AC-F2-05. | ¿Debe el resultado filtrar por tipo de elemento o devolver todos los alcanzables? |
+| AMB-F2-02 | ¿Con qué nivel de detalle se enriquece la respuesta (solo identificadores, con tipo y nombre, con distancia o nivel, o con el camino que lleva al afectado)? La especificación actual fija un contenido mínimo obligatorio y deja el enriquecimiento como opcional. | El brief pide «elementos visitados de manera comprensible», sin fijar la estructura. | Afectaría al contrato de la respuesta, no al conjunto de afectados. | ¿Se requiere nivel, distancia o camino en la respuesta de impacto? |
+| AMB-F2-03 | ¿Debe existir la regla «todo suministro tiene proveedor asignado» y «un proceso que requiera un suministro sin proveedor no se puede crear»? No figura en `docs/brief.md`. | Definirla sería inventar una regla de negocio. Además, es una validación de escritura (F1), no de consulta (F2). | Si se aprueba, aparece una validación nueva en el alta de elementos y de dependencias (F1) y un caso de error nuevo; no afecta al cálculo de impacto. | ¿Debe existir una regla que exija que todo suministro tenga proveedor asignado y que rechace crear procesos que lo requieran si no lo tiene? ¿Aplica a F1 (validación al crear/relacionar) o a F2? |
+| AMB-F2-04 | ¿Se requiere habilitar eliminar o modificar relaciones (dependencias)? El brief de F1 solo describe crear y listar; F2 es una consulta. | F2 no tiene ninguna operación de escritura; añadirla sería inventar un requisito. | Si se aprueba, es una corrección de F1 (endpoints de borrado o edición) o una feature nueva, con su propio alcance, contrato y criterios. | ¿Se requiere habilitar eliminar/modificar relaciones? ¿Es corrección de F1 o feature nueva? |
+
+### 9.10 Trazabilidad de F2
+
+`necesidad → requisito → criterio de aceptación → solución técnica`
+
+| Necesidad | Requisitos | Criterios | Solución técnica |
+| --------- | ---------- | --------- | ---------------- |
+| N9. Identificar qué queda afectado por la indisponibilidad de un elemento | RF-F2-01, RF-F2-03 | AC-F2-01, AC-F2-05 | `GET /api/v1/impacto/{id}`; recorrido hacia adelante en el dominio |
+| N10. Consultar el impacto según la dirección definida | RF-F2-01 | AC-F2-01, AC-F2-01b, AC-F2-07 | Adyacencia de salida del grafo de dominio; sin inversión del grafo |
+| N11. Recorrido propio y elementos visitados comprensibles | RF-F2-03, RF-F2-05, RF-F2-07 | AC-F2-05, AC-F2-05b, AC-F2-05c, AC-F2-06, AC-F2-06b, AC-F2-13 | Recorrido en profundidad sobre la adyacencia de salida, con conjunto de visitados; orden estable por `id` |
+| N12. Diferenciar inexistente, sin dependencias y cadena | RF-F2-02, RF-F2-06 | AC-F2-03, AC-F2-04, AC-F2-11, AC-F2-12 | Errores `ERR-02` y `ERR-05` del catálogo existente; respuesta `200` con elemento consultado, afectados y total |
+| N13. Explicar el significado de «alcanzar» | RF-F2-04, RF-F2-09 | AC-F2-02, AC-F2-15 | `graph-model.md` §8 y sección de alcance en `README.md` |
+| N14. Reglas de dominio sobre elementos dependientes | RF-F2-01 | AC-F2-07 | Adyacencia de entrada del grafo de dominio, sin alterar la dirección |
+| Restricción: sin NetworkX para el cálculo | RF-F2-05 | AC-F2-06, AC-F2-06b | Algoritmo propio en el dominio; NetworkX solo para visualización |
+| Alcance por feature: F2 no anticipa F3 | RF-F2-08 | AC-F2-14 | Contrato de la respuesta sin campos de ciclo ni de orden |
+| Restricción: datos sintéticos y errores explícitos | RNF-F2-02 | AC-F2-08 | Sobre de error único de `api-contract.md` §5 |
+| Restricción: arquitectura y trazabilidad | RNF-F2-01, RNF-F2-03 | AC-F2-09, AC-F2-10 | `architecture.md` §7; matriz de esta sección |
