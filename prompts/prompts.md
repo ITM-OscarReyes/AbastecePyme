@@ -29,3 +29,129 @@ Las reglas que deben aplicarse cuando correspondan son:
 - No modificar funcionalidades existentes sin una razón justificada.
 
 Antes de realizar cambios, revisa la estructura actual del proyecto y de los agentes. Indica qué agentes consideras que deben incorporar estas reglas y por qué. Después realiza los cambios necesarios.
+
+## 02 — Documentación y requisitos de F1 con el agente analyst
+
+Ejecuta el agente `analyst` para generar toda la documentación y requisitos necesarios para desarrollar la **únicamente la Feature 1 (F1 — Catálogo de dependencias)**, únicamente se debe hacer la documentación de la primera feature, las demás features aún no. Adicional debe generar solo la documentación, no debe empezar a implementar ni generar código.
+
+---
+
+Tarea: generar TODA la documentación y requisitos necesarios para desarrollar la **únicamente la Feature 1 (F1 — Catálogo de dependencias)** de AbastecePyme.
+
+Contexto del proyecto:
+
+- Directorio de trabajo: `E:\Repositories\AbastecePyme`
+- `AGENTS.md` del proyecto ya define las reglas: `docs/brief.md` es la fuente de verdad. Features: F1 Catálogo de dependencias, F2 Análisis de impacto, F3 Orden de producción y ciclos, F4 Dashboard integrado.
+- Registro de decisiones: cada agente escribe exclusivamente en su propio archivo, en este caso `docs/decisions/analyst.md`, con columnas: Fecha | Agente | Feature | Decisión o pieza | Problema o necesidad | Decisión adoptada | Motivo | Cómo se verificó.
+- `docs/decisions/decisions.md` es índice y no contiene decisiones.
+
+REQUISITOS ESTRICTOS:
+
+1. **Solo documentación de F1.** No documentar, no especificar, no esbozar F2, F3 ni F4 (salvo mencionar dependencias o encadenamiento con F2/F3 de forma mínima y sin especificar su contenido). Si detectas que parte de F1 requiere una regla de negocio que pertenece a F2 o F3, NO la inventes: documéntala como ambigüedad o decisión pendiente y escala.
+2. **Cero implementación.** No escribas código Python, TypeScript, SQL, JSON de ejemplo ejecutable, ni scaffolds de archivos de código. No crees archivos `.py`, `.ts`, `.tsx`, `requirements.txt` ni `package.json`. Escribe únicamente Markdown de especificación. Los fragmentos ilustrativos en JSON o YAML deben ser puramente ilustrativos dentro de documentos markdown, no archivos de código ejecutable.
+3. **Respeta Clean Architecture, SOLID, Clean Code y la prohibición de NetworkX** (NetworkX solo para visualización de resultados ya calculados por el backend).
+4. No redefinas reglas de negocio del brief. Ante ambigüedad: documéntala explícitamente como decisión pendiente.
+
+Antes de empezar:
+
+- Lee `docs/brief.md` completo.
+- Lee los documentos existentes en `docs/` (por ejemplo `docs/requirements.md`, `docs/graph-model.md`, `docs/api-contract.md`, `docs/architecture.md`, `docs/acceptance-criteria.md`) para respetar el formato, la convención de nombres, la ubicación y la estructura ya establecida por ejecuciones anteriores del analyst. Reutiliza la estructura existente en lugar de inventar una nueva; si no existe, crea la estructura coherente con lo que ya haya.
+- Lee `AGENTS.md` y cualquier `docs/decisions/analyst.md` existente.
+
+Entregables esperados (ajústalos a la estructura ya existente en el repositorio):
+
+- Especificación técnica de F1 en detalle: requisitos funcionales y no funcionales verificables (REQ IDs únicos), modelo de dominio del elemento y de la relación de dependencia, y **definición explícita de la dirección de cada relación** y de la representación del grafo (nodos, aristas, adyacencia), que es requisito explícito de F1.
+- Contrato de API REST de F1 (endpoints, métodos, request y response, códigos de estado, esquema de errores, nombres de campos, ejemplos ilustrativos en markdown).
+- Reglas de validación de entrada y catálogo de errores de F1.
+- Criterios de aceptación de F1 (verificables, con IDs) y casos límite: datos válidos, duplicados, mal formados, pesos inválidos, elementos inexistentes, relaciones inexistentes, grafo vacío, elementos sin dependencias.
+- Trazabilidad: cada requisito mapea a feature y a endpoint o capa correspondiente.
+- Registra en `docs/decisions/analyst.md` todas las decisiones tomadas, usando la tabla y el formato existentes en el repositorio.
+- Actualiza el índice `docs/decisions/decisions.md` si el formato del repositorio lo requiere.
+
+Al finalizar, devuelve un resumen conciso con: (1) lista de archivos creados o modificados con su ruta, (2) IDs de requisitos y criterios de aceptación definidos, (3) lista de ambigüedades o decisiones pendientes escaladas, (4) confirmación explícita de que no se escribió código.
+
+## 03 — Backend de F1 con el agente backend-builder
+
+Hola, por favor con el agente backend-builder desarrolla todo el backend necesario **únicamente para el feature 1 (F1 — Catálogo de dependencias)**, empleando Python y FastAPI, todo dentro del branch `f1-Backend`. Así mismo almacena la documentación del prompt en el archivo `prompts.md` y trata de que el propio código quede con una documentación clara.
+
+REQUISITOS ESTRICTOS DE ALCANCE:
+
+1. **Solo F1.** No implementes F2 (análisis de impacto), F3 (orden de producción y ciclos) ni F4 (dashboard integrado), aunque `docs/brief.md` las describa y aunque tu definición de agente las mencione.
+2. No crees endpoints, algoritmos, modelos, casos de uso ni datos de demostración de F2, F3 o F4. No los anticipes "para dejarlos listos".
+3. `GET /api/v1/grafo` expone la estructura del catálogo tal como está. No le agregues recorridos, niveles, Degrees, ciclos, orden ni veredictos.
+4. F1 **no rechaza ciclos**: una dependencia que cierre un ciclo es un dato válido de F1. No la trates como error.
+5. Los endpoints del backend deben coincidir exactamente con `docs/api-contract.md`.
+6. La verificación de F1 la realiza `tester`. Tú no declares PASS/FAIL.
+
+## 04 — Frontend de F1 con el agente frontend-builder
+
+Hola, por favor con el agente frontend-builder desarrolla la interfaz necesaria **únicamente para el feature 1 (F1 — Catálogo de dependencias)**, con React + TypeScript, consumiendo la API real del backend, todo dentro del branch `f1-Frontend`. Así mismo almacena la documentación del prompt en el archivo `prompts.md`.
+
+REQUISITOS ESTRICTOS DE ALCANCE:
+
+1. **Solo F1.** No implementes F2 (análisis de impacto), F3 (orden de producción y ciclos) ni F4 (dashboard integrado). No crees componentes, vistas, tipos, servicios, estados ni datos de demostración de esas features, ni siquiera "dejando la estructura lista".
+2. El menú y las vistas deben corresponder solo a F1: catálogo de elementos, catálogo de dependencias y visualización de la red.
+3. **No calcules nada sobre el grafo en el cliente.** Está prohibido implementar recorridos BFS/DFS, detección de ciclos, orden topológico (Kahn o similar), cálculo de impacto, caminos o niveles. No existe backend para F2/F3, así que cualquier cálculo de ese tipo en el frontend es una segunda versión de los algoritmos y una violation de `docs/architecture.md`.
+4. **No dupliques reglas de negocio.** El backend valida formato de `id`, tipo, `nombre`, `descripcion`, campos desconocidos, aristas reflexivas, duplicados y elementos inexistentes. El frontend no recorta, no pasa a mayúsculas y no valida longitudes por su cuenta: envía lo que el usuario escribió y muestra el error que devuelve la API.
+5. **No inventes endpoints.** Consume solo los de `docs/api-contract.md`: `POST/GET /api/v1/elementos`, `GET /api/v1/elementos/{id}`, `POST/GET /api/v1/dependencias` y `GET /api/v1/grafo`.
+6. **No simules datos.** No generes elementos, dependencias ni veredictos falsos. Si un dato no está en la API, repórtalo a `orchestrator` como faltante.
+7. Cytoscape está permitido **solo para dibujar** los datos que devuelve el backend. No lo uses para calcular.
+8. Maneja de forma explícita: carga, respuesta exitosa, grafo vacío, elemento inexistente, elemento sin dependencias, cadena de dependencias, errores de validación, errores de API y backend no disponible. Los errores se muestran, no se convierten en estado vacío.
+9. No declares PASS/FAIL; la verificación la hace `tester`.
+
+Al finalizar, reporta qué components creaste, qué endpoints consumes, qué decisiones registraste en `docs/decisions/frontend-builder.md` y qué necesita verificación de `tester`.
+
+## 05 — Verificación de F1 con el agente tester
+
+Hola, por favor con el agente tester verifica **únicamente la feature 1 (F1 — Catálogo de dependencias)** de extremo a extremo, tal como quedó implementada. Así mismo registra la documentación del prompt en este archivo `prompts.md` y deja las decisiones de estrategia de verificación en `docs/decisions/tester.md`.
+
+REQUISITOS ESTRICTOS:
+
+1. **No modifiques código de producción.** No corrijas backend ni frontend, aunque encuentres defectos. Es tu función reportarlos con evidencia reproducible; la corrección corresponde al agente responsable.
+2. **Solo F1.** No verifiques, no sugieras y no implementes F2, F3 ni F4.
+3. **Eres el único autorizado a declarar PASS/FAIL.** Ningún otro agente lo hace.
+4. **Verifica con ejecuciones reales, no por inspección.** Ningún criterio se declara PASS sin evidencia obtenida ejecutando el backend y el frontend.
+5. **Un criterio sin evidencia no es PASS.** Si el entorno impide verificarlo, decláralo BLOCKED indicando qué falta.
+6. **Un FAIL debe traer evidencia mínima reproducible:** criterio, caso, esperado, obtenido, evidencia y archivo relacionado.
+7. Respeta Clean Architecture, SOLID y Clean Code también en el código de pruebas que escribas.
+
+Antes de empezar:
+
+- Lee `AGENTS.md`, `docs/brief.md`, `docs/requirements.md`, `docs/acceptance-criteria.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/graph-model.md`.
+- Lee `docs/decisions/tester.md` si existe, para respetar el formato del registro ya establecido.
+- Revisa la implementación real de backend y frontend antes de escribir las pruebas.
+
+ENTREGABLES:
+
+1. **Ejecución real de extremo a extremo.** Levanta el backend con Uvicorn y el frontend, y ejercita la API y la interfaz contra los procesos reales. Nada de dobles de red que simulen respuestas.
+2. **Cobertura de todos los casos límite** de `docs/acceptance-criteria.md`: datos válidos, duplicados, mal formados, pesos inválidos, elementos inexistentes, relaciones inexistentes, grafo vacío, elementos sin dependencias, cadenas de dependencias, ciclos y dependencias inversas.
+3. **Verificación de los errores**, no solo del camino feliz: cada código de error del contrato, sus campos, sus mensajes y que el catálogo queda intacto tras un rechazo.
+4. **Verificación de la interfaz mínima**, incluida la propagatedión de errores y la visualizaicón de la red respetando la dirección definida. Si el render requiere un navegador real, usa uno.
+5. **Verificación del estado vacío** con el catálogo sin elementos, no solo con los datos de demostración.
+6. **Criterios de arquitectura como pruebas ejecutables.** Los criterios que piden una revisión (Clean Architecture, separación de responsabilidades, no duplicar reglas de negocio, nomenclatura) deben poder fallar de forma reproducible ante una regresión; una revisión manual no basta.
+7. **Rendimiento y determinismo:** el criterio de volumen de datos y la estabilidad de lecturas repetidas.
+8. **Revisión de la documentación** frente a la implementación: reporta contradicciones entre documentos, sin corregir la especificación por tu cuenta.
+9. Registra en `docs/decisions/tester.md` las decisiones de estrategia de verificación.
+10. Informe final con el conteo PASS/FAIL/BLOCKED, una matriz criterio → resultado → evidencia y una conclusión.
+
+Al finalizar, devuelve un resumen conciso con: (1) archivos de prueba creados, (2) conteo PASS/FAIL/BLOCKED, (3) matriz criterio → resultado → evidencia, (4) hallazgos con evidencia reproducible, y (5) conclusión explícita de F1.
+
+## 06 — Auditoría de F1 con el agente auditor
+
+Hola, por favor con el agente auditor audita **únicamente la feature 1 (F1 — Catálogo de dependencias)** tal como quedó especificada, implementada, verificada y documentada. Registra la documentación del prompt en este archivo `prompts.md` y deja las decisiones derivadas de tus hallazgos en `docs/decisions/auditor.md`.
+
+REQUISITOS ESTRICTOS:
+
+1. **Revisas y reportas; no corriges.** No modifiques código, pruebas ni documentación. Los hallazgos se devuelven a `orchestrator`, que los deriva al agente responsable.
+2. **Solo F1.** F2, F3 y F4 están fuera de alcance: no las especifiques, no las pruebes y no las marques como pendientes ni como fallo.
+3. **No declaras PASS/FAIL.** Esa facultad es exclusiva de `tester`. Tu veredicto es de auditoría: `APTO` o `NO APTO`, con justificación.
+4. **Trazabilidad de extremo a extremo.** Cada `RF-F1` y cada `AC-F1` debe poder seguirse de `docs/brief.md` a la especificación, a la implementación, a la prueba y a la evidencia. Un criterio sin prueba o sin evidencia es un hallazgo.
+5. **Coherencia de la especificación.** Comprueba que `docs/requirements.md`, `docs/graph-model.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/acceptance-criteria.md` no contradigan `docs/brief.md` ni entre sí.
+6. **Contrato y alcance.** Verifica que `backend/app/api/rutas.py` exponga exactamente los seis endpoints de F1, sin endpoints de F2, F3 ni F4, y que no haya contaminación de esas features en código, prompts ni documentación.
+7. **Calidad de código.** Revisa el cumplimiento de `AGENTS.md`: Clean Architecture, SOLID, Clean Code, nomenclatura de Python y TypeScript, sin duplicación de reglas de negocio, sin NetworkX en los cálculos y frontend sin algoritmos propios del grafo.
+8. **Registro de decisiones.** Comprueba que `docs/decisions/*.md` sea coherente entre sí, con los documentos y con el brief. Reporta contradicciones sin reescribir decisiones ya registradas.
+9. **Entrega de F1.** Revisa que la entrega incluya el script de aceptación con escenario, esperado, obtenido y pasó o falló, la bitácora de IA, la traza manual, la salida de aceptación y un README con propósito, instalación, ejecución, endpoints y decisiones de diseño, separando lo que falta y es corregible por un agente de lo que es tarea humana (video, pitch, aportes, coevaluación).
+
+Lee antes `AGENTS.md`, `docs/brief.md`, toda la especificación de `docs/`, los registros de `docs/decisions/` y la implementación de `backend/` y `frontend/`.
+
+Al finalizar, devuelve un informe con: (1) hallazgos con severidad, archivo:lima y la comparación entre lo que dice la fuente de verdad y lo que existe, (2) matriz de trazabilidad RF/AC → especificación → implementación → prueba → evidencia con los faltantes, (3) lista de lo que falta para cerrar F1 separada en corregible por agente y tarea humana, y (4) veredicto de auditoría `APTO` o `NO APTO` con justificación.
