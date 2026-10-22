@@ -1,14 +1,15 @@
-# Criterios de aceptación — AbastecePyme (F1)
+# Criterios de aceptación — AbastecePyme (F1 y F2)
 
-Criterios de aceptación de **F1 — Catálogo de dependencias**, derivados de `requirements.md` y
-verificables de extremo a extremo.
+Criterios de aceptación de **F1 — Catálogo de dependencias** y de **F2 — Análisis de impacto**,
+derivados de `requirements.md` y verificables de extremo a extremo.
 
 - Cada criterio es verificable de forma objetiva: describe una entrada, un resultado esperado y,
   cuando aplica, el código de error o el elemento del catálogo que se inspecciona.
 - Los identificadores son estables y se reutilizan en `requirements.md`, `api-contract.md`,
   `architecture.md` y en las pruebas.
 - `tester` es el único agente autorizado para declarar PASS/FAIL de estos criterios.
-- Los criterios de F2, F3 y F4 **no** están aquí: este documento cubre únicamente F1.
+- Los criterios de F3 y F4 **no** están aquí: este documento cubre únicamente F1 (secciones 1 a 6) y
+  F2 (sección 7).
 
 ## 1. Datos de prueba
 
@@ -274,3 +275,160 @@ Dependencias del conjunto de prueba:
 | Ruta inexistente | `404` `ERR-09` | AC-F1-17 |
 | Ciclo de dependencias | Se registra sin error ni advertencia | AC-F1-16 |
 | Lista sin dependencias | `200` con `dependencias: []` | AC-F1-13 |
+
+
+## 7. Criterios de aceptación — F2: Análisis de impacto
+
+Únicamente F2. Requisitos en `requirements.md` §9, modelo en `graph-model.md` §8 y contrato en
+`api-contract.md` §8.
+
+- Cada criterio es verificable de forma objetiva: describe una entrada, el resultado esperado y,
+  cuando aplica, el código HTTP y el código de error que se inspeccionan.
+- Ningún criterio introduce una regla de negocio que no esté en `docs/brief.md`: lo que el brief no
+  declara no se convierte en criterio, y lo que el brief sí declara tiene criterio.
+- `tester` es el único agente autorizado para declarar PASS/FAIL de estos criterios.
+
+### 7.1 Datos de prueba de F2
+
+Conjunto sintético coherente con la sección 1 de este documento, con una dependencia añadida:
+
+| `origen` | `destino` | Lectura |
+| -------- | --------- | ------- |
+| `PROV-ACERO` | `INS-BARRA` | Para preparar la barra de acero necesito al proveedor de acero |
+| `INS-BARRA` | `PROC-CORTE` | Para el corte de panel necesito la barra de acero |
+| `PROC-CORTE` | `PROD-PANEL` | Para el panel necesito el proceso de corte |
+| `INS-TORNILLO` | `PROD-PANEL` | Para el panel necesito tornillos |
+| `PROD-PANEL` | `PROD-BANCO` | Para el banco de montaje necesito el panel |
+| `INS-TORNILLO` | `PROD-BANCO` | Para el banco de montaje necesito tornillos |
+
+Conjunto cíclico: el anterior más `PROD-BANCO → PROD-PANEL` («para el panel de montaje necesito el
+banco de montaje»), configuración imposible que F1 admite sin error (AC-F1-16).
+
+Alcance esperado con el conjunto de prueba, según la dirección `origen habilita destino`:
+
+| Elemento consultado | Elementos alcanzados (afectados) | Total |
+| ------------------- | -------------------------------- | ----- |
+| `PROV-ACERO` | `INS-BARRA`, `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` | 4 |
+| `INS-BARRA` | `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` | 3 |
+| `INS-TORNILLO` | `PROD-PANEL`, `PROD-BANCO` | 2 |
+| `PROD-PANEL` | `PROD-BANCO` | 1 |
+| `PROD-BANCO` | (ninguno) | 0 |
+
+### RF-F2-01 / RN-F2-01, RN-F2-02, RN-F2-07 · Respeto a la dirección definida
+
+- **AC-F2-01.** La consulta de impacto de `PROV-ACERO` devuelve como afectados exactamente
+  `INS-BARRA`, `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`. No devuelve `INS-TORNILLO`, que no es
+  alcanzable desde `PROV-ACERO` siguiendo las aristas `origen habilita destino`.
+- **AC-F2-01b.** El recorrido no invierte el grafo. La consulta de impacto de `PROD-PANEL` devuelve
+  como afectado solo `PROD-BANCO`: los elementos que lo habilitan (`PROC-CORTE`, `INS-BARRA`,
+  `PROV-ACERO`) no aparecen entre sus afectados, porque la indisponibilidad de `PROD-PANEL` no
+  afecta a quienes dependen de él.
+- **AC-F2-07.** Un elemento es dependiente de otro cuando existe una arista entrante, es decir,
+  cuando es el destino de alguna dependencia. Esa definición se mantiene en F2 y es coherente con
+  `graph-model.md`; el análisis de impacto no la invierte: opera hacia adelante desde la causa.
+
+### RF-F2-02 / RN-F2-03, RN-F2-04, RN-F2-09 · Diferenciación de los casos
+
+- **AC-F2-03.** La consulta de impacto de un identificador con formato válido que no existe en el
+  catálogo responde `404` con el sobre de error `ERR-02` (`ELEMENTO_NO_ENCONTRADO`), y el mensaje
+  identifica el identificador consultado. No responde `200` con una lista vacía ni con un resultado
+  de impacto.
+- **AC-F2-04.** La consulta de impacto de `PROD-BANCO` (existe y no habilita a nadie) responde
+  `200`, identifica el elemento consultado en la respuesta y devuelve el conjunto de afectados
+  vacío, con total cero. Es un resultado válido y distinguible del caso inexistente, que responde
+  `404` `ERR-02` sin contenido de negocio.
+- **AC-F2-11.** La consulta de impacto con un identificador mal formado en la ruta responde `422`
+  con `ERR-05` (`IDENTIFICADOR_INVALIDO`), nunca `404`: «mal formado» e «inexistente» son
+  situaciones distintas y el cliente debe poder separarlas.
+
+### RF-F2-03 / RN-F2-05, RN-F2-11 · Elementos alcanzados de manera comprensible
+
+- **AC-F2-05.** La consulta de impacto de `INS-BARRA` devuelve como afectados `PROC-CORTE`,
+  `PROD-PANEL` y `PROD-BANCO`: el primero por camino directo y los otros dos por caminos indirectos.
+  El resultado no se limita a un paso: incluye los afectados indirectos, que no están entre los
+  habilitados directamente por el elemento consultado.
+- **AC-F2-05b.** Cada elemento alcanzable aparece una sola vez en la respuesta, aunque sea
+  alcanzable por varios caminos. En el conjunto de prueba, `PROD-BANCO` es alcanzable desde
+  `INS-TORNILLO` por dos caminos (directo y a través de `PROD-PANEL`) y aparece una sola vez.
+- **AC-F2-05c.** Con el conjunto cíclico, la consulta de impacto de `INS-BARRA` termina y devuelve
+  `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`, cada uno una sola vez. El recorrido maneja los
+  elementos ya visitados y no se asume que el grafo sea acíclico.
+
+### RF-F2-04 / RN-F2-02, RN-F2-13 · Significado de «alcanzar»
+
+- **AC-F2-02.** «Alcanzar» significa que existe un camino dirigido desde el elemento consultado
+  hasta el elemento alcanzado siguiendo aristas `origen habilita destino`. Los alcanzables son los
+  afectados por la indisponibilidad del elemento consultado. El conjunto de afectados devuelto es
+  exactamente el conjunto de elementos alcanzables hacia adelante, sin filtrar por tipo: un
+  proveedor, un insumo, un proceso o un producto alcanzados son afectados.
+
+### RF-F2-05 / RN-F2-06 · Recorrido propio del proyecto
+
+- **AC-F2-06.** El cálculo de impacto se implementa con un recorrido propio del proyecto. La
+  revisión del código confirma que el dominio no importa NetworkX ni ninguna otra biblioteca de
+  grafos, y que no hay ninguna llamada a esas bibliotecas para calcular alcanzables, caminos o
+  impacto.
+- **AC-F2-06b.** Si el frontend representa el resultado con una biblioteca de grafos, dibuja lo que
+  devuelve el backend y no calcula los alcanzables por su cuenta.
+
+### RF-F2-06 / RN-F2-10 · Catálogo vacío
+
+- **AC-F2-12.** Con el catálogo sin elementos, la consulta de impacto de cualquier identificador
+  con formato válido responde `404` con `ERR-02` (`ELEMENTO_NO_ENCONTRADO`), no `200` con una lista
+  vacía. Un total cero solo puede corresponder a un elemento existente que no alcanza a nadie.
+
+### RF-F2-07 / RN-F2-11 · Resultado determinista
+
+- **AC-F2-13.** Dos consultas de impacto idénticas y consecutivas sobre el mismo estado devuelven
+  la misma respuesta, con los mismos afectados y en el mismo orden. El orden de los afectados no
+  depende del orden en que se registraron las dependencias.
+
+### RF-F2-08 / RN-F2-12 · Sin información de ciclos ni de orden
+
+- **AC-F2-14.** La respuesta de impacto no incluye ningún campo de veredicto de ciclo, de ciclo
+  detectado ni de orden de preparación. F2 no anticipa F3: la detección de ciclos y el orden
+  topológico no forman parte de esta consulta.
+
+### RF-F2-09 / RN-F2-13 · «Alcanzar» documentado
+
+- **AC-F2-15.** El `README.md` del repositorio explica qué significa «alcanzar» en este negocio:
+  que existe un camino dirigido desde el elemento consultado siguiendo aristas `origen habilita
+  destino`, que los alcanzables son los afectados por su indisponibilidad y que la dirección no se
+  invierte. La explicación incluye un ejemplo sobre la red sintética.
+
+### RNF-F2-01 · Separación de capas
+
+- **AC-F2-09.** La revisión del backend confirma que el recorrido de impacto vive en el dominio (o
+  en la aplicación si es orquestación) y que la capa HTTP no implementa el recorrido ni decide qué
+  elementos son afectados. Si el frontend expone el resultado del impacto, la revisión del frontend
+  confirma que no recalcula los alcanzables, no invierte la dirección y no filtra por reglas
+  propias.
+
+### RNF-F2-02 · Datos sintéticos y errores explícitos
+
+- **AC-F2-08.** Los elementos y dependencias empleados en la verificación de F2 son sintéticos y
+  coherentes con el dominio, sin datos de personas, proveedores ni empresas reales. Ningún error de
+  la consulta de impacto se oculta ni se presenta como un resultado aparentemente válido: cada
+  fallo sale con el sobre de error y el código que le corresponde.
+
+### RNF-F2-03 · Trazabilidad
+
+- **AC-F2-10.** Existe trazabilidad `necesidad (N9 a N14) → requisito (RF-F2-01 a RF-F2-09,
+  RNF-F2-01 a RNF-F2-03) → criterio (AC-F2-01 a AC-F2-15)` en `requirements.md` §9, y cada criterio
+  de esta sección remite al requisito del que deriva.
+
+### Casos límite de F2
+
+| Caso | Resultado esperado | Criterio |
+| ---- | ------------------ | -------- |
+| Elemento inexistente | `404` `ERR-02`, sin contenido de negocio | AC-F2-03 |
+| Identificador mal formado en la ruta | `422` `ERR-05`, nunca `404` | AC-F2-11 |
+| Catálogo vacío (grafo vacío) | `404` `ERR-02`; nunca `200` con lista vacía | AC-F2-12 |
+| Elemento existente sin aristas salientes | `200`, elemento consultado identificado, total cero | AC-F2-04 |
+| Elemento que habilita a una cadena | Devuelve alcanzables directos e indirectos | AC-F2-05 |
+| Múltiples caminos al mismo elemento | El alcanzable aparece una sola vez | AC-F2-05b |
+| Ciclo presente (permitido por F1) | El recorrido termina y devuelve alcanzables sin repetir | AC-F2-05c |
+| Consulta desde un proveedor, un insumo, un proceso o un producto | Respeta la dirección definida | AC-F2-01, AC-F2-01b, AC-F2-07 |
+| Dos consultas idénticas seguidas | Misma respuesta y mismo orden de afectados | AC-F2-13 |
+| Consulta repetida sobre un grafo con ciclo | Sin ciclo infinito ni afectado duplicado | AC-F2-05c |
+

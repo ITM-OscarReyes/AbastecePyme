@@ -1,11 +1,13 @@
 # Modelo del grafo — AbastecePyme
 
-Documento de referencia para **F1 — Catálogo de dependencias**. Define la dirección de las
-relaciones y la representación del grafo, que son requisitos explícitos de F1 en `docs/brief.md`.
+Documento de referencia para **F1 — Catálogo de dependencias** y **F2 — Análisis de impacto**.
+Define la dirección de las relaciones y la representación del grafo, que son requisitos explícitos
+de F1 en `docs/brief.md`, y su lectura para el análisis de impacto de F2 (sección 8).
 
-- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RNF-F1-03).
-- Contrato HTTP: `api-contract.md`.
-- Verificación: `acceptance-criteria.md`.
+- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RNF-F1-03) y, para F2,
+  `requirements.md` §9.
+- Contrato HTTP: `api-contract.md` (secciones 1 a 7 para F1, sección 8 para F2).
+- Verificación: `acceptance-criteria.md` (secciones 1 a 6 para F1, sección 7 para F2).
 
 ## 1. Vocabulario
 
@@ -150,8 +152,9 @@ representación; son los datos que deben esperar las features posteriores.
 | `INS-TORNILLO → PROD-BANCO` | Para el banco de montaje necesito tornillos |
 
 Grado de salida de `INS-TORNILLO`: 2. Grado de salida de `INS-BARRA`: 1. Con esta dirección,
-`INS-TORNILLO` alcanza a `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`, que son los procesos y
-productos afectados si el insumo no está disponible.
+`INS-TORNILLO` alcanza a `PROD-PANEL` y a `PROD-BANCO`, que son los productos afectados si el
+insumo no está disponible; `PROC-CORTE` no está entre ellos, porque el tornillo no habilita al
+proceso de corte.
 
 ## 5. Elementos sin dependencias y grafo vacío
 
@@ -177,3 +180,17 @@ red sea «producible». F1 solo registra, valida, almacena y expone la estructur
 | Dirección única `origen habilita destino` | `docs/decisions/analyst.md` |
 | Representación del grafo con adyacencias de entrada y salida propias del proyecto | `docs/decisions/analyst.md` |
 | F1 registra ciclos sin detectarlos | `docs/decisions/analyst.md` |
+
+
+## 8. Relevancia para F2 — Análisis de impacto
+
+- **Sentido del recorrido:** para determinar qué se afecta por la indisponibilidad de un elemento `X`, se recorre el grafo en **sentido hacia adelante** desde `X` siguiendo aristas `X → Y` (donde `X` habilita a `Y`). Los elementos alcanzables son los afectados directa o indirectamente.
+- **"Alcanzar":** existe un camino dirigido desde el elemento consultado al elemento alcanzado. Esto define el conjunto de afectados.
+- **Conjunto de afectados:** es exactamente el conjunto de elementos alcanzables hacia adelante. No se filtra por tipo de elemento: un proveedor, un insumo, un proceso o un producto alcanzados son todos afectados.
+- **Predecesores no afectados:** los elementos que habilitan al elemento consultado (sus requisitos previos) no forman parte del conjunto de afectados. La indisponibilidad de un elemento no afecta a quienes dependen de él.
+- **Diferenciación:** elemento inexistente ≠ elemento existente sin dependencias salientes ≠ elemento que afecta una cadena. Un identificador mal formado es, además, una tercera situación, distinta de «inexistente».
+- **Recorrido propio:** el cálculo debe realizarse con recorrido propio del proyecto (sin NetworkX para recorridos/caminos/impacto). NetworkX solo podría usarse para visualizar resultados ya calculados, no para el cálculo.
+- **Ciclos:** si existen ciclos (registrados en F1), el recorrido debe terminar (manejo de visitados) y devolver elementos alcanzables de forma comprensible; no se asume grafo acíclico.
+- **Coherencia:** la dirección definida es invariante; no se invierte el grafo para el análisis de impacto.
+- **Documentación:** este significado de «alcanzar» está escrito en el `README.md` del repositorio, como exige el brief de F2.
+- **Contrato:** la forma de la respuesta y los códigos de error están en `api-contract.md` §8.

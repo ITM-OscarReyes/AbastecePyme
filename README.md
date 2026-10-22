@@ -11,7 +11,7 @@ reales.
 | Documento | Contenido |
 | --------- | --------- |
 | [`docs/brief.md`](docs/brief.md) | Fuente de verdad de necesidades, alcance y reglas de negocio |
-| [`docs/requirements.md`](docs/requirements.md) | Requisitos funcionales y no funcionales de F1, trazabilidad y decisiones pendientes |
+| [`docs/requirements.md`](docs/requirements.md) | Requisitos funcionales y no funcionales de F1 y F2, trazabilidad y decisiones pendientes |
 | [`docs/graph-model.md`](docs/graph-model.md) | Dirección de las aristas y representación del grafo |
 | [`docs/api-contract.md`](docs/api-contract.md) | Contrato REST, validaciones y catálogo de errores |
 | [`docs/architecture.md`](docs/architecture.md) | Capas, responsabilidades y convenciones |
@@ -24,8 +24,9 @@ la traza manual del ejemplo pequeño y la salida de la última ejecución del sc
 ## Estado del proyecto
 
 Implementada únicamente la **F1 — Catálogo de dependencias**: alta y consulta de elementos y
-dependencias, y visualización de la red. F2 (análisis de impacto), F3 (orden de producción y ciclos)
-y F4 (tablero integrado) están especificadas en el brief pero no implementadas.
+dependencias, y visualización de la red. La **F2 — Análisis de impacto** está especificada en
+`docs/` (modelo, contrato y criterios), pero todavía no implementada. F3 (orden de producción y
+ciclos) y F4 (tablero integrado) están especificadas en el brief pero no implementadas.
 
 ## Requisitos
 
@@ -154,6 +155,36 @@ recorridos, ciclos ni órdenes de producción.
 
 El detalle de los campos, los códigos de estado y el catálogo de errores están en
 [`docs/api-contract.md`](docs/api-contract.md).
+
+## API de impacto (F2, especificada, no implementada)
+
+| Método | Ruta | Descripción |
+| ------ | ---- | ----------- |
+| `GET` | `/api/v1/impacto/{id}` | Consultar los elementos afectados por la indisponibilidad de un elemento |
+
+El contrato está en [`docs/api-contract.md`](docs/api-contract.md), sección 8, y los criterios de
+aceptación en [`docs/acceptance-criteria.md`](docs/acceptance-criteria.md), sección 7.
+
+## Qué significa «alcanzar» (F2 — análisis de impacto)
+
+En este proyecto, **alcanzar** un elemento significa que existe un **camino dirigido** desde el
+elemento consultado hasta ese elemento, siguiendo las aristas en la dirección definida: el `origen`
+**habilita** al `destino`. Cada flecha se lee «para producir o preparar el destino, necesito que el
+origen esté disponible».
+
+Con esa dirección, el recorrido propio del proyecto avanza **hacia delante** desde el elemento
+consultado. Los elementos así alcanzados son los **afectados** por su indisponibilidad: sus
+dependientes directos e indirectos. Los elementos que lo habilitan son sus **requisitos previos** y
+no se ven afectados por su indisponibilidad, así que no aparecen entre los afectados.
+
+Ejemplo con la red sintética: si el proveedor de acero (`PROV-ACERO`) está indisponible, quedan
+afectados la barra de acero (`INS-BARRA`), el proceso de corte (`PROC-CORTE`), el panel de montaje
+(`PROD-PANEL`) y el banco de montaje (`PROD-BANCO`). Los tornillos (`INS-TORNILLO`) no quedan
+afectados: ninguna arista del grafo indica que el proveedor de acero los habilite.
+
+La dirección es única y no se invierte nunca: el mismo sentido de recorrido sirve para el análisis de
+impacto y para el orden de preparación. El significado también está documentado en
+[`docs/graph-model.md`](docs/graph-model.md), sección 8.
 
 ## Convenciones
 

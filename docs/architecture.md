@@ -1,10 +1,12 @@
-# Arquitectura y calidad — AbastecePyme (F1)
+# Arquitectura y calidad — AbastecePyme (F1 y F2)
 
-Este documento operacionaliza para F1 las reglas obligatorias de `AGENTS.md` (Clean Architecture,
-SOLID, Clean Code, nomenclatura y prohibición de NetworkX) y las hace verificables.
+Este documento operacionaliza para F1 y F2 las reglas obligatorias de `AGENTS.md` (Clean
+Architecture, SOLID, Clean Code, nomenclatura y prohibición de NetworkX) y las hace verificables.
 
-- Requisitos de calidad asociados: `requirements.md`, sección 5 (`RNF-Q-01` a `RNF-Q-08`).
-- Verificación: `acceptance-criteria.md` (AC-F1-21 a AC-F1-23).
+- Requisitos de calidad asociados: `requirements.md`, sección 5 (`RNF-Q-01` a `RNF-Q-08`) para F1 y
+  `requirements.md` §9 (`RNF-F2-01` a `RNF-F2-03`) para F2.
+- Verificación: `acceptance-criteria.md` (AC-F1-21 a AC-F1-23 para F1; AC-F2-09 para F2).
+- Las secciones 1 a 6 son de F1 y la sección 7 es de F2. F2 no modifica ninguna regla de F1.
 
 No se define aquí ninguna estructura de clases ni de archivos: esas decisiones corresponden a
 `backend-builder` y `frontend-builder`. Se definen responsabilidades, límites y dependencias entre
@@ -165,9 +167,36 @@ designar un elemento del catálogo.
 | Los datos mal formados se rechazan | Reglas de validación del dominio | Todos los casos de uso | Todos los endpoints | Mensaje de error con el campo | El formulario señala el campo y el catálogo queda intacto |
 | La red se puede consultar | Representación del grafo con adyacencias | Obtener grafo | `GET /api/v1/grafo` | Visualización de la red | Nodos y flechas en la dirección `origen → destino` |
 | La dirección de las relaciones es explícita | Metadato `tipoRelacion` | Listar dependencias | `GET /api/v1/dependencias` | Rotulación de las flechas | Cada flecha indica qué habilita a qué |
-
 ## 6. Decisiones relacionadas
 
 Las decisiones que sustentan estas restricciones están registradas en `docs/decisions/analyst.md`.
+
 Las decisiones de estructura de código, elección de framework y de persistencia concreta
 corresponden a `backend-builder` y `frontend-builder` en sus propios archivos de registro.
+
+## 7. Relevancia para F2 — Análisis de impacto
+
+F2 no abre capas nuevas: reutiliza el catálogo, el grafo, los casos de uso y los puertos de
+persistencia de F1. Lo único que añade es un cálculo sobre el grafo ya existente.
+
+| Aspecto | Ubicación obligatoria |
+| ------- | ---------------------- |
+| Regla «alcanzar» y definición del conjunto de afectados | Dominio |
+| Recorrido de alcanzables hacia adelante y manejo de visitados | Dominio |
+| Definición de dependiente (existencia de arista entrante) | Dominio |
+| Orquestación de la consulta de impacto | Aplicación (caso de uso) |
+| Forma del JSON `Impacto` y traducción de `snake_case` a `lowerCamelCase` | Infraestructura (sección 3.1) |
+| Traducción de `ERR-02` y `ERR-05` a `404` y `422` | Infraestructura |
+| Detección de ciclos y orden de preparación | **Fuera de F2** (F3) |
+
+Reglas transversales de F2:
+
+- El caso de uso de aplicación **no** implementa el recorrido: expresa la consulta y el resultado
+  en términos del dominio.
+- La capa HTTP no decide qué elementos son afectados, no invierte la dirección y no filtra por tipo.
+- El recorrido es propio del proyecto: no se introduce ninguna biblioteca de grafos para el cálculo.
+  NetworkX solo puede usarse para visualizar un resultado ya calculado.
+- Si el frontend llega a exponer el impacto, consume el resultado del backend y no recalcula los
+  alcanzables, no invierte la dirección y no filtra por reglas propias.
+- El cálculo de impacto no altera el modelo de F1: no añade elementos, aristas ni atributos, y no
+  modifica la dirección definida.
