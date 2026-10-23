@@ -9,15 +9,18 @@ from fastapi import APIRouter, Request, Response, status
 
 from app.api.esquemas import (
     DependenciaRespuesta,
+    ElementoImpactoRespuesta,
     ElementoRespuesta,
     EntradaDependencia,
     EntradaElemento,
     GrafoRespuesta,
+    ImpactoRespuesta,
     ListaDependenciasRespuesta,
     ListaElementosRespuesta,
     ResumenGrafo,
 )
 from app.aplicacion.casos_de_uso import (
+    ConsultarImpacto,
     CrearElemento,
     ListarDependencias,
     ListarElementos,
@@ -51,6 +54,14 @@ def _dependencia_a_respuesta(dependencia: Dependencia) -> DependenciaRespuesta:
         origen=dependencia.origen,
         destino=dependencia.destino,
         tipo_relacion=dependencia.tipo_relacion,
+    )
+
+
+def _elemento_a_impacto_respuesta(elemento: Elemento) -> ElementoImpactoRespuesta:
+    return ElementoImpactoRespuesta(
+        id=elemento.id,
+        tipo=elemento.tipo.value,
+        nombre=elemento.nombre,
     )
 
 
@@ -142,6 +153,24 @@ def crear_enrutador() -> APIRouter:
                 total_elementos=len(elementos),
                 total_dependencias=len(dependencias),
             ),
+        )
+
+    @enrutador.get("/impacto/{id}", response_model=ImpactoRespuesta)
+    def obtener_impacto(id: str, peticion: Request) -> ImpactoRespuesta:
+        """Devuelve los elementos afectados por la indisponibilidad de ``id``.
+
+        Recorre el grafo en sentido hacia adelante (``origen habilita destino``).
+        Responde:
+        - 200: elemento existe; ``afectados`` puede estar vacía (total 0).
+        - 404 ERR-02: elemento no existe.
+        - 422 ERR-05: identificador mal formado.
+        """
+        caso_de_uso = ConsultarImpacto(obtener_repositorio(peticion))
+        elemento, afectados = caso_de_uso.ejecutar(id)
+        return ImpactoRespuesta(
+            elemento=_elemento_a_impacto_respuesta(elemento),
+            afectados=[_elemento_a_impacto_respuesta(a) for a in afectados],
+            total=len(afectados),
         )
 
     return enrutador

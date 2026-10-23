@@ -331,12 +331,13 @@ def test_ac_f1_23_la_composicion_de_dependencias_es_un_unico_punto() -> None:
 
     La composición puede referenciar todas las piezas: por eso no se cuenta
     como una operación con varias responsabilidades.
+    F1 tenía 2 POST y 4 GET; F2 añade 1 GET (/impacto/{id}) en la misma función.
     """
     contenido = (RAIZ_BACKEND / "app" / "api" / "rutas.py").read_text(encoding="utf-8")
 
     assert contenido.count("def crear_enrutador") == 1
     assert contenido.count("enrutador.post(") == 2
-    assert contenido.count("enrutador.get(") == 4
+    assert contenido.count("enrutador.get(") == 5  # 4 de F1 + 1 de F2
 
 
 def test_ac_f1_23_el_cliente_de_api_no_calcula_sobre_el_grafo() -> None:

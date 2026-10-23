@@ -138,3 +138,41 @@ class Catalogo:
     def total_dependencias(self) -> int:
         """Número de dependencias registradas."""
         return sum(len(destinos) for destinos in self._adyacencia_salida.values())
+
+    def obtener_impacto(self, identificador: str) -> list[Elemento]:
+        """Devuelve los elementos afectados por la indisponibilidad de ``identificador``.
+
+        El impacto es el conjunto de elementos alcanzables desde ``identificador``
+        siguiendo aristas en sentido hacia adelante (``origen habilita destino``).
+        No incluye al propio elemento consultado.
+
+        Lanza ``ElementoNoEncontrado`` si el elemento no existe (ERR-02).
+        El recorrido usa un conjunto de visitados para terminar en grafos con ciclos
+        y devuelve los afectados ordenados por ``id`` ascendente (determinista).
+
+        RN-F2-01, RN-F2-02, RN-F2-05, RN-F2-06, RN-F2-11.
+        """
+        if identificador not in self._elementos:
+            raise ElementoNoEncontrado(
+                f"No existe un elemento con el identificador {identificador}.",
+                [DetalleError("id", f"El elemento '{identificador}' no existe en el catálogo.")],
+            )
+
+        visitados: set[str] = set()
+        afectados_ids: set[str] = set()
+        pila: list[str] = [identificador]
+
+        while pila:
+            actual = pila.pop()
+            if actual in visitados:
+                continue
+            visitados.add(actual)
+
+            for destino in self._adyacencia_salida[actual]:
+                if destino not in visitados and destino != identificador:
+                    afectados_ids.add(destino)
+                    pila.append(destino)
+
+        # Orden determinista por id ascendente
+        afectados_ordenados = sorted(afectados_ids)
+        return [self._elementos[id_elem] for id_elem in afectados_ordenados]
