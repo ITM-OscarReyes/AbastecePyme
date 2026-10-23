@@ -115,3 +115,22 @@ class RespuestaError(_EsquemaBase):
     """Sobre único y uniforme para todos los errores de F1."""
 
     error: CuerpoErrorRespuesta
+
+
+class ElementoImpactoRespuesta(_EsquemaBase):
+    """Representación reducida de un elemento para la respuesta de impacto.
+
+    Incluye solo ``id``, ``tipo`` y ``nombre`` según el contrato de F2.
+    """
+
+    id: str
+    tipo: str
+    nombre: str
+
+
+class ImpactoRespuesta(_EsquemaBase):
+    """Respuesta de ``GET /api/v1/impacto/{id}`` (F2 — Análisis de impacto)."""
+
+    elemento: ElementoImpactoRespuesta
+    afectados: list[ElementoImpactoRespuesta]
+    total: int

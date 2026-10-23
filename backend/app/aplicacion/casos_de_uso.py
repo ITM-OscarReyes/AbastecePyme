@@ -119,3 +119,22 @@ class ObtenerGrafo:
 
     def ejecutar(self) -> Catalogo:
         return self._repositorio.obtener()
+
+
+class ConsultarImpacto:
+    """RF-F2-01/02/03/04/05/07/09: consulta el impacto de un elemento.
+
+    Valida el formato del identificador (ERR-05 si mal formado) y delega
+    en el dominio el recorrido hacia adelante. El dominio lanza
+    ElementoNoEncontrado (ERR-02) si el elemento no existe.
+    """
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(self, identificador: object) -> tuple[Elemento, list[Elemento]]:
+        id_normalizado = validar_identificador_consulta(identificador, "id")
+        catalogo = self._repositorio.obtener()
+        elemento = catalogo.obtener_elemento(id_normalizado)
+        afectados = catalogo.obtener_impacto(id_normalizado)
+        return elemento, afectados

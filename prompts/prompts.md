@@ -155,3 +155,27 @@ REQUISITOS ESTRICTOS:
 Lee antes `AGENTS.md`, `docs/brief.md`, toda la especificación de `docs/`, los registros de `docs/decisions/` y la implementación de `backend/` y `frontend/`.
 
 Al finalizar, devuelve un informe con: (1) hallazgos con severidad, archivo:lima y la comparación entre lo que dice la fuente de verdad y lo que existe, (2) matriz de trazabilidad RF/AC → especificación → implementación → prueba → evidencia con los faltantes, (3) lista de lo que falta para cerrar F1 separada en corregible por agente y tarea humana, y (4) veredicto de auditoría `APTO` o `NO APTO` con justificación.
+
+## 07 — Backend de F2 con el agente backend-builder
+
+Continúa con el desarrollo del backend para el Feature 2 (F2 - Análisis de impacto) de AbastecePyme, aprovechando el backend ya existente del Feature 1 (Catálogo de dependencias).
+
+**Contexto del proyecto:**
+- F1 ya está implementado y verificado (Catálogo de dependencias: crear/listar elementos, registrar dependencias, validar, representar y consultar el grafo)
+- F2 es "Análisis de impacto": consultar el impacto de un elemento respetando la dirección del grafo; diferenciar entre elemento inexistente, elemento existente sin dependencias y elemento que afecta o depende de una cadena
+- Debes trabajar en la rama `f2-Backend`
+- Usar Python 3.12+ y FastAPI
+- No usar NetworkX para cálculos principales (solo visualización)
+- Almacena la documentación del prompt en `prompts.md`
+- Código con documentación clara
+
+**Pasos a seguir:**
+1. Primero, explora el código existente del backend (F1) para entender la estructura, modelos, API y algoritmos del grafo
+2. Crea/cambia a la rama `f2-Backend`
+3. Documenta este prompt en `prompts.md`
+4. Implementa los endpoints y lógica para F2:
+   - Endpoint para consultar impacto de un elemento (hacia adelante/atrás según dirección del grafo)
+   - Manejo de casos: elemento inexistente, sin dependencias, con cadenas de dependencia
+   - Respuestas claras diferenciando cada caso
+5. Asegura que la implementación respete SOLID, Clean Architecture, y las convenciones del proyecto
+6. Escribe pruebas básicas para validar la funcionalidad
