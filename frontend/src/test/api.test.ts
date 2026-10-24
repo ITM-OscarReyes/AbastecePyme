@@ -143,4 +143,31 @@ describe('Cliente de API contra el backend real', () => {
 
     expect(grafo.elementos).toEqual(listado.elementos);
   });
+
+  it('AC-F2-01 el cliente consulta el impacto real del backend para un elemento existente', async () => {
+    const impacto = await apiService.obtenerImpacto('PROV-ACERO');
+
+    expect(impacto.elemento.id).toBe('PROV-ACERO');
+    expect(impacto.afectados.length).toBe(impacto.total);
+    const idsAfectados = impacto.afectados.map((a) => a.id);
+    expect(idsAfectados).toContain('INS-BARRA');
+    expect(idsAfectados).not.toContain('INS-TORNILLO');
+  });
+
+  it('AC-F2-04 el cliente maneja un elemento sin afectados (total 0)', async () => {
+    const impacto = await apiService.obtenerImpacto('PROD-BANCO');
+
+    expect(impacto.elemento.id).toBe('PROD-BANCO');
+    expect(impacto.total).toBe(0);
+    expect(impacto.afectados).toEqual([]);
+  });
+
+  it('AC-F2-03 elemento inexistente devuelve error ELEMENTO_NO_ENCONTRADO', async () => {
+    try {
+      await apiService.obtenerImpacto('INEXISTENTE-123');
+      throw new Error('Debería haber fallado con 404');
+    } catch (error) {
+      expect(extraerMensajeError(error)).toContain('no existe');
+    }
+  });
 });

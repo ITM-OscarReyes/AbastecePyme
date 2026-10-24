@@ -60,3 +60,16 @@ export interface CrearDependenciaDto {
   origen: string;
   destino: string;
 }
+
+// F2 — Análisis de impacto
+export interface ElementoImpacto {
+  id: string;
+  tipo: TipoElemento;
+  nombre: string;
+}
+
+export interface ImpactoRespuesta {
+  elemento: ElementoImpacto;
+  afectados: ElementoImpacto[];
+  total: number;
+}

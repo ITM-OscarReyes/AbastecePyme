@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import type { CrearElementoDto, TipoElemento } from '../types';
+import type { CrearElementoDto, TipoElemento, Elemento } from '../types';
 import { X, AlertCircle, PlusCircle } from 'lucide-react';
 
 interface ModalCrearElementoProps {
   isOpen: boolean;
+  elementos?: Elemento[];
   onClose: () => void;
   onSubmit: (dto: CrearElementoDto) => Promise<void>;
 }
 
 export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = ({
   isOpen,
+  elementos,
   onClose,
   onSubmit
 }) => {
@@ -21,6 +23,25 @@ export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = ({
   const [cargando, setCargando] = useState(false);
 
   if (!isOpen) return null;
+
+  const sugerirIdUnico = () => {
+    const prefijos: Record<TipoElemento, string> = {
+      PROVEEDOR: 'PROV',
+      INSUMO: 'INS',
+      PROCESO: 'PROC',
+      PRODUCTO: 'PROD',
+    };
+    const prefijo = prefijos[tipo] || 'ELM';
+    const elementosExistentes = elementos || [];
+
+    let correlativo = 1;
+    let candidato = `${prefijo}-${String(correlativo).padStart(4, '0')}`;
+    while (elementosExistentes.some((e) => e.id.toUpperCase() === candidato)) {
+      correlativo += 1;
+      candidato = `${prefijo}-${String(correlativo).padStart(4, '0')}`;
+    }
+    setId(candidato);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +89,7 @@ export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = ({
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">Nuevo Elemento</h2>
-            <p className="text-xs text-slate-400">Registra un proveedor, insumo, proceso o producto.</p>
+            <p className="text-xs text-slate-400">Registra un proveedor, insumo, proceso o producto con código único.</p>
           </div>
         </div>
 
@@ -81,15 +102,28 @@ export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Identificador Único (ID)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-300">Identificador Único (ID / Código)</label>
+              <button
+                type="button"
+                onClick={sugerirIdUnico}
+                className="text-[11px] font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer transition-colors"
+                title="Generar correlativo alfanumérico único para planta (letras y números)"
+              >
+                <span>⚡ Generar Código Único</span>
+              </button>
+            </div>
             <input
               type="text"
-              placeholder="ej: INS-TORNILLO, PROD-PANEL"
+              placeholder="ej: INS-0001, INS-TORNILLO, PROD-0001"
               value={id}
               onChange={(e) => setId(e.target.value)}
               required
-              className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 transition-all uppercase"
+              className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 transition-all uppercase font-mono"
             />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Estándar SKU [Categoría]-[Correlativo] (ej: INS-0001). Inmutable ante cambios de nombre y compatible con ERPs y etiquetas.
+            </p>
           </div>
 
           <div>
