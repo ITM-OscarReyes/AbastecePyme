@@ -71,5 +71,11 @@ export const apiService = {
   async crearDependencia(dto: CrearDependenciaDto): Promise<Dependencia> {
     const { data } = await apiClient.post<Dependencia>('/dependencias', dto);
     return data;
+  },
+
+  // F2 — Análisis de impacto
+  async obtenerImpacto(id: string): Promise<import('../types').ImpactoRespuesta> {
+    const { data } = await apiClient.get<import('../types').ImpactoRespuesta>(`/impacto/${encodeURIComponent(id)}`);
+    return data;
   }
 };

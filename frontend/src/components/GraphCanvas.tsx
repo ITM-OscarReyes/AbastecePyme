@@ -4,7 +4,8 @@ import cytoscape from 'cytoscape';
 import type { Core, NodeSingular } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import type { Elemento, Dependencia } from '../types';
-import { Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut, Layers } from 'lucide-react';
+import { obtenerCodigoSku } from '../utils/sku';
+import { Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut, Layers, Download, Crosshair } from 'lucide-react';
 
 try {
   cytoscape.use(dagre);
@@ -25,13 +26,17 @@ const encuadrarAlInicio = (cy: Core, padding: number): void => {
 
   const caja = cy.elements().boundingBox();
   const zoom = cy.zoom();
-  cy.pan({ x: padding - caja.x1 * zoom, y: padding - caja.y1 * zoom });
+  const posX = padding - caja.x1 * zoom;
+  const posY = padding - caja.y1 * zoom;
+
+  cy.pan({ x: posX, y: posY });
 };
 
 interface GraphCanvasProps {
   elementos: Elemento[];
   dependencias: Dependencia[];
   nodoSeleccionadoId?: string | null;
+  nodosAfectadosIds?: string[];
   onSelectNode?: (nodoId: string | null) => void;
 }
 
@@ -39,6 +44,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   elementos,
   dependencias,
   nodoSeleccionadoId,
+  nodosAfectadosIds = [],
   onSelectNode
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,16 +73,21 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       }
 
       const esSeleccionado = nodoSeleccionadoId === e.id;
+      const esAfectado = nodosAfectadosIds.includes(e.id);
 
       if (esSeleccionado) {
         colorBorde = '#38bdf8';
         borderWidth = 4;
+      } else if (esAfectado) {
+        colorFondo = '#7f1d1d'; // Rojo oscuro de alerta de impacto
+        colorBorde = '#ef4444'; // Borde rojo brillante
+        borderWidth = 3;
       }
 
       return {
         data: {
           id: e.id,
-          label: `${icono} ${e.nombre}\n[${e.id}] • ${e.tipo}`,
+          label: `${esAfectado ? '⚠️ ' : ''}${icono} ${e.nombre}\n[${obtenerCodigoSku(e.id)}] • ${e.tipo}`,
           tipo: e.tipo,
           colorFondo,
           colorBorde,
@@ -87,15 +98,19 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     // Modelado de aristas dirigidas de abastecimiento
     const cyEdges = dependencias.map((d, index) => {
+      const aristaEnCadenaImpacto =
+        (nodoSeleccionadoId === d.origen && nodosAfectadosIds.includes(d.destino)) ||
+        (nodosAfectadosIds.includes(d.origen) && nodosAfectadosIds.includes(d.destino));
+
       return {
         data: {
           id: `e_${d.origen}_${d.destino}_${index}`,
           source: d.origen,
           target: d.destino,
           label: 'habilita',
-          lineColor: '#475569',
-          arrowColor: '#64748b',
-          width: 2.5
+          lineColor: aristaEnCadenaImpacto ? '#ef4444' : '#475569',
+          arrowColor: aristaEnCadenaImpacto ? '#f87171' : '#64748b',
+          width: aristaEnCadenaImpacto ? 3.5 : 2.5
         }
       };
     });
@@ -128,8 +143,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'shape': 'round-rectangle',
             'border-color': 'data(colorBorde)',
             'border-width': 'data(borderWidth)',
+            'opacity': 'data(opacidad)' as unknown as number,
             'overlay-padding': '4px',
-            'transition-property': 'background-color, border-color, border-width, width, height',
+            'transition-property': 'background-color, border-color, border-width, opacity, width, height',
             'transition-duration': 0.25
           }
         },
@@ -146,6 +162,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'font-size': '10px',
             'font-weight': 600,
             'color': '#94a3b8',
+            'opacity': 'data(opacidad)' as unknown as number,
             'text-background-color': '#030712',
             'text-background-opacity': 0.85,
             'text-background-padding': '2px',
@@ -186,7 +203,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       }
     });
 
-    // Ajuste inicial contra la esquina superior izquierda del lienzo
+    // Ajuste inicial contra la esquina superior izquierda del lienzo (Decisión 15)
     cy.ready(() => {
       encuadrarAlInicio(cy, 40);
     });
@@ -199,20 +216,43 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias, nodoSeleccionadoId]);
+  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode]);
 
   const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleFit = () => {
     if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
   };
+  const handleCentrarSeleccion = () => {
+    if (!cyRef.current || !nodoSeleccionadoId) return;
+    const nodo = cyRef.current.getElementById(nodoSeleccionadoId);
+    if (nodo && nodo.length > 0) {
+      cyRef.current.animate({
+        center: { eles: nodo },
+        zoom: Math.max(cyRef.current.zoom(), 1.25),
+        duration: 350
+      });
+    }
+  };
 
-  // Al cambiar el tamaño del contenedor Cytoscape no reajusta su viewport: sin esto el grafo
-  // queda escalado con la medida anterior al entrar o salir de pantalla completa.
+  // Al cambiar pantalla completa, esperar a que el DOM aplique las clases de posicionamiento
   useEffect(() => {
-    cyRef.current?.resize();
-    if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
-  }, [esPantallaCompleta]);
+    const timer = setTimeout(() => {
+      if (cyRef.current) {
+        cyRef.current.resize();
+        if (nodoSeleccionadoId) {
+          const nodo = cyRef.current.getElementById(nodoSeleccionadoId);
+          if (nodo && nodo.length > 0) {
+            cyRef.current.center(nodo);
+            return;
+          }
+        }
+        encuadrarAlInicio(cyRef.current, 45);
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [esPantallaCompleta, nodoSeleccionadoId]);
 
   // Cytoscape no reajusta su viewport cuando cambia el tamaño del contenedor. Como el lienzo ahora
   // ocupa el espacio restante del viewport, hay que reajustarlo al redimensionar la ventana; si no,
@@ -236,14 +276,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     return () => window.removeEventListener('keydown', salirConEscape);
   }, []);
 
-  // Al alternar entre `relative` y `fixed` hay que desactivar la transición de tamaño de
-  // `.glass-card`, o el reajuste de Cytoscape mide un contenedor todavía en movimiento.
-  // En pantalla completa `width`/`height` deben ser `auto`: con `w-full h-full` (`100vw`/`100vh`)
-  // y `inset-4` a la vez, el tamaño queda sobre-constreñido, CSS descarta `right` y `bottom`, y el
-  // panel sobresale 1rem por la derecha y 1rem por abajo.
-  const estiloContenedor: CSSProperties = esPantallaCompleta
-    ? { transition: 'none', width: 'auto', height: 'auto' }
-    : {};
+  // Al alternar entre `relative` y `fixed` se desactiva cualquier transición de tamaño
+  // para evitar que el motor gráfico mida un contenedor con dimensiones intermedias o erróneas.
+  const estiloContenedor: CSSProperties = {
+    transition: 'none'
+  };
 
   const handleRelayout = () => {
     cyRef.current?.layout({
@@ -255,6 +292,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       animate: true,
       animationDuration: 400
     } as any).run();
+  };
+
+  const handleExportarPNG = () => {
+    if (!cyRef.current) return;
+    const uri = cyRef.current.png({ full: true, scale: 2, bg: '#020617' });
+    const a = document.createElement('a');
+    a.href = uri;
+    a.download = `abastecepyme-red-${new Date().toISOString().slice(0, 10)}.png`;
+    a.click();
   };
 
 // En pantalla completa el ancho y la altura los fijan los insets: ocupa el viewport menos el
@@ -292,6 +338,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </div>
       </div>
 
+
+
       {/* Controles de Vista y Pantalla Completa */}
       <div className="absolute bottom-3 right-3 z-10 bg-slate-950/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-800 flex items-center gap-1 shadow-2xl">
         <button
@@ -308,6 +356,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         >
           <ZoomOut size={17} />
         </button>
+        {nodoSeleccionadoId && (
+          <button
+            onClick={handleCentrarSeleccion}
+            title="Centrar vista en componente seleccionado"
+            className="p-2 text-sky-400 hover:text-white hover:bg-sky-500/20 rounded-lg transition-colors active:scale-95"
+          >
+            <Crosshair size={17} />
+          </button>
+        )}
         <button
           onClick={handleFit}
           title="Ajustar vista"
@@ -321,6 +378,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
         >
           <RefreshCw size={17} />
+        </button>
+        <button
+          onClick={handleExportarPNG}
+          title="Exportar diagrama en imagen (PNG)"
+          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
+        >
+          <Download size={17} />
         </button>
         <div className="w-[1px] h-5 bg-slate-800 mx-0.5" />
         <button
