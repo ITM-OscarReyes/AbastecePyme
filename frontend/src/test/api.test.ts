@@ -170,4 +170,33 @@ describe('Cliente de API contra el backend real', () => {
       expect(extraerMensajeError(error)).toContain('no existe');
     }
   });
+it('AC-F2-11 identificador mal formado devuelve error 422 IDENTIFICADOR_INVALIDO', async () => {
+    try {
+      await apiService.obtenerImpacto('xx');
+      throw new Error('Debería haber fallado con 422');
+    } catch (error) {
+      expect(extraerMensajeError(error)).toContain('no cumple el formato');
+    }
+  });
+
+  it('AC-F2-05b múltiples caminos hacia el mismo destino devuelven el elemento sin duplicados', async () => {
+    const impacto = await apiService.obtenerImpacto('INS-TORNILLO');
+    const ids = impacto.afectados.map((a) => a.id);
+    expect(ids.filter((id) => id === 'PROD-BANCO').length).toBe(1);
+    expect(ids).toEqual(['PROD-BANCO', 'PROD-PANEL']);
+  });
+
+  it('AC-F2-13 los elementos afectados vienen ordenados de forma determinista por id', async () => {
+    const impacto = await apiService.obtenerImpacto('PROV-ACERO');
+    const ids = impacto.afectados.map((a) => a.id);
+    expect(ids).toEqual([...ids].sort());
+  });
+
+  it('AC-F2-14 la respuesta de impacto no expone campos de ciclos ni de orden', async () => {
+    const respuesta = await apiClient.get<Record<string, unknown>>('/impacto/PROV-ACERO');
+    const clavesProhibidas = ['ciclos', 'ciclo', 'tieneCiclo', 'orden', 'ordenProduccion', 'nivel'];
+    for (const clave of clavesProhibidas) {
+      expect(respuesta.data).not.toHaveProperty(clave);
+    }
+  });
 });
