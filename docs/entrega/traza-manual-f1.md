@@ -1,7 +1,9 @@
 # Traza manual de F1 — Catálogo de dependencias
 
 Ejemplo pequeño recorrido a mano. Los valores de las respuestas
-se obtuvieron ejecutando el backend real con `uvicorn app.main:app`.
+se obtuvieron ejecutando el backend real con `uvicorn app.main:app`. La demo actual añade la línea
+de madera (`PROV-MADERA`, `INS-TABLERO`, `INS-BARNIZ`, `PROC-ENSAMBLE`, `PROD-ESCRITORIO`); esta
+traza conserva el ejemplo original de F1 para no alterar la evidencia histórica.
 
 **Dirección del grafo:** `origen → destino`, con `tipoRelacion: "habilita"`, y la lectura "Para
 producir el destino necesito el origen" (ver [`graph-model.md`](../graph-model.md), sección 2).

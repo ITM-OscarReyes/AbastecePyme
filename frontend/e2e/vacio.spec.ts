@@ -1,43 +1,39 @@
 /**
- * AC-F1-13 / AC-F1-14d · Catálogo vacío en la interfaz.
+ * Catálogo vacío en la interfaz.
  *
- * Se ejecuta contra el backend con `V = ∅` (`backend/tests/servidor_vacio.py`).
- * Una aplicación iniciada sin datos debe mostrar el estado vacío y totales en
- * cero; no debe inventar elementos ni un error de conexión.
+ * Se ejecuta contra el backend con el catálogo vacío (`backend/tests/servidor_vacio.py`).
+ * Comprueba que la aplicación muestra el estado vacío, los totales en cero y que el
+ * alta de elementos y la selección por tipo funcionan sin datos inventados.
  */
 import { test, expect } from '@playwright/test';
 
 test.describe('Interfaz con catálogo vacío', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('API Conectada')).toBeVisible();
+    await expect(page.getByText('Sistema Sincronizado')).toBeVisible();
   });
 
-  test('AC-F1-13 los totales muestran cero sin errores', async ({ page }) => {
+  test('los totales muestran cero sin errores', async ({ page }) => {
     const tarjeta = (titulo: string) =>
       page.locator('.glass-card').filter({ hasText: titulo }).first();
 
-    await expect(tarjeta('Total Elementos')).toContainText('0');
-    await expect(tarjeta('Dependencias')).toContainText('0');
-    await expect(tarjeta('Tipos en Catálogo')).toContainText('0');
-    await expect(page.getByText('API Desconectada')).toHaveCount(0);
+    await expect(tarjeta('Proveedores')).toContainText('0');
+    await expect(tarjeta('Materias & Suministros')).toContainText('0');
+    await expect(tarjeta('Procesos de Planta')).toContainText('0');
+    await expect(tarjeta('Productos Finales')).toContainText('0');
+    await expect(page.getByText('Sin Conexión')).toHaveCount(0);
   });
 
-  test('AC-F1-13 el catálogo se muestra vacío, no con datos inventados', async ({ page }) => {
-    await page.getByRole('button', { name: 'Catálogo' }).click();
-
-    // La tabla conserva su cabecera y un único aviso de "sin resultados":
-    // no hay filas de datos, es decir, ningún elemento inventado.
-    const cuerpo = page.locator('table tbody');
-    await expect(cuerpo.getByRole('cell')).toHaveCount(1);
-    await expect(cuerpo).toContainText(/no se encontraron elementos/i);
+  test('el catálogo se muestra vacío, no con datos inventados', async ({ page }) => {
+    await page.getByRole('button', { name: /Materiales & Procesos/i }).click();
 
     const filas = page.locator('table tbody tr');
     await expect(filas).toHaveCount(1);
-    await expect(filas.getByRole('cell').first()).toHaveAttribute('colspan', '4');
+    await expect(filas.getByRole('cell').first()).toHaveAttribute('colspan', '6');
+    await expect(page.locator('table tbody')).toContainText(/no se encontraron elementos/i);
   });
 
-  test('AC-F1-14d el lienzo se monta sin nodos ni aristas', async ({ page }) => {
+  test('el lienzo se monta sin nodos ni aristas', async ({ page }) => {
     await expect(page.locator('canvas').first()).toBeVisible();
 
     const dibujado = await page.evaluate(() => {
@@ -53,25 +49,25 @@ test.describe('Interfaz con catálogo vacío', () => {
     expect(dibujado).toEqual({ nodos: 0, aristas: 0 });
   });
 
-  test('AC-F1-14 el alta desde la interfaz funciona sobre el catálogo vacío', async ({ page }) => {
+  test('el alta desde la interfaz funciona sobre el catálogo vacío', async ({ page }) => {
     const id = 'VACIO-TEST-INSUMO';
 
-    await page.getByRole('button', { name: 'Elemento' }).click();
+    await page.getByRole('button', { name: /Nuevo Componente/i }).click();
     const modal = page.locator('.fixed').filter({ hasText: 'Nuevo Elemento' });
     await modal.getByPlaceholder(/INS-TORNILLO/i).fill(id);
-    await modal.getByPlaceholder(/Tornillo hexagonal/i).fill('Primer insumo del catálogo vacío');
+    await modal.getByPlaceholder(/Tornillo hexagonal/i).fill('Primer suministro del catálogo vacío');
     await modal.getByRole('button', { name: 'Crear Elemento' }).click();
     await expect(page.locator('.fixed')).toBeHidden();
 
-    const tarjeta = page.locator('.glass-card').filter({ hasText: 'Total Elementos' }).first();
+    const tarjeta = page.locator('.glass-card').filter({ hasText: 'Materias & Suministros' }).first();
     await expect(tarjeta).toContainText('1');
 
-    await page.getByRole('button', { name: 'Catálogo' }).click();
-    await expect(page.getByRole('cell', { name: id, exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /Materiales & Procesos/i }).click();
+    await expect(page.getByText(`${id}-01`, { exact: true })).toBeVisible();
   });
 
-  test('AC-F1-14 el selector de dependencias ofrece los elementos reales', async ({ page }) => {
-    await page.getByRole('button', { name: 'Elemento' }).click();
+  test('el formulario de relación filtra elementos por tipo', async ({ page }) => {
+    await page.getByRole('button', { name: /Nuevo Componente/i }).click();
     let modal = page.locator('.fixed').filter({ hasText: 'Nuevo Elemento' });
     await modal.getByPlaceholder(/INS-TORNILLO/i).fill('VACIO-TEST-PRODUCTO');
     await modal.getByPlaceholder(/Tornillo hexagonal/i).fill('Producto del catálogo vacío');
@@ -79,10 +75,17 @@ test.describe('Interfaz con catálogo vacío', () => {
     await modal.getByRole('button', { name: 'Crear Elemento' }).click();
     await expect(page.locator('.fixed')).toBeHidden();
 
-    await page.getByRole('button', { name: 'Dependencia', exact: true }).click();
-    modal = page.locator('.fixed').filter({ hasText: 'Nueva Dependencia Dirigida' });
-    const opciones = modal.locator('select').first().locator('option');
-    await expect(opciones).toHaveCount(3); // vacío + los dos creados
-    await expect(opciones.nth(1)).toContainText('VACIO-TEST-INSUMO');
+    await page.getByRole('button', { name: /Enlazar Suministro/i }).click();
+    modal = page.locator('.fixed').filter({ hasText: 'Enlazar Suministro' });
+    const selectores = modal.locator('select');
+    await selectores.nth(0).selectOption('INSUMO');
+    await selectores.nth(2).selectOption('PRODUCTO');
+
+    const opcionesOrigen = selectores.nth(1).locator('option');
+    const opcionesDestino = selectores.nth(3).locator('option');
+    await expect(opcionesOrigen).toHaveCount(2); // vacío + el suministro creado
+    await expect(opcionesDestino).toHaveCount(2); // vacío + el producto creado
+    await expect(opcionesOrigen.nth(1)).toContainText('VACIO-TEST-INSUMO');
+    await expect(opcionesDestino.nth(1)).toContainText('VACIO-TEST-PRODUCTO');
   });
 });

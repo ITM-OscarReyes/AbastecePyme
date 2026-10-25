@@ -76,6 +76,12 @@ class DependenciaDuplicada(ErrorDominio):
     codigo = "DEPENDENCIA_DUPLICADA"
 
 
+class DependenciaNoEncontrada(ErrorDominio):
+    """ERR-10: la dependencia solicitada no existe."""
+
+    codigo = "DEPENDENCIA_NO_ENCONTRADA"
+
+
 class RutaNoEncontrada(ErrorDominio):
     """ERR-09: la ruta solicitada no existe en la API."""
 

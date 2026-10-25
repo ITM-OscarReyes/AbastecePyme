@@ -2,10 +2,10 @@
         esperado: 200
         obtenido: 200
 [PASÓ] AC-F1-10 el resumen coincide con lo devuelto
-        esperado: resumen con 6 elementos y 6 dependencias, igual que las listas
-        obtenido: {"totalElementos": 6, "totalDependencias": 6}
+        esperado: resumen con 11 elementos y 11 dependencias, igual que las listas
+        obtenido: {"totalElementos": 11, "totalDependencias": 11}
 [PASÓ] AC-F1-09c cada dependencia lleva tipoRelacion habilita
-        esperado: tipoRelacion "habilita" en las 6 dependencias
+        esperado: tipoRelacion "habilita" en las 11 dependencias
         obtenido: {'habilita'}
 [PASÓ] AC-F1-01b alta en minúsculas normalizada responde 201
         esperado: 201
@@ -13,6 +13,15 @@
 [PASÓ] AC-F1-01b el id y el tipo se devuelven en mayúsculas
         esperado: id INS-PRUEBA-HTTP, tipo INSUMO
         obtenido: id INS-PRUEBA-HTTP, tipo INSUMO
+[PASÓ] El suministro de prueba se asocia a un proveedor
+        esperado: 201 para el proveedor
+        obtenido: 201
+[PASÓ] La asociación proveedor → suministro se registra
+        esperado: 201
+        obtenido: 201
+[PASÓ] El proceso de prueba se crea para las relaciones inversas
+        esperado: 201
+        obtenido: 201
 [PASÓ] AC-F1-02 un id ya registrado responde 409 ERR-01
         esperado: 409 con error.codigo ELEMENTO_DUPLICADO
         obtenido: 409 con ELEMENTO_DUPLICADO
@@ -40,6 +49,9 @@
 [PASÓ] AC-F1-08 dependencia repetida responde 409 ERR-08
         esperado: 409 con error.codigo DEPENDENCIA_DUPLICADA
         obtenido: 409 con DEPENDENCIA_DUPLICADA
+[PASÓ] La relación suministro → proceso se registra
+        esperado: 201
+        obtenido: 201
 [PASÓ] AC-F1-08b el par inverso responde 201
         esperado: 201
         obtenido: 201
@@ -47,8 +59,8 @@
         esperado: 422 con error.codigo DEPENDENCIA_INVALIDA
         obtenido: 422 con DEPENDENCIA_INVALIDA
 [PASÓ] AC-F1-09b filtro por origen devuelve solo las de ese origen
-        esperado: 200 con total 1 hacia PROD-BANCO
-        obtenido: 200 con total 1 hacia PROD-BANCO
+        esperado: 200 con total 2 hacia PROD-BANCO y PROC-PRUEBA-HTTP
+        obtenido: 200 con total 2
 [PASÓ] AC-F1-04d filtro de tipo inválido responde 422 ERR-04
         esperado: 422 con error.codigo VALIDACION_FALLIDA
         obtenido: 422 con VALIDACION_FALLIDA
@@ -70,17 +82,17 @@
 [PASÓ] AC-F1-18 dos lecturas idénticas devuelven lo mismo
         esperado: idénticas
         obtenido: idénticas
-[PASÓ] AC-F1-16 los tres elementos del ciclo se crean
-        esperado: 201, 201, 201
-        obtenido: 201, 201, 201
+[PASÓ] AC-F1-16 los cuatro elementos del ciclo se crean
+        esperado: 201, 201, 201, 201
+        obtenido: 201, 201, 201, 201
 [PASÓ] AC-F1-16 un ciclo se registra íntegramente sin error
-        esperado: 201, 201, 201 para A->B, B->C y C->A
-        obtenido: 201, 201, 201
-[PASÓ] AC-F1-16 las tres aristas del ciclo aparecen en GET /grafo
-        esperado: las tres parejas A->B, B->C y C->A presentes
-        obtenido: 3 de 3 presentes
+        esperado: 201, 201, 201, 201 para las cuatro aristas del ciclo
+        obtenido: 201, 201, 201, 201
+[PASÓ] AC-F1-16 las cuatro aristas del ciclo aparecen en GET /grafo
+        esperado: las cuatro parejas del ciclo presentes
+        obtenido: 4 de 4 presentes
 [PASÓ] AC-F1-16b la respuesta no anuncia el ciclo
         esperado: sin campos de advertencia ni veredicto de ciclo
         obtenido: sin campos de advertencia ni veredicto
 
-Escenarios: 28 · PASÓ: 28 · FALLÓ: 0
+Escenarios: 32 · PASÓ: 32 · FALLÓ: 0

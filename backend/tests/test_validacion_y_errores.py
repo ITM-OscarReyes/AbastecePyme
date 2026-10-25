@@ -1,4 +1,4 @@
-﻿"""RF-F1-11/12/13 Â· ValidaciÃ³n de entrada, errores explÃ­citos y estados vacÃ­os.
+"""RF-F1-11/12/13 Â· ValidaciÃ³n de entrada, errores explÃ­citos y estados vacÃ­os.
 
 Cubre AC-F1-11, AC-F1-11b, AC-F1-11c, AC-F1-11d, AC-F1-12, AC-F1-12b,
 AC-F1-13, AC-F1-13b, AC-F1-13c.
@@ -191,7 +191,7 @@ def test_ac_f1_11d_el_catalogo_queda_intacto_tras_cualquier_rechazo(cliente: Tes
         (cliente.post("/api/v1/elementos", json={"id": "INS-X1", "tipo": "INSUMO", "nombre": "Barra", "extra": 1})),
         (cliente.post("/api/v1/dependencias", json={"origen": "FANTASMA", "destino": "PROD-PANEL"})),
         (cliente.post("/api/v1/dependencias", json={"origen": "INS-TORNILLO", "destino": "INS-TORNILLO"})),
-        (cliente.post("/api/v1/dependencias", json={"origen": "INS-TORNILLO", "destino": "PROD-PANEL"})),
+        (cliente.post("/api/v1/dependencias", json={"origen": "PROD-PANEL", "destino": "INS-TORNILLO"})),
         (cliente.post("/api/v1/elementos", content="no-json", headers={"Content-Type": "application/json"})),
     ]
 
@@ -208,7 +208,7 @@ def test_ac_f1_12_toda_respuesta_de_error_tiene_el_sobre_uniforme(cliente: TestC
         cliente.get("/api/v1/elementos/xx"),
         cliente.post("/api/v1/elementos", json={"id": "INS-X1", "tipo": "INSUMO", "nombre": "Nombre valido", "z": 1}),
         cliente.post("/api/v1/dependencias", json={"origen": "INS-TORNILLO", "destino": "INS-TORNILLO"}),
-        cliente.post("/api/v1/dependencias", json={"origen": "INS-TORNILLO", "destino": "PROD-PANEL"}),
+        cliente.post("/api/v1/dependencias", json={"origen": "PROD-PANEL", "destino": "INS-TORNILLO"}),
         cliente.get("/api/v1/ruta/inexistente"),
     ]
 
@@ -293,7 +293,7 @@ def test_ac_f1_12b_cada_codigo_del_contrato_produce_su_http(cliente: TestClient)
             cliente, "INS-TORNILLO", "INS-TORNILLO"
         ),
         "DEPENDENCIA_DUPLICADA": lambda: registrar_dependencia(
-            cliente, "INS-TORNILLO", "PROD-PANEL"
+            cliente, "INS-TORNILLO", "PROC-CORTE"
         ),
         "TIPO_NO_ENCONTRADO": lambda: cliente.get("/api/v1/ruta/inexistente"),
     }
@@ -329,7 +329,16 @@ def test_ac_f1_13b_elemento_sin_dependencias_es_valido_y_consultable(cliente_vac
     assert cliente_vacio.get("/api/v1/dependencias").json() == {"dependencias": [], "total": 0}
     grafo = cliente_vacio.get("/api/v1/grafo").json()
     assert grafo["elementos"] == [
-        {"id": "INS-SOLO", "tipo": "INSUMO", "nombre": "Insumo aislado", "descripcion": None}
+        {
+            "id": "INS-SOLO",
+            "tipo": "INSUMO",
+            "nombre": "Insumo aislado",
+            "descripcion": None,
+            "stockDisponible": 0,
+            "stockMinimo": 0,
+            "estadoStock": "SUFICIENTE",
+            "alertaStock": False,
+        }
     ]
     assert grafo["resumen"]["totalDependencias"] == 0
 

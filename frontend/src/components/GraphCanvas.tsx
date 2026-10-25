@@ -5,6 +5,7 @@ import type { Core, NodeSingular } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import type { Elemento, Dependencia } from '../types';
 import { obtenerCodigoSku } from '../utils/sku';
+import { etiquetaTipo } from '../utils/etiquetas';
 import { Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut, Layers, Download, Crosshair } from 'lucide-react';
 
 try {
@@ -82,12 +83,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         colorFondo = '#7f1d1d'; // Rojo oscuro de alerta de impacto
         colorBorde = '#ef4444'; // Borde rojo brillante
         borderWidth = 3;
+      } else if (e.alertaStock) {
+        colorBorde = '#f97316'; // Naranja de alerta de stock
+        borderWidth = 3;
       }
+
+      const avisoStock = e.alertaStock ? '\n⚠ Stock bajo' : '';
 
       return {
         data: {
           id: e.id,
-          label: `${esAfectado ? '⚠️ ' : ''}${icono} ${e.nombre}\n[${obtenerCodigoSku(e.id)}] • ${e.tipo}`,
+          label: `${esAfectado ? '⚠️ ' : ''}${icono} ${e.nombre}\n[${obtenerCodigoSku(e.id)}] • ${etiquetaTipo(e.tipo)}${avisoStock}`,
           tipo: e.tipo,
           colorFondo,
           colorBorde,
@@ -326,7 +332,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-md bg-amber-600 border border-amber-400 inline-block shadow-sm"></span>
-          <span className="text-slate-300 font-semibold text-[11px]">Insumo</span>
+          <span className="text-slate-300 font-semibold text-[11px]">Suministro</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-md bg-purple-600 border border-purple-400 inline-block shadow-sm"></span>
@@ -335,6 +341,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-md bg-emerald-600 border border-emerald-400 inline-block shadow-sm"></span>
           <span className="text-slate-300 font-semibold text-[11px]">Producto</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-md bg-slate-800 border-2 border-orange-500 inline-block shadow-sm"></span>
+          <span className="text-slate-300 font-semibold text-[11px]">Stock bajo</span>
         </div>
       </div>
 

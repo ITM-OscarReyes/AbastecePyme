@@ -33,15 +33,17 @@ ELEMENTOS_PRUEBA: tuple[tuple[str, str, str], ...] = (
 
 DEPENDENCIAS_PRUEBA: tuple[tuple[str, str], ...] = (
     ("PROV-ACERO", "INS-BARRA"),
+    ("PROV-ACERO", "INS-TORNILLO"),
     ("INS-BARRA", "PROC-CORTE"),
+    ("INS-TORNILLO", "PROC-CORTE"),
     ("PROC-CORTE", "PROD-PANEL"),
-    ("INS-TORNILLO", "PROD-PANEL"),
-    ("PROD-PANEL", "PROD-BANCO"),
-    ("INS-TORNILLO", "PROD-BANCO"),
+    ("PROC-CORTE", "PROD-BANCO"),
 )
 
-# Conjunto cíclico: el anterior más PROD-BANCO → PROD-PANEL
-DEPENDENCIAS_CICLICAS: tuple[tuple[str, str], ...] = DEPENDENCIAS_PRUEBA + (("PROD-BANCO", "PROD-PANEL"),)
+# Conjunto cíclico: el anterior más PROC-CORTE → INS-BARRA
+DEPENDENCIAS_CICLICAS: tuple[tuple[str, str], ...] = DEPENDENCIAS_PRUEBA + (
+    ("PROC-CORTE", "INS-BARRA"),
+)
 
 
 def _cliente_con_datos(dependencias: tuple[tuple[str, str], ...] = DEPENDENCIAS_PRUEBA) -> TestClient:
@@ -63,45 +65,48 @@ def _cliente_vacio() -> TestClient:
 # RF-F2-01 / RN-F2-01, RN-F2-02, RN-F2-07 · Respeto a la dirección definida
 # ---------------------------------------------------------------------------
 
-def test_ac_f2_01_impacto_prov_acero_devuelve_cuatro_afectados() -> None:
-    """AC-F2-01: PROV-ACERO afecta INS-BARRA, PROC-CORTE, PROD-PANEL, PROD-BANCO."""
+def test_ac_f2_01_impacto_prov_acero_devuelve_cinco_afectados() -> None:
+    """PROV-ACERO afecta a los dos suministros, al proceso y a los dos productos."""
     cliente = _cliente_con_datos()
     respuesta = cliente.get("/api/v1/impacto/PROV-ACERO")
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
     afectados_ids = [e["id"] for e in cuerpo["afectados"]]
-    assert afectados_ids == ["INS-BARRA", "PROC-CORTE", "PROD-BANCO", "PROD-PANEL"]
-    assert cuerpo["total"] == 4
-    # INS-TORNILLO NO debe aparecer (no es alcanzable desde PROV-ACERO)
-    assert "INS-TORNILLO" not in afectados_ids
+    assert afectados_ids == [
+        "INS-BARRA",
+        "INS-TORNILLO",
+        "PROC-CORTE",
+        "PROD-BANCO",
+        "PROD-PANEL",
+    ]
+    assert cuerpo["total"] == 5
 
 
-def test_ac_f2_01b_impacto_no_invierte_grafo_prod_panel_solo_afecta_prod_banco() -> None:
-    """AC-F2-01b: PROD-PANEL solo afecta a PROD-BANCO, no a sus predecesores."""
+def test_ac_f2_01b_impacto_no_invierte_grafo_producto_terminal_sin_afectados() -> None:
+    """Un producto no habilita a otros elementos: no tiene afectados aguas abajo."""
     cliente = _cliente_con_datos()
     respuesta = cliente.get("/api/v1/impacto/PROD-PANEL")
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    afectados_ids = [e["id"] for e in cuerpo["afectados"]]
-    assert afectados_ids == ["PROD-BANCO"]
-    assert cuerpo["total"] == 1
+    assert cuerpo["afectados"] == []
+    assert cuerpo["total"] == 0
     # Predecesores no afectados
-    assert "PROC-CORTE" not in afectados_ids
-    assert "INS-BARRA" not in afectados_ids
-    assert "PROV-ACERO" not in afectados_ids
-    assert "INS-TORNILLO" not in afectados_ids
+    assert "PROC-CORTE" not in [e["id"] for e in cuerpo["afectados"]]
+    assert "INS-BARRA" not in [e["id"] for e in cuerpo["afectados"]]
+    assert "PROV-ACERO" not in [e["id"] for e in cuerpo["afectados"]]
+    assert "INS-TORNILLO" not in [e["id"] for e in cuerpo["afectados"]]
 
 
 def test_ac_f2_07_dependiente_definido_por_arista_entrada_coherente() -> None:
-    """AC-F2-07: un elemento es dependiente cuando tiene arista entrante; impacto no invierte."""
+    """Un elemento con aristas entrantes puede afectar a sus dependientes."""
     cliente = _cliente_con_datos()
-    # PROD-PANEL tiene aristas entrantes (es dependiente), pero su impacto va hacia adelante
-    respuesta = cliente.get("/api/v1/impacto/PROD-PANEL")
+    # PROC-CORTE tiene aristas entrantes (es dependiente) y afecta hacia adelante.
+    respuesta = cliente.get("/api/v1/impacto/PROC-CORTE")
     cuerpo = respuesta.json()
-    assert cuerpo["total"] == 1
-    assert cuerpo["afectados"][0]["id"] == "PROD-BANCO"
+    assert cuerpo["total"] == 2
+    assert {e["id"] for e in cuerpo["afectados"]} == {"PROD-BANCO", "PROD-PANEL"}
 
 
 # ---------------------------------------------------------------------------
@@ -164,17 +169,16 @@ def test_ac_f2_05_impacto_ins_barra_incluye_directos_e_indirectos() -> None:
 
 
 def test_ac_f2_05b_cada_alcanzable_aparece_una_sola_vez() -> None:
-    """AC-F2-05b: PROD-BANCO alcanzable por dos caminos desde INS-TORNILLO aparece una vez."""
+    """PROD-BANCO y PROD-PANEL se alcanzan por varios caminos y aparecen una vez."""
     cliente = _cliente_con_datos()
     respuesta = cliente.get("/api/v1/impacto/INS-TORNILLO")
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
     afectados_ids = [e["id"] for e in cuerpo["afectados"]]
-    # PROD-BANCO solo una vez
     assert afectados_ids.count("PROD-BANCO") == 1
-    assert set(afectados_ids) == {"PROD-PANEL", "PROD-BANCO"}
-    assert cuerpo["total"] == 2
+    assert set(afectados_ids) == {"PROC-CORTE", "PROD-PANEL", "PROD-BANCO"}
+    assert cuerpo["total"] == 3
 
 
 def test_ac_f2_05c_con_ciclo_el_recorrido_termina_y_devuelve_sin_repetir() -> None:
@@ -203,7 +207,13 @@ def test_ac_f2_02_alcanzar_significa_camino_dirigido_hacia_adelante() -> None:
 
     # Los afectados son exactamente los alcanzables hacia adelante
     alcanzados = {e["id"] for e in cuerpo["afectados"]}
-    assert alcanzados == {"INS-BARRA", "PROC-CORTE", "PROD-PANEL", "PROD-BANCO"}
+    assert alcanzados == {
+        "INS-BARRA",
+        "INS-TORNILLO",
+        "PROC-CORTE",
+        "PROD-PANEL",
+        "PROD-BANCO",
+    }
     # No filtra por tipo: incluye INSUMO, PROCESO, PRODUCTO
     tipos = {e["tipo"] for e in cuerpo["afectados"]}
     assert tipos == {"INSUMO", "PROCESO", "PRODUCTO"}
@@ -348,7 +358,11 @@ def test_ac_f2_08_datos_sinteticos_errores_explicitos() -> None:
     r3 = cliente.get("/api/v1/impacto/PROV-ACERO")
     assert r3.status_code == 200
     cuerpo = r3.json()
-    assert set(cuerpo.keys()) == {"elemento", "afectados", "total"}
+    assert set(cuerpo.keys()) == {"elemento", "afectados", "total", "resumenStock"}
+    assert set(cuerpo["resumenStock"].keys()) == {
+        "totalSuministros",
+        "suministrosBajoMinimo",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +400,7 @@ def test_ac_f2_normalizacion_id_minusculas() -> None:
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
     assert cuerpo["elemento"]["id"] == "PROV-ACERO"
-    assert cuerpo["total"] == 4
+    assert cuerpo["total"] == 5
 
 
 def test_ac_f2_elemento_aislado() -> None:
@@ -404,21 +418,26 @@ def test_ac_f2_elemento_aislado() -> None:
 
 
 def test_ac_f2_componentes_desconectadas() -> None:
-    """Elementos de una componente conexa disjunta no afectan a la otra."""
+    """Elementos de una componente disjunta no afectan a la otra."""
     catalogo = Catalogo()
-    for x in ("A", "B", "C", "D"):
-        catalogo.registrar_elemento(Elemento.crear(f"INS-{x}", "INSUMO", f"Item {x}"))
-    # Componente 1: A -> B
-    catalogo.registrar_dependencia("INS-A", "INS-B")
-    # Componente 2: C -> D
-    catalogo.registrar_dependencia("INS-C", "INS-D")
+    for id_valor, tipo in (
+        ("PROC-A", "PROCESO"),
+        ("INS-B", "INSUMO"),
+        ("PROC-C", "PROCESO"),
+        ("INS-D", "INSUMO"),
+    ):
+        catalogo.registrar_elemento(Elemento.crear(id_valor, tipo, f"Item {id_valor}"))
+    # Componente 1: PROC-A -> INS-B
+    catalogo.registrar_dependencia("PROC-A", "INS-B")
+    # Componente 2: PROC-C -> INS-D
+    catalogo.registrar_dependencia("PROC-C", "INS-D")
 
     cliente = TestClient(crear_aplicacion(catalogo))
-    r_a = cliente.get("/api/v1/impacto/INS-A")
+    r_a = cliente.get("/api/v1/impacto/PROC-A")
     assert r_a.status_code == 200
     assert [e["id"] for e in r_a.json()["afectados"]] == ["INS-B"]
 
-    r_c = cliente.get("/api/v1/impacto/INS-C")
+    r_c = cliente.get("/api/v1/impacto/PROC-C")
     assert r_c.status_code == 200
     assert [e["id"] for e in r_c.json()["afectados"]] == ["INS-D"]
 
@@ -426,102 +445,113 @@ def test_ac_f2_componentes_desconectadas() -> None:
 def test_ac_f2_diamante_multiples_rutas() -> None:
     """Múltiples caminos convergentes (diamante) no duplican el elemento alcanzado."""
     catalogo = Catalogo()
-    for x in ("ORIGEN", "RAMA-A", "RAMA-B", "DESTINO"):
-        catalogo.registrar_elemento(Elemento.crear(f"INS-{x}", "INSUMO", f"Item {x}"))
+    for id_valor, tipo in (
+        ("PROC-ORIGEN", "PROCESO"),
+        ("INS-RAMA-A", "INSUMO"),
+        ("INS-RAMA-B", "INSUMO"),
+        ("PROC-DESTINO", "PROCESO"),
+    ):
+        catalogo.registrar_elemento(Elemento.crear(id_valor, tipo, f"Item {id_valor}"))
     # Diamante: ORIGEN -> RAMA-A -> DESTINO y ORIGEN -> RAMA-B -> DESTINO
-    catalogo.registrar_dependencia("INS-ORIGEN", "INS-RAMA-A")
-    catalogo.registrar_dependencia("INS-ORIGEN", "INS-RAMA-B")
-    catalogo.registrar_dependencia("INS-RAMA-A", "INS-DESTINO")
-    catalogo.registrar_dependencia("INS-RAMA-B", "INS-DESTINO")
+    catalogo.registrar_dependencia("PROC-ORIGEN", "INS-RAMA-A")
+    catalogo.registrar_dependencia("PROC-ORIGEN", "INS-RAMA-B")
+    catalogo.registrar_dependencia("INS-RAMA-A", "PROC-DESTINO")
+    catalogo.registrar_dependencia("INS-RAMA-B", "PROC-DESTINO")
 
     cliente = TestClient(crear_aplicacion(catalogo))
-    res = cliente.get("/api/v1/impacto/INS-ORIGEN")
+    res = cliente.get("/api/v1/impacto/PROC-ORIGEN")
     assert res.status_code == 200
     afectados_ids = [e["id"] for e in res.json()["afectados"]]
     assert len(afectados_ids) == 3
     assert afectados_ids == sorted(afectados_ids)
-    assert set(afectados_ids) == {"INS-DESTINO", "INS-RAMA-A", "INS-RAMA-B"}
+    assert set(afectados_ids) == {"INS-RAMA-A", "INS-RAMA-B", "PROC-DESTINO"}
 
 
 def test_ac_f2_cadena_larga() -> None:
     """Cadena secuencial de 7 eslabones verifica alcance transitivo completo."""
     catalogo = Catalogo()
-    ids = [f"PROC-PASO-{i}" for i in range(1, 8)]
-    for id_val in ids:
-        catalogo.registrar_elemento(Elemento.crear(id_val, "PROCESO", f"Paso {id_val}"))
+    ids: list[str] = []
+    for indice in range(1, 8):
+        tipo = "PROCESO" if indice % 2 == 1 else "INSUMO"
+        id_valor = f"PROC-PASO-{indice}" if tipo == "PROCESO" else f"INS-PASO-{indice}"
+        ids.append(id_valor)
+        catalogo.registrar_elemento(Elemento.crear(id_valor, tipo, f"Paso {id_valor}"))
     for i in range(len(ids) - 1):
         catalogo.registrar_dependencia(ids[i], ids[i + 1])
 
     cliente = TestClient(crear_aplicacion(catalogo))
-    # Primer paso debe alcanzar a los 6 siguientes
     res1 = cliente.get(f"/api/v1/impacto/{ids[0]}")
     assert res1.status_code == 200
     assert res1.json()["total"] == 6
 
-    # Cuarto paso debe alcanzar a los 3 siguientes
     res4 = cliente.get(f"/api/v1/impacto/{ids[3]}")
     assert res4.status_code == 200
     assert res4.json()["total"] == 3
 
-    # Último paso no alcanza a nadie
     res_last = cliente.get(f"/api/v1/impacto/{ids[-1]}")
     assert res_last.status_code == 200
     assert res_last.json()["total"] == 0
 
 
 def test_ac_f2_ciclo_con_ramificacion() -> None:
-    """Ciclo con rama saliente: el nodo consultado no se incluye en afectados y la rama se alcanza."""
+    """Ciclo con rama saliente: el nodo consultado no se incluye y la rama se alcanza."""
     catalogo = Catalogo()
-    for x in ("A", "B", "C", "D"):
-        catalogo.registrar_elemento(Elemento.crear(f"INS-{x}", "INSUMO", f"Item {x}"))
-    # Ciclo A -> B -> C -> A
-    catalogo.registrar_dependencia("INS-A", "INS-B")
-    catalogo.registrar_dependencia("INS-B", "INS-C")
-    catalogo.registrar_dependencia("INS-C", "INS-A")
-    # Rama B -> D
-    catalogo.registrar_dependencia("INS-B", "INS-D")
+    for id_valor, tipo in (
+        ("PROC-A", "PROCESO"),
+        ("INS-B", "INSUMO"),
+        ("PROC-C", "PROCESO"),
+        ("INS-D", "INSUMO"),
+        ("INS-E", "INSUMO"),
+    ):
+        catalogo.registrar_elemento(Elemento.crear(id_valor, tipo, f"Item {id_valor}"))
+    # Ciclo PROC-A -> INS-B -> PROC-C -> INS-D -> PROC-A
+    catalogo.registrar_dependencia("PROC-A", "INS-B")
+    catalogo.registrar_dependencia("INS-B", "PROC-C")
+    catalogo.registrar_dependencia("PROC-C", "INS-D")
+    catalogo.registrar_dependencia("INS-D", "PROC-A")
+    # Rama PROC-A -> INS-E
+    catalogo.registrar_dependencia("PROC-A", "INS-E")
 
     cliente = TestClient(crear_aplicacion(catalogo))
-    # Desde A: debe alcanzar B, C y D. A no debe estar en afectados.
-    res_a = cliente.get("/api/v1/impacto/INS-A")
+    res_a = cliente.get("/api/v1/impacto/PROC-A")
     assert res_a.status_code == 200
     cuerpo_a = res_a.json()
     ids_a = [e["id"] for e in cuerpo_a["afectados"]]
-    assert ids_a == ["INS-B", "INS-C", "INS-D"]
-    assert "INS-A" not in ids_a
-    assert cuerpo_a["total"] == 3
+    assert ids_a == ["INS-B", "INS-D", "INS-E", "PROC-C"]
+    assert "PROC-A" not in ids_a
+    assert cuerpo_a["total"] == 4
 
-    # Desde B: debe alcanzar C, A y D. B no debe estar en afectados.
     res_b = cliente.get("/api/v1/impacto/INS-B")
     assert res_b.status_code == 200
     cuerpo_b = res_b.json()
     ids_b = [e["id"] for e in cuerpo_b["afectados"]]
-    assert ids_b == ["INS-A", "INS-C", "INS-D"]
+    assert ids_b == ["INS-D", "INS-E", "PROC-A", "PROC-C"]
     assert "INS-B" not in ids_b
-    assert cuerpo_b["total"] == 3
+    assert cuerpo_b["total"] == 4
 
 
 def test_ac_f2_rendimiento_grafo_grande() -> None:
-    """Con 200 elementos y 500 dependencias, la consulta responde en tiempo lineal (< 50ms)."""
+    """Con 200 elementos y 500 dependencias, la consulta responde en tiempo lineal."""
     catalogo = Catalogo()
-    elementos_ids = [f"INS-{i:04d}" for i in range(200)]
-    for id_val in elementos_ids:
-        catalogo.registrar_elemento(Elemento.crear(id_val, "INSUMO", f"Elemento {id_val}"))
+    proveedores = [f"PROV-{i:04d}" for i in range(100)]
+    suministros = [f"INS-{i:04d}" for i in range(100)]
+    for id_valor in proveedores:
+        catalogo.registrar_elemento(Elemento.crear(id_valor, "PROVEEDOR", f"Proveedor {id_valor}"))
+    for id_valor in suministros:
+        catalogo.registrar_elemento(Elemento.crear(id_valor, "INSUMO", f"Insumo {id_valor}"))
 
     registrados = 0
-    for i in range(200):
-        for offset in range(1, 4):
-            if registrados == 500:
-                break
-            dest = (i + offset) % 200
-            catalogo.registrar_dependencia(elementos_ids[i], elementos_ids[dest])
+    for indice_suministro in range(100):
+        for desplazamiento in range(5):
+            proveedor = proveedores[(indice_suministro * 5 + desplazamiento) % 100]
+            catalogo.registrar_dependencia(proveedor, suministros[indice_suministro])
             registrados += 1
-        if registrados == 500:
-            break
+
+    assert registrados == 500
 
     cliente = TestClient(crear_aplicacion(catalogo))
     t0 = time.perf_counter()
-    respuesta = cliente.get("/api/v1/impacto/INS-0000")
+    respuesta = cliente.get("/api/v1/impacto/PROV-0000")
     t1 = time.perf_counter()
     duracion_ms = (t1 - t0) * 1000
 
@@ -549,7 +579,7 @@ def test_ac_f2_parametros_consulta_ignorados() -> None:
     cliente = _cliente_con_datos()
     respuesta = cliente.get("/api/v1/impacto/PROV-ACERO?parametroExtra=ignorado")
     assert respuesta.status_code == 200
-    assert respuesta.json()["total"] == 4
+    assert respuesta.json()["total"] == 5
 
 
 # ---------------------------------------------------------------------------
@@ -561,7 +591,7 @@ def test_limite_consulta_desde_proveedor() -> None:
     cliente = _cliente_con_datos()
     respuesta = cliente.get("/api/v1/impacto/PROV-ACERO")
     assert respuesta.status_code == 200
-    assert respuesta.json()["total"] == 4
+    assert respuesta.json()["total"] == 5
 
 
 def test_limite_consulta_desde_insumo() -> None:
@@ -569,7 +599,7 @@ def test_limite_consulta_desde_insumo() -> None:
     cliente = _cliente_con_datos()
     respuesta = cliente.get("/api/v1/impacto/INS-TORNILLO")
     assert respuesta.status_code == 200
-    assert respuesta.json()["total"] == 2
+    assert respuesta.json()["total"] == 3
 
 
 def test_limite_consulta_desde_proceso() -> None:
@@ -587,7 +617,7 @@ def test_limite_consulta_desde_producto() -> None:
     respuesta = cliente.get("/api/v1/impacto/PROD-PANEL")
     assert respuesta.status_code == 200
     afectados = {e["id"] for e in respuesta.json()["afectados"]}
-    assert afectados == {"PROD-BANCO"}
+    assert afectados == set()
 
 
 def test_limite_consulta_repetida_sobre_grafo_con_ciclo_sin_bucle_infinito() -> None:

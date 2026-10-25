@@ -23,10 +23,11 @@ la traza manual del ejemplo pequeño y la salida de la última ejecución del sc
 
 ## Estado del proyecto
 
-Implementada únicamente la **F1 — Catálogo de dependencias**: alta y consulta de elementos y
-dependencias, y visualización de la red. La **F2 — Análisis de impacto** está especificada en
-`docs/` (modelo, contrato y criterios), pero todavía no implementada. F3 (orden de producción y
-ciclos) y F4 (tablero integrado) están especificadas en el brief pero no implementadas.
+Implementadas la **F1 — Catálogo de dependencias** y la **F2 — Análisis de impacto**, con las
+mejoras solicitadas sobre la interfaz: inventario y alertas de stock para suministros, edición y
+eliminación de elementos y relaciones con aviso de continuidad, reglas de dependencia por tipo,
+ficha modal de cada elemento, historial de los 10 análisis de impacto más recientes y guía de uso.
+F3 (orden de producción y ciclos) y F4 (tablero integrado) siguen fuera del alcance actual.
 
 ## Requisitos
 
@@ -71,8 +72,9 @@ python -m venv .venv
 Queda disponible en `http://127.0.0.1:8000`, con la API bajo `/api/v1` y la documentación
 interactiva en `http://127.0.0.1:8000/docs`.
 
-Arranca con el conjunto sintético de demostración de F1. Los datos viven en memoria, por lo que se
-restablecen al reiniciar el servidor.
+Arranca con el conjunto sintético de demostración: **11 elementos y 11 dependencias** que forman la
+línea de acero y la línea de madera. Los datos viven en memoria, por lo que se restablecen al
+reiniciar el servidor.
 
 ### 2. Frontend
 
@@ -118,9 +120,9 @@ cmd /c ".venv\Scripts\python.exe -X utf8 tests\verificacion_http.py http://127.0
 El resto de suites de F1:
 
 ```powershell
-cd backend   ; .\.venv\Scripts\python.exe -m pytest      # 117 pruebas
-cd frontend  ; npm run test                              # 22 pruebas
-              npm run test:e2e                           # 11 pruebas (backend en 8000)
+cd backend   ; .\.venv\Scripts\python.exe -m pytest      # 166 pruebas
+cd frontend  ; npm run test                              # 31 pruebas
+              npm run test:e2e                           # 19 pruebas (backend en 8000)
               npm run test:e2e:vacio                     #  5 pruebas (catálogo vacío)
 ```
 
@@ -142,30 +144,29 @@ como estado vacío y no valida por su cuenta las reglas del catálogo.
 La red se dibuja con Cytoscape, que solo dibuja lo que devuelve el backend: el frontend no calcula
 recorridos, ciclos ni órdenes de producción.
 
-## API de F1
+## API
 
 | Método | Ruta | Descripción |
 | ------ | ---- | ----------- |
 | `POST` | `/api/v1/elementos` | Crear un elemento del catálogo |
 | `GET` | `/api/v1/elementos` | Listar elementos, con filtro opcional por `tipo` |
 | `GET` | `/api/v1/elementos/{id}` | Consultar un elemento |
+| `PUT` | `/api/v1/elementos/{id}` | Actualizar nombre, descripción e inventario |
+| `DELETE` | `/api/v1/elementos/{id}` | Eliminar un elemento y sus relaciones |
 | `POST` | `/api/v1/dependencias` | Registrar una dependencia dirigida |
 | `GET` | `/api/v1/dependencias` | Listar dependencias, con filtro por `origen` o `destino` |
+| `PUT` | `/api/v1/dependencias/{origen}/{destino}` | Cambiar los extremos de una relación |
+| `DELETE` | `/api/v1/dependencias/{origen}/{destino}` | Eliminar una relación |
+| `GET` | `/api/v1/reglas-dependencia` | Consultar las combinaciones de tipos permitidas |
 | `GET` | `/api/v1/grafo` | Obtener la representación del grafo |
+| `GET` | `/api/v1/impacto/{id}` | Consultar los elementos afectados por la indisponibilidad de un elemento |
 
+Los suministros (`INSUMO`) incluyen `stockDisponible`, `stockMinimo`, `estadoStock` y
+`alertaStock`. La alerta se activa cuando la cantidad disponible es inferior al mínimo aceptable.
 El detalle de los campos, los códigos de estado y el catálogo de errores están en
 [`docs/api-contract.md`](docs/api-contract.md).
 
-## API de impacto (F2, especificada, no implementada)
-
-| Método | Ruta | Descripción |
-| ------ | ---- | ----------- |
-| `GET` | `/api/v1/impacto/{id}` | Consultar los elementos afectados por la indisponibilidad de un elemento |
-
-El contrato está en [`docs/api-contract.md`](docs/api-contract.md), sección 8, y los criterios de
-aceptación en [`docs/acceptance-criteria.md`](docs/acceptance-criteria.md), sección 7.
-
-## Qué significa «alcanzar» (F2 — análisis de impacto)
+## Qué significa «alcanzar»
 
 En este proyecto, **alcanzar** un elemento significa que existe un **camino dirigido** desde el
 elemento consultado hasta ese elemento, siguiendo las aristas en la dirección definida: el `origen`
@@ -178,9 +179,8 @@ dependientes directos e indirectos. Los elementos que lo habilitan son sus **req
 no se ven afectados por su indisponibilidad, así que no aparecen entre los afectados.
 
 Ejemplo con la red sintética: si el proveedor de acero (`PROV-ACERO`) está indisponible, quedan
-afectados la barra de acero (`INS-BARRA`), el proceso de corte (`PROC-CORTE`), el panel de montaje
-(`PROD-PANEL`) y el banco de montaje (`PROD-BANCO`). Los tornillos (`INS-TORNILLO`) no quedan
-afectados: ninguna arista del grafo indica que el proveedor de acero los habilite.
+afectados la barra de acero (`INS-BARRA`), el tornillo hexagonal (`INS-TORNILLO`), el proceso de
+corte (`PROC-CORTE`), el panel de montaje (`PROD-PANEL`) y el banco de montaje (`PROD-BANCO`).
 
 La dirección es única y no se invierte nunca: el mismo sentido de recorrido sirve para el análisis de
 impacto y para el orden de preparación. El significado también está documentado en

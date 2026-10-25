@@ -1,10 +1,9 @@
 """Esquemas de entrada y salida de la API.
 
 Los modelos Pydantic usan nombres Python en ``snake_case`` y traducen a
-``lowerCamelCase`` únicamente al serializar (ver ``architecture.md`` 3.1).
-La validación de reglas de negocio no vive aquí: los modelos de entrada
-aceptan cualquier JSON interpretable y los casos de uso aplican las reglas
-del dominio, para que cada regla se evalúe en un único lugar (RNF-Q-04).
+``lowerCamelCase`` únicamente al serializar. La validación de reglas de
+negocio no vive aquí: los modelos de entrada aceptan cualquier JSON
+interpretable y los casos de uso aplican las reglas del dominio.
 """
 
 from typing import Any
@@ -28,10 +27,31 @@ class EntradaElemento(_EsquemaBase):
     tipo: Any = None
     nombre: Any = None
     descripcion: Any = None
+    stock_disponible: Any = None
+    stock_minimo: Any = None
 
     def como_diccionario(self) -> dict[str, object]:
         """Devuelve todos los campos recibidos, incluidos los no reconocidos."""
         return dict(self.model_dump())
+
+
+class EntradaActualizarElemento(_EsquemaBase):
+    """Cuerpo de ``PUT /api/v1/elementos/{id}``.
+
+    El identificador y el tipo no se editan: el código es estable y el tipo
+    determina las reglas de dependencia aplicables.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="allow")
+
+    nombre: Any = None
+    descripcion: Any = None
+    stock_disponible: Any = None
+    stock_minimo: Any = None
+
+    def como_diccionario(self) -> dict[str, object]:
+        """Devuelve solo los campos enviados explícitamente por el cliente."""
+        return dict(self.model_dump(exclude_unset=True))
 
 
 class EntradaDependencia(_EsquemaBase):
@@ -54,6 +74,10 @@ class ElementoRespuesta(_EsquemaBase):
     tipo: str
     nombre: str
     descripcion: str | None
+    stock_disponible: int | None
+    stock_minimo: int | None
+    estado_stock: str
+    alerta_stock: bool
 
 
 class DependenciaRespuesta(_EsquemaBase):
@@ -86,10 +110,7 @@ class ResumenGrafo(_EsquemaBase):
 
 
 class GrafoRespuesta(_EsquemaBase):
-    """Representación del grafo: estructura del catálogo tal como está.
-
-    No incluye recorridos, niveles, ciclos ni órdenes (F1 no los calcula).
-    """
+    """Representación del grafo: estructura del catálogo tal como está."""
 
     elementos: list[ElementoRespuesta]
     dependencias: list[DependenciaRespuesta]
@@ -112,25 +133,51 @@ class CuerpoErrorRespuesta(_EsquemaBase):
 
 
 class RespuestaError(_EsquemaBase):
-    """Sobre único y uniforme para todos los errores de F1."""
+    """Sobre único y uniforme para todos los errores del catálogo."""
 
     error: CuerpoErrorRespuesta
 
 
 class ElementoImpactoRespuesta(_EsquemaBase):
-    """Representación reducida de un elemento para la respuesta de impacto.
-
-    Incluye solo ``id``, ``tipo`` y ``nombre`` según el contrato de F2.
-    """
+    """Elemento dentro de un análisis de impacto, con su estado de stock."""
 
     id: str
     tipo: str
     nombre: str
+    descripcion: str | None
+    stock_disponible: int | None
+    stock_minimo: int | None
+    estado_stock: str
+    alerta_stock: bool
+
+
+class ResumenStockImpacto(_EsquemaBase):
+    """Resumen de inventario de los suministros involucrados en el impacto."""
+
+    total_suministros: int
+    suministros_bajo_minimo: int
 
 
 class ImpactoRespuesta(_EsquemaBase):
-    """Respuesta de ``GET /api/v1/impacto/{id}`` (F2 — Análisis de impacto)."""
+    """Respuesta de ``GET /api/v1/impacto/{id}``."""
 
     elemento: ElementoImpactoRespuesta
     afectados: list[ElementoImpactoRespuesta]
     total: int
+    resumen_stock: ResumenStockImpacto
+
+
+class ReglaDependenciaRespuesta(_EsquemaBase):
+    """Combinación de tipos y su veredicto de dependencia."""
+
+    tipo_origen: str
+    tipo_destino: str
+    permitida: bool
+    motivo: str
+
+
+class ReglasDependenciaRespuesta(_EsquemaBase):
+    """Reglas de dependencia disponibles para la interfaz."""
+
+    tipos: list[str]
+    reglas: list[ReglaDependenciaRespuesta]

@@ -30,10 +30,15 @@ Dependencias del conjunto de prueba:
 | `origen` | `destino` | Lectura |
 | -------- | --------- | ------- |
 | `PROV-ACERO` | `INS-BARRA` | Para preparar la barra de acero necesito al proveedor de acero |
+| `PROV-ACERO` | `INS-TORNILLO` | Para preparar los tornillos necesito al proveedor de acero |
 | `INS-BARRA` | `PROC-CORTE` | Para el corte de panel necesito la barra de acero |
+| `INS-TORNILLO` | `PROC-CORTE` | Para el corte de panel necesito los tornillos |
 | `PROC-CORTE` | `PROD-PANEL` | Para el panel necesito el proceso de corte |
-| `INS-TORNILLO` | `PROD-PANEL` | Para el panel necesito tornillos |
-| `PROD-PANEL` | `PROD-BANCO` | Para el banco de montaje necesito el panel |
+| `PROC-CORTE` | `PROD-BANCO` | Para el banco de montaje necesito el proceso de corte |
+
+La demo del backend añade la línea de madera (`PROV-MADERA`, `INS-TABLERO`, `INS-BARNIZ`,
+`PROC-ENSAMBLE`, `PROD-ESCRITORIO`). El conjunto de seis elementos anterior se conserva como base
+determinista de los criterios de F1 y F2 para no alterar sus resultados esperados.
 
 ## 2. Criterios funcionales
 
@@ -85,14 +90,15 @@ Dependencias del conjunto de prueba:
   la dependencia con `origen`, `destino` y `tipoRelacion: "habilita"`. La dependencia aparece en
   `GET /api/v1/dependencias` y en `GET /api/v1/grafo`.
 - **AC-F1-06b.** La dirección es la documentada: con los datos de prueba, registrar
-  `origen: INS-TORNILLO`, `destino: PROD-PANEL` significa «para producir el panel necesito tornillos».
-  La consulta de la red muestra `INS-TORNILLO` como origen de la flecha y `PROD-PANEL` como
+  `origen: PROC-CORTE`, `destino: PROD-PANEL` significa «para producir el panel necesito el proceso
+  de corte». La consulta de la red muestra `PROC-CORTE` como origen de la flecha y `PROD-PANEL` como
   destino.
 - **AC-F1-06c.** Si `origen` no existe, la respuesta es `404` con `ERR-02` y el detalle señala el
   campo `origen`. Si `destino` no existe, la respuesta es `404` con `ERR-02` y el detalle señala
   `destino`. En ambos casos no se registra ninguna dependencia.
-- **AC-F1-06d.** Las dependencias inversas (`A → B` y luego `B → A`) son relaciones distintas: ambas
-  se registran con `201` y las dos aparecen en el listado de dependencias.
+- **AC-F1-06d.** Cuando la combinación de tipos lo permite (por ejemplo, un proceso y un suministro),
+  las dependencias inversas (`A → B` y luego `B → A`) son relaciones distintas: ambas se registran
+  con `201` y las dos aparecen en el listado.
 
 ### RF-F1-07 · Dependencia reflexiva
 
@@ -290,39 +296,38 @@ Dependencias del conjunto de prueba:
 
 ### 7.1 Datos de prueba de F2
 
-Conjunto sintético coherente con la sección 1 de este documento, con una dependencia añadida:
+Conjunto sintético coherente con la sección 1 de este documento:
 
 | `origen` | `destino` | Lectura |
 | -------- | --------- | ------- |
 | `PROV-ACERO` | `INS-BARRA` | Para preparar la barra de acero necesito al proveedor de acero |
+| `PROV-ACERO` | `INS-TORNILLO` | Para preparar los tornillos necesito al proveedor de acero |
 | `INS-BARRA` | `PROC-CORTE` | Para el corte de panel necesito la barra de acero |
+| `INS-TORNILLO` | `PROC-CORTE` | Para el corte de panel necesito los tornillos |
 | `PROC-CORTE` | `PROD-PANEL` | Para el panel necesito el proceso de corte |
-| `INS-TORNILLO` | `PROD-PANEL` | Para el panel necesito tornillos |
-| `PROD-PANEL` | `PROD-BANCO` | Para el banco de montaje necesito el panel |
-| `INS-TORNILLO` | `PROD-BANCO` | Para el banco de montaje necesito tornillos |
+| `PROC-CORTE` | `PROD-BANCO` | Para el banco de montaje necesito el proceso de corte |
 
-Conjunto cíclico: el anterior más `PROD-BANCO → PROD-PANEL` («para el panel de montaje necesito el
-banco de montaje»), configuración imposible que F1 admite sin error (AC-F1-16).
+Conjunto cíclico: el anterior más `PROC-CORTE → INS-BARRA` («para preparar la barra necesito el
+proceso de corte»), configuración que el catálogo admite sin error (AC-F1-16).
 
 Alcance esperado con el conjunto de prueba, según la dirección `origen habilita destino`:
 
 | Elemento consultado | Elementos alcanzados (afectados) | Total |
 | ------------------- | -------------------------------- | ----- |
-| `PROV-ACERO` | `INS-BARRA`, `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` | 4 |
+| `PROV-ACERO` | `INS-BARRA`, `INS-TORNILLO`, `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` | 5 |
 | `INS-BARRA` | `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` | 3 |
-| `INS-TORNILLO` | `PROD-PANEL`, `PROD-BANCO` | 2 |
-| `PROD-PANEL` | `PROD-BANCO` | 1 |
+| `INS-TORNILLO` | `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` | 3 |
+| `PROD-PANEL` | (ninguno: producto terminal) | 0 |
 | `PROD-BANCO` | (ninguno) | 0 |
 
 ### RF-F2-01 / RN-F2-01, RN-F2-02, RN-F2-07 · Respeto a la dirección definida
 
 - **AC-F2-01.** La consulta de impacto de `PROV-ACERO` devuelve como afectados exactamente
-  `INS-BARRA`, `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`. No devuelve `INS-TORNILLO`, que no es
-  alcanzable desde `PROV-ACERO` siguiendo las aristas `origen habilita destino`.
-- **AC-F2-01b.** El recorrido no invierte el grafo. La consulta de impacto de `PROD-PANEL` devuelve
-  como afectado solo `PROD-BANCO`: los elementos que lo habilitan (`PROC-CORTE`, `INS-BARRA`,
-  `PROV-ACERO`) no aparecen entre sus afectados, porque la indisponibilidad de `PROD-PANEL` no
-  afecta a quienes dependen de él.
+  `INS-BARRA`, `INS-TORNILLO`, `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`, que son los elementos
+  alcanzables desde `PROV-ACERO` siguiendo las aristas `origen habilita destino`.
+- **AC-F2-01b.** El recorrido no invierte el grafo. La consulta de impacto de `PROD-PANEL` no
+  devuelve afectados porque el producto es terminal: los elementos que lo habilitan (`PROC-CORTE`,
+  `INS-BARRA`, `INS-TORNILLO`, `PROV-ACERO`) no aparecen entre sus afectados.
 - **AC-F2-07.** Un elemento es dependiente de otro cuando existe una arista entrante, es decir,
   cuando es el destino de alguna dependencia. Esa definición se mantiene en F2 y es coherente con
   `graph-model.md`; el análisis de impacto no la invierte: opera hacia adelante desde la causa.
@@ -348,11 +353,11 @@ Alcance esperado con el conjunto de prueba, según la dirección `origen habilit
   El resultado no se limita a un paso: incluye los afectados indirectos, que no están entre los
   habilitados directamente por el elemento consultado.
 - **AC-F2-05b.** Cada elemento alcanzable aparece una sola vez en la respuesta, aunque sea
-  alcanzable por varios caminos. En el conjunto de prueba, `PROD-BANCO` es alcanzable desde
-  `INS-TORNILLO` por dos caminos (directo y a través de `PROD-PANEL`) y aparece una sola vez.
-- **AC-F2-05c.** Con el conjunto cíclico, la consulta de impacto de `INS-BARRA` termina y devuelve
-  `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`, cada uno una sola vez. El recorrido maneja los
-  elementos ya visitados y no se asume que el grafo sea acíclico.
+  alcanzable por varios caminos. En el conjunto de prueba, `PROD-BANCO` y `PROD-PANEL` son
+  alcanzables desde `INS-TORNILLO` por varios caminos y aparecen una sola vez.
+- **AC-F2-05c.** Con el conjunto cíclico (`PROC-CORTE → INS-BARRA`), la consulta de impacto de
+  `INS-BARRA` termina y devuelve `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`, cada uno una sola vez.
+  El recorrido maneja los elementos ya visitados y no se asume que el grafo sea acíclico.
 
 ### RF-F2-04 / RN-F2-02, RN-F2-13 · Significado de «alcanzar»
 

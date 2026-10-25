@@ -7,7 +7,7 @@ frontend (C-02, AC-F1-24). Uso:
     python tests/verificacion_http.py [http://127.0.0.1:8000]
 
 Precondición: servidor recién arrancado con el catálogo de demostración
-intacto (6 elementos y 6 dependencias), porque los escenarios de alta y de
+intacto (11 elementos y 11 dependencias), porque los escenarios de alta y de
 duplicado modifican el catálogo.
 
 La salida declara por cada escenario qué se esperaba, qué se obtuvo y si pasó
@@ -67,14 +67,14 @@ def main() -> int:
     )
     comprobar(
         "AC-F1-10 el resumen coincide con lo devuelto",
-        "resumen con 6 elementos y 6 dependencias, igual que las listas",
+        "resumen con 11 elementos y 11 dependencias, igual que las listas",
         resumen,
-        grafo["resumen"]["totalElementos"] == len(grafo["elementos"]) == 6
-        and grafo["resumen"]["totalDependencias"] == len(grafo["dependencias"]) == 6,
+        grafo["resumen"]["totalElementos"] == len(grafo["elementos"]) == 11
+        and grafo["resumen"]["totalDependencias"] == len(grafo["dependencias"]) == 11,
     )
     comprobar(
         "AC-F1-09c cada dependencia lleva tipoRelacion habilita",
-        'tipoRelacion "habilita" en las 6 dependencias',
+        'tipoRelacion "habilita" en las 11 dependencias',
         str({d["tipoRelacion"] for d in grafo["dependencias"]}),
         all(d["tipoRelacion"] == "habilita" for d in grafo["dependencias"]),
     )
@@ -90,6 +90,41 @@ def main() -> int:
         "id INS-PRUEBA-HTTP, tipo INSUMO",
         f"id {cuerpo.get('id')}, tipo {cuerpo.get('tipo')}",
         cuerpo.get("id") == "INS-PRUEBA-HTTP" and cuerpo.get("tipo") == "INSUMO",
+    )
+
+    estado, _ = llamar(
+        "POST",
+        "/api/v1/elementos",
+        {"id": "PROV-PRUEBA-HTTP", "tipo": "PROVEEDOR", "nombre": "Proveedor de prueba HTTP"},
+    )
+    comprobar(
+        "El suministro de prueba se asocia a un proveedor",
+        "201 para el proveedor",
+        str(estado),
+        estado == 201,
+    )
+    estado, _ = llamar(
+        "POST",
+        "/api/v1/dependencias",
+        {"origen": "PROV-PRUEBA-HTTP", "destino": "INS-PRUEBA-HTTP"},
+    )
+    comprobar(
+        "La asociación proveedor → suministro se registra",
+        "201",
+        str(estado),
+        estado == 201,
+    )
+
+    estado, _ = llamar(
+        "POST",
+        "/api/v1/elementos",
+        {"id": "PROC-PRUEBA-HTTP", "tipo": "PROCESO", "nombre": "Proceso de prueba HTTP"},
+    )
+    comprobar(
+        "El proceso de prueba se crea para las relaciones inversas",
+        "201",
+        str(estado),
+        estado == 201,
     )
 
     estado, cuerpo = llamar(
@@ -177,8 +212,22 @@ def main() -> int:
         estado == 409 and cuerpo["error"]["codigo"] == "DEPENDENCIA_DUPLICADA",
     )
 
-    estado, cuerpo = llamar(
-        "POST", "/api/v1/dependencias", {"origen": "PROD-BANCO", "destino": "INS-PRUEBA-HTTP"}
+    estado, _ = llamar(
+        "POST",
+        "/api/v1/dependencias",
+        {"origen": "INS-PRUEBA-HTTP", "destino": "PROC-PRUEBA-HTTP"},
+    )
+    comprobar(
+        "La relación suministro → proceso se registra",
+        "201",
+        str(estado),
+        estado == 201,
+    )
+
+    estado, _ = llamar(
+        "POST",
+        "/api/v1/dependencias",
+        {"origen": "PROC-PRUEBA-HTTP", "destino": "INS-PRUEBA-HTTP"},
     )
     comprobar("AC-F1-08b el par inverso responde 201", "201", str(estado), estado == 201)
 
@@ -195,12 +244,12 @@ def main() -> int:
     estado, cuerpo = llamar("GET", "/api/v1/dependencias?origen=INS-PRUEBA-HTTP")
     comprobar(
         "AC-F1-09b filtro por origen devuelve solo las de ese origen",
-        "200 con total 1 hacia PROD-BANCO",
-        f"{estado} con total {cuerpo.get('total')} hacia "
-        f"{cuerpo['dependencias'][0]['destino'] if cuerpo['dependencias'] else 'ninguno'}",
+        "200 con total 2 hacia PROD-BANCO y PROC-PRUEBA-HTTP",
+        f"{estado} con total {cuerpo.get('total')}",
         estado == 200
-        and cuerpo["total"] == 1
-        and cuerpo["dependencias"][0]["destino"] == "PROD-BANCO",
+        and cuerpo["total"] == 2
+        and {d["destino"] for d in cuerpo["dependencias"]}
+        == {"PROD-BANCO", "PROC-PRUEBA-HTTP"},
     )
 
     estado, cuerpo = llamar("GET", "/api/v1/elementos?tipo=DESCONOCIDO")
@@ -265,19 +314,29 @@ def main() -> int:
         primera == segunda,
     )
 
-    ciclo = [("CICLO-A", "CICLO-B"), ("CICLO-B", "CICLO-C"), ("CICLO-C", "CICLO-A")]
-    nombres_ciclo = {"CICLO-A": "Primera pieza del ciclo", "CICLO-B": "Segunda pieza del ciclo", "CICLO-C": "Tercera pieza del ciclo"}
+    ciclo = [
+        ("PROC-CICLO-A", "INS-CICLO-B"),
+        ("INS-CICLO-B", "PROC-CICLO-C"),
+        ("PROC-CICLO-C", "INS-CICLO-D"),
+        ("INS-CICLO-D", "PROC-CICLO-A"),
+    ]
+    tipos_ciclo = {
+        "PROC-CICLO-A": ("PROCESO", "Primer proceso del ciclo"),
+        "INS-CICLO-B": ("INSUMO", "Primer suministro del ciclo"),
+        "PROC-CICLO-C": ("PROCESO", "Segundo proceso del ciclo"),
+        "INS-CICLO-D": ("INSUMO", "Segundo suministro del ciclo"),
+    }
     estados_alta: list[int] = []
-    for identificador in nombres_ciclo:
+    for identificador, (tipo, nombre) in tipos_ciclo.items():
         estado, _ = llamar(
-            "POST", "/api/v1/elementos", {"id": identificador, "tipo": "INSUMO", "nombre": nombres_ciclo[identificador]}
+            "POST", "/api/v1/elementos", {"id": identificador, "tipo": tipo, "nombre": nombre}
         )
         estados_alta.append(estado)
     comprobar(
-        "AC-F1-16 los tres elementos del ciclo se crean",
-        "201, 201, 201",
+        "AC-F1-16 los cuatro elementos del ciclo se crean",
+        "201, 201, 201, 201",
         ", ".join(str(e) for e in estados_alta),
-        estados_alta == [201, 201, 201],
+        estados_alta == [201, 201, 201, 201],
     )
 
     estados_ciclo: list[int] = []
@@ -286,17 +345,17 @@ def main() -> int:
         estados_ciclo.append(estado)
     comprobar(
         "AC-F1-16 un ciclo se registra íntegramente sin error",
-        "201, 201, 201 para A->B, B->C y C->A",
+        "201, 201, 201, 201 para las cuatro aristas del ciclo",
         ", ".join(str(e) for e in estados_ciclo),
-        estados_ciclo == [201, 201, 201],
+        estados_ciclo == [201, 201, 201, 201],
     )
 
     _, grafo_con_ciclo = llamar("GET", "/api/v1/grafo")
     parejas = {(d["origen"], d["destino"]) for d in grafo_con_ciclo["dependencias"]}
     comprobar(
-        "AC-F1-16 las tres aristas del ciclo aparecen en GET /grafo",
-        "las tres parejas A->B, B->C y C->A presentes",
-        f"{len(parejas & set(ciclo))} de 3 presentes",
+        "AC-F1-16 las cuatro aristas del ciclo aparecen en GET /grafo",
+        "las cuatro parejas del ciclo presentes",
+        f"{len(parejas & set(ciclo))} de 4 presentes",
         set(ciclo) <= parejas,
     )
 

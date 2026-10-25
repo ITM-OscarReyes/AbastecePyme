@@ -1,10 +1,16 @@
 export type TipoElemento = 'PROVEEDOR' | 'INSUMO' | 'PRODUCTO' | 'PROCESO';
 
+export type EstadoStock = 'NO_APLICA' | 'SUFICIENTE' | 'BAJO';
+
 export interface Elemento {
   id: string;
   tipo: TipoElemento;
   nombre: string;
   descripcion: string | null;
+  stockDisponible: number | null;
+  stockMinimo: number | null;
+  estadoStock: EstadoStock;
+  alertaStock: boolean;
 }
 
 export interface Dependencia {
@@ -54,6 +60,15 @@ export interface CrearElementoDto {
   tipo: TipoElemento;
   nombre: string;
   descripcion?: string | null;
+  stockDisponible?: number | null;
+  stockMinimo?: number | null;
+}
+
+export interface ActualizarElementoDto {
+  nombre?: string;
+  descripcion?: string | null;
+  stockDisponible?: number | null;
+  stockMinimo?: number | null;
 }
 
 export interface CrearDependenciaDto {
@@ -61,15 +76,46 @@ export interface CrearDependenciaDto {
   destino: string;
 }
 
-// F2 — Análisis de impacto
+// Análisis de impacto
 export interface ElementoImpacto {
   id: string;
   tipo: TipoElemento;
   nombre: string;
+  descripcion: string | null;
+  stockDisponible: number | null;
+  stockMinimo: number | null;
+  estadoStock: EstadoStock;
+  alertaStock: boolean;
+}
+
+export interface ResumenStockImpacto {
+  totalSuministros: number;
+  suministrosBajoMinimo: number;
 }
 
 export interface ImpactoRespuesta {
   elemento: ElementoImpacto;
   afectados: ElementoImpacto[];
+  total: number;
+  resumenStock: ResumenStockImpacto;
+}
+
+export interface ReglaDependencia {
+  tipoOrigen: TipoElemento;
+  tipoDestino: TipoElemento;
+  permitida: boolean;
+  motivo: string;
+}
+
+export interface ReglasDependenciaRespuesta {
+  tipos: TipoElemento[];
+  reglas: ReglaDependencia[];
+}
+
+export interface AnalisisReciente {
+  elementoId: string;
+  nombre: string;
+  tipo: TipoElemento;
+  fecha: string;
   total: number;
 }
