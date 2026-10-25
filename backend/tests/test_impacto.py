@@ -4,7 +4,10 @@ Cubre AC-F2-01 a AC-F2-15 y casos límite de la sección 7 de
 acceptance-criteria.md.
 """
 
+import ast
+import re
 import sys
+import time
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -212,8 +215,6 @@ def test_ac_f2_02_alcanzar_significa_camino_dirigido_hacia_adelante() -> None:
 
 def test_ac_f2_06_calculo_impacto_sin_networkx() -> None:
     """AC-F2-06: revisión estática confirma que no se usa NetworkX para el cálculo."""
-    import ast
-
     modulos_importados: set[str] = set()
     for ruta in (RAIZ_BACKEND / "app").rglob("*.py"):
         arbol = ast.parse(ruta.read_text(encoding="utf-8"))
@@ -227,9 +228,22 @@ def test_ac_f2_06_calculo_impacto_sin_networkx() -> None:
 
 
 def test_ac_f2_06b_frontend_no_recalcula_alcanzables() -> None:
-    """AC-F2-06b: nota de verificación para frontend (aquí solo documentamos la intención)."""
-    # El frontend no debe implementar recorridos; se verifica en tests de frontend.
-    pass
+    """AC-F2-06b / AC-F2-09: revisión estática confirma que el frontend no calcula alcanzables."""
+    raiz_frontend = RAIZ_BACKEND.parent / "frontend" / "src"
+    patrones_prohibidos = [
+        re.compile(r"\b(dfs|bfs|shortestPath|dijkstra)\b", re.IGNORECASE),
+        re.compile(r"from\s+['\"]networkx['\"]"),
+        re.compile(r"from\s+['\"]graphlib['\"]"),
+    ]
+
+    for archivo in raiz_frontend.rglob("*.ts*"):
+        if "test" in archivo.parts:
+            continue
+        texto = archivo.read_text(encoding="utf-8")
+        for patron in patrones_prohibidos:
+            assert not patron.search(texto), (
+                f"AC-F2-06b: Patrón de cálculo o biblioteca de grafo encontrado en {archivo.name}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +349,207 @@ def test_ac_f2_08_datos_sinteticos_errores_explicitos() -> None:
     assert r3.status_code == 200
     cuerpo = r3.json()
     assert set(cuerpo.keys()) == {"elemento", "afectados", "total"}
+
+
+# ---------------------------------------------------------------------------
+# RNF-F2-03 · Trazabilidad documental de F2
+# ---------------------------------------------------------------------------
+
+def test_ac_f2_10_trazabilidad_necesidades_requisitos_criterios() -> None:
+    """AC-F2-10: trazabilidad N9..N14 -> RF-F2-01..09, RNF-F2-01..03 -> AC-F2-01..15."""
+    req_path = RAIZ_BACKEND.parent / "docs" / "requirements.md"
+    ac_path = RAIZ_BACKEND.parent / "docs" / "acceptance-criteria.md"
+    req_text = req_path.read_text(encoding="utf-8")
+    ac_text = ac_path.read_text(encoding="utf-8")
+
+    # Necesidades declaradas en requirements.md §9
+    for necesidad in ("N9", "N10", "N11", "N12", "N13", "N14"):
+        assert necesidad in req_text, f"Necesidad {necesidad} ausente en requirements.md"
+
+    # Requisitos funcionales y no funcionales de F2
+    for req in [f"RF-F2-{i:02d}" for i in range(1, 10)] + [f"RNF-F2-{i:02d}" for i in range(1, 4)]:
+        assert req in req_text, f"Requisito {req} ausente en requirements.md"
+
+    # Criterios de aceptación de F2 en acceptance-criteria.md
+    for crit in [f"AC-F2-{i:02d}" for i in range(1, 16)]:
+        assert crit in ac_text, f"Criterio {crit} ausente en acceptance-criteria.md"
+
+
+# ---------------------------------------------------------------------------
+# Normalización y Casos Límite de F2
+# ---------------------------------------------------------------------------
+
+def test_ac_f2_normalizacion_id_minusculas() -> None:
+    """El id de ruta en minúsculas se normaliza a mayúsculas."""
+    cliente = _cliente_con_datos()
+    respuesta = cliente.get("/api/v1/impacto/prov-acero")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["elemento"]["id"] == "PROV-ACERO"
+    assert cuerpo["total"] == 4
+
+
+def test_ac_f2_elemento_aislado() -> None:
+    """Un elemento existente sin dependencias entrantes ni salientes responde 200 con total 0."""
+    catalogo = Catalogo()
+    catalogo.registrar_elemento(Elemento.crear("PROD-AISLADO", "PRODUCTO", "Producto Aislado"))
+    cliente = TestClient(crear_aplicacion(catalogo))
+
+    respuesta = cliente.get("/api/v1/impacto/PROD-AISLADO")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["elemento"]["id"] == "PROD-AISLADO"
+    assert cuerpo["afectados"] == []
+    assert cuerpo["total"] == 0
+
+
+def test_ac_f2_componentes_desconectadas() -> None:
+    """Elementos de una componente conexa disjunta no afectan a la otra."""
+    catalogo = Catalogo()
+    for x in ("A", "B", "C", "D"):
+        catalogo.registrar_elemento(Elemento.crear(f"INS-{x}", "INSUMO", f"Item {x}"))
+    # Componente 1: A -> B
+    catalogo.registrar_dependencia("INS-A", "INS-B")
+    # Componente 2: C -> D
+    catalogo.registrar_dependencia("INS-C", "INS-D")
+
+    cliente = TestClient(crear_aplicacion(catalogo))
+    r_a = cliente.get("/api/v1/impacto/INS-A")
+    assert r_a.status_code == 200
+    assert [e["id"] for e in r_a.json()["afectados"]] == ["INS-B"]
+
+    r_c = cliente.get("/api/v1/impacto/INS-C")
+    assert r_c.status_code == 200
+    assert [e["id"] for e in r_c.json()["afectados"]] == ["INS-D"]
+
+
+def test_ac_f2_diamante_multiples_rutas() -> None:
+    """Múltiples caminos convergentes (diamante) no duplican el elemento alcanzado."""
+    catalogo = Catalogo()
+    for x in ("ORIGEN", "RAMA-A", "RAMA-B", "DESTINO"):
+        catalogo.registrar_elemento(Elemento.crear(f"INS-{x}", "INSUMO", f"Item {x}"))
+    # Diamante: ORIGEN -> RAMA-A -> DESTINO y ORIGEN -> RAMA-B -> DESTINO
+    catalogo.registrar_dependencia("INS-ORIGEN", "INS-RAMA-A")
+    catalogo.registrar_dependencia("INS-ORIGEN", "INS-RAMA-B")
+    catalogo.registrar_dependencia("INS-RAMA-A", "INS-DESTINO")
+    catalogo.registrar_dependencia("INS-RAMA-B", "INS-DESTINO")
+
+    cliente = TestClient(crear_aplicacion(catalogo))
+    res = cliente.get("/api/v1/impacto/INS-ORIGEN")
+    assert res.status_code == 200
+    afectados_ids = [e["id"] for e in res.json()["afectados"]]
+    assert len(afectados_ids) == 3
+    assert afectados_ids == sorted(afectados_ids)
+    assert set(afectados_ids) == {"INS-DESTINO", "INS-RAMA-A", "INS-RAMA-B"}
+
+
+def test_ac_f2_cadena_larga() -> None:
+    """Cadena secuencial de 7 eslabones verifica alcance transitivo completo."""
+    catalogo = Catalogo()
+    ids = [f"PROC-PASO-{i}" for i in range(1, 8)]
+    for id_val in ids:
+        catalogo.registrar_elemento(Elemento.crear(id_val, "PROCESO", f"Paso {id_val}"))
+    for i in range(len(ids) - 1):
+        catalogo.registrar_dependencia(ids[i], ids[i + 1])
+
+    cliente = TestClient(crear_aplicacion(catalogo))
+    # Primer paso debe alcanzar a los 6 siguientes
+    res1 = cliente.get(f"/api/v1/impacto/{ids[0]}")
+    assert res1.status_code == 200
+    assert res1.json()["total"] == 6
+
+    # Cuarto paso debe alcanzar a los 3 siguientes
+    res4 = cliente.get(f"/api/v1/impacto/{ids[3]}")
+    assert res4.status_code == 200
+    assert res4.json()["total"] == 3
+
+    # Último paso no alcanza a nadie
+    res_last = cliente.get(f"/api/v1/impacto/{ids[-1]}")
+    assert res_last.status_code == 200
+    assert res_last.json()["total"] == 0
+
+
+def test_ac_f2_ciclo_con_ramificacion() -> None:
+    """Ciclo con rama saliente: el nodo consultado no se incluye en afectados y la rama se alcanza."""
+    catalogo = Catalogo()
+    for x in ("A", "B", "C", "D"):
+        catalogo.registrar_elemento(Elemento.crear(f"INS-{x}", "INSUMO", f"Item {x}"))
+    # Ciclo A -> B -> C -> A
+    catalogo.registrar_dependencia("INS-A", "INS-B")
+    catalogo.registrar_dependencia("INS-B", "INS-C")
+    catalogo.registrar_dependencia("INS-C", "INS-A")
+    # Rama B -> D
+    catalogo.registrar_dependencia("INS-B", "INS-D")
+
+    cliente = TestClient(crear_aplicacion(catalogo))
+    # Desde A: debe alcanzar B, C y D. A no debe estar en afectados.
+    res_a = cliente.get("/api/v1/impacto/INS-A")
+    assert res_a.status_code == 200
+    cuerpo_a = res_a.json()
+    ids_a = [e["id"] for e in cuerpo_a["afectados"]]
+    assert ids_a == ["INS-B", "INS-C", "INS-D"]
+    assert "INS-A" not in ids_a
+    assert cuerpo_a["total"] == 3
+
+    # Desde B: debe alcanzar C, A y D. B no debe estar en afectados.
+    res_b = cliente.get("/api/v1/impacto/INS-B")
+    assert res_b.status_code == 200
+    cuerpo_b = res_b.json()
+    ids_b = [e["id"] for e in cuerpo_b["afectados"]]
+    assert ids_b == ["INS-A", "INS-C", "INS-D"]
+    assert "INS-B" not in ids_b
+    assert cuerpo_b["total"] == 3
+
+
+def test_ac_f2_rendimiento_grafo_grande() -> None:
+    """Con 200 elementos y 500 dependencias, la consulta responde en tiempo lineal (< 50ms)."""
+    catalogo = Catalogo()
+    elementos_ids = [f"INS-{i:04d}" for i in range(200)]
+    for id_val in elementos_ids:
+        catalogo.registrar_elemento(Elemento.crear(id_val, "INSUMO", f"Elemento {id_val}"))
+
+    registrados = 0
+    for i in range(200):
+        for offset in range(1, 4):
+            if registrados == 500:
+                break
+            dest = (i + offset) % 200
+            catalogo.registrar_dependencia(elementos_ids[i], elementos_ids[dest])
+            registrados += 1
+        if registrados == 500:
+            break
+
+    cliente = TestClient(crear_aplicacion(catalogo))
+    t0 = time.perf_counter()
+    respuesta = cliente.get("/api/v1/impacto/INS-0000")
+    t1 = time.perf_counter()
+    duracion_ms = (t1 - t0) * 1000
+
+    assert respuesta.status_code == 200
+    assert duracion_ms < 50.0, f"Consulta tardó {duracion_ms:.2f} ms (esperado < 50ms)"
+
+
+def test_ac_f2_metodo_no_permitido() -> None:
+    """POST sobre /api/v1/impacto/{id} responde 405 Method Not Allowed."""
+    cliente = _cliente_con_datos()
+    respuesta = cliente.post("/api/v1/impacto/PROV-ACERO")
+    assert respuesta.status_code == 405
+
+
+def test_ac_f2_subruta_inexistente() -> None:
+    """Subruta bajo /api/v1/impacto/... responde 404 ERR-09."""
+    cliente = _cliente_con_datos()
+    respuesta = cliente.get("/api/v1/impacto/PROV-ACERO/subruta")
+    assert respuesta.status_code == 404
+    assert respuesta.json()["error"]["codigo"] == "TIPO_NO_ENCONTRADO"
+
+
+def test_ac_f2_parametros_consulta_ignorados() -> None:
+    """Parámetros de consulta adicionales no provocan fallo ni alteran el resultado."""
+    cliente = _cliente_con_datos()
+    respuesta = cliente.get("/api/v1/impacto/PROV-ACERO?parametroExtra=ignorado")
+    assert respuesta.status_code == 200
+    assert respuesta.json()["total"] == 4
 
 
 # ---------------------------------------------------------------------------

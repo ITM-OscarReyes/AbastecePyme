@@ -179,3 +179,67 @@ Continúa con el desarrollo del backend para el Feature 2 (F2 - Análisis de imp
    - Respuestas claras diferenciando cada caso
 5. Asegura que la implementación respete SOLID, Clean Architecture, y las convenciones del proyecto
 6. Escribe pruebas básicas para validar la funcionalidad
+
+## 08 — Frontend de F2 con el agente frontend-builder
+
+Hola, por favor con el agente frontend-builder desarrolla la interfaz necesaria únicamente para el Feature 2 (F2 — Análisis de impacto) de AbastecePyme, con React + TypeScript, consumiendo la API real del backend, trabajando en la rama `f2-Frontend`. Asimismo almacena la documentación del prompt en el archivo `prompts.md`.
+
+REQUISITOS ESTRICTOS DE ALCANCE Y ARQUITECTURA:
+
+1. Solo F2: Implementar la visualización y consulta del análisis de impacto aprovechando el catálogo existente de F1. No implementar F3 (orden de producción y ciclos) ni F4 (dashboard integrado).
+2. Consumir la API real: Conectar con el endpoint real `GET /api/v1/impacto/{id}` a través de `apiService.obtenerImpacto(id)`.
+3. No calcular nada en el cliente: El cálculo de alcanzabilidad e impacto lo realiza estrictamente el backend. El cliente solo presenta y resalta los datos recibidos.
+4. Manejo explícito de casos de negocio:
+   - Elemento inexistente (error 404).
+   - Formato inválido de ID (422).
+   - Elemento sin dependencias / sin afectados (total: 0).
+   - Elemento con cadena de dependencias / afectados directos e indirectos.
+5. Vistas y Componentes:
+   - Añadir vista y pestaña "Análisis de Impacto" (`VistaImpacto.tsx`).
+   - Resaltado visual en el grafo (`GraphCanvas.tsx`) de nodos y aristas afectados.
+   - Detalle de impacto en el panel lateral de inspección.
+   - Herramientas de soporte operativo para Compras y Planta (minuta de contingencia, exportación de red, estándares de legibilidad de códigos).
+6. Calidad: Mantener Clean Architecture, SOLID, no duplicar reglas de validación del backend y asegurar que las pruebas (`vitest`, `lint`, `build`) pasen sin errores.
+
+## 08 — Auditoría de F1 con el agente auditors
+
+Actúa como **Tester / QA** del proyecto AbastecePyme. Estamos trabajando en la Feature 2 (F2 — Análisis de impacto).
+
+Antes de comenzar, inspecciona el repositorio, lee `AGENTS.md` y consulta la documentación pertinente, especialmente `docs/requirements.md`, `docs/acceptance-criteria.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/graph-model.md`.
+
+**Objetivo**
+
+Verifica la implementación de F2 y crea o completa las pruebas necesarias para comprobar todos sus criterios de aceptación.
+
+Cubre como mínimo:
+
+- Análisis de impacto mediante recorridos del grafo dirigido (BFS/DFS), siguiendo las reglas documentadas.
+- Identificación correcta de todos los elementos afectados, sin duplicados.
+- Cadenas de dependencias, múltiples rutas y elementos aislados.
+- Elementos inexistentes frente a elementos existentes sin elementos impactados.
+- Validaciones de entradas y respuestas de error según el contrato de la API.
+- Integración con F1, API, frontend y arquitectura, cuando corresponda.
+- Casos límite, determinismo y rendimiento según los requisitos documentados.
+
+**Reglas importantes**
+
+- Utiliza la documentación como fuente de verdad; no inventes requisitos.
+- Prueba únicamente F2 y las integraciones necesarias con F1. No implementes funcionalidades de F3 o F4.
+- Respeta la dirección de las dependencias y verifica qué significa exactamente «impacto» según la documentación.
+- No utilices NetworkX ni otra biblioteca externa para sustituir los algoritmos propios del proyecto si la arquitectura lo prohíbe.
+- Tu función es probar, no corregir. No modifiques código de producción ni hagas refactors para conseguir que las pruebas pasen.
+- Ejecuta las pruebas realmente. No declares PASS basándote solo en inspeccionar el código.
+- Si una prueba no puede ejecutarse, márcala como `BLOCKED` y explica el motivo.
+
+**Informe final**
+
+Entrega un resumen con:
+
+1. Total de pruebas: PASS / FAIL / BLOCKED.
+2. Matriz de todos los criterios de aceptación de F2 y sus resultados.
+3. Fallos encontrados, indicando criterio, resultado esperado, resultado obtenido y evidencia reproducible.
+4. Pruebas bloqueadas y sus motivos.
+5. Cobertura de criterios de aceptación.
+6. Conclusión: indica si F2 cumple o no cumple los requisitos.
+
+**No declares F2 aprobada si existen criterios sin verificar.** Si encuentras contradicciones en la documentación, repórtalas en lugar de asumir una solución.
