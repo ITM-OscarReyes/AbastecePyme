@@ -20,6 +20,10 @@ def test_ac_f1_01_alta_devuelve_201_elemento_y_location(cliente_vacio: TestClien
         "tipo": "INSUMO",
         "nombre": "Tornillo hexagonal M6",
         "descripcion": None,
+        "stockDisponible": 0,
+        "stockMinimo": 0,
+        "estadoStock": "SUFICIENTE",
+        "alertaStock": False,
     }
     assert respuesta.headers["Location"] == "/api/v1/elementos/INS-TORNILLO"
 
@@ -75,8 +79,8 @@ def test_ac_f1_02_id_repetido_responde_409_err01_sin_alterar_original(cliente: T
     assert respuesta.status_code == 409
     assert respuesta.json()["error"]["codigo"] == "ELEMENTO_DUPLICADO"
     assert cliente.get("/api/v1/elementos/INS-TORNILLO").json() == original
-    assert cliente.get("/api/v1/elementos?tipo=PRODUCTO").json()["total"] == 2
-    assert cliente.get("/api/v1/elementos").json()["total"] == 6
+    assert cliente.get("/api/v1/elementos?tipo=PRODUCTO").json()["total"] == 3
+    assert cliente.get("/api/v1/elementos").json()["total"] == 11
 
 
 def test_ac_f1_02_unicidad_es_de_todo_el_catalogo_no_por_tipo(cliente_vacio: TestClient) -> None:

@@ -351,3 +351,63 @@ especifican aquí. Ninguno se convierte en requisito ni en criterio de aceptaci�
 | Alcance por feature: F2 no anticipa F3 | RF-F2-08 | AC-F2-14 | Contrato de la respuesta sin campos de ciclo ni de orden |
 | Restricción: datos sintéticos y errores explícitos | RNF-F2-02 | AC-F2-08 | Sobre de error único de `api-contract.md` §5 |
 | Restricción: arquitectura y trazabilidad | RNF-F2-01, RNF-F2-03 | AC-F2-09, AC-F2-10 | `architecture.md` §7; matriz de esta sección |
+## 10. Ajustes de producto solicitados por el cliente (2026-10-25)
+
+Estos ajustes amplían el alcance funcional descrito en el brief original. Se implementan por
+solicitud directa del cliente y se registran en `docs/decisions/analyst.md`. No modifican la
+dirección `origen habilita destino` ni el cálculo de impacto de F2.
+
+### 10.1 Reglas de dependencia por tipo
+
+| Tipo de origen | Tipos de destino permitidos |
+| -------------- | --------------------------- |
+| `PROVEEDOR` | `INSUMO`, `PROCESO`, `PRODUCTO` |
+| `INSUMO` | `PROCESO`, `PRODUCTO` |
+| `PROCESO` | `INSUMO`, `PRODUCTO` |
+| `PRODUCTO` | Ninguno (elemento terminal) |
+
+- Un `INSUMO` debe tener una arista entrante de `PROVEEDOR` o `PROCESO` antes de enlazarse con un
+  proceso o producto.
+- Las reglas se aplican en la creación, la edición y la validación de relaciones.
+- `GET /api/v1/reglas-dependencia` expone las 16 combinaciones y el motivo de cada una para que la
+  interfaz las muestre antes de crear la relación.
+
+### 10.2 Inventario de suministros
+
+- Solo los `INSUMO` manejan inventario. Campos: `stockDisponible` y `stockMinimo`, enteros ≥ 0.
+- Si no se envían al crear, se asumen `0`.
+- `estadoStock`: `BAJO` si `stockDisponible < stockMinimo`; `SUFICIENTE` en caso contrario;
+  `NO_APLICA` para los demás tipos. `alertaStock` es verdadero solo en `BAJO`.
+- La alerta se muestra en el mapa, en las fichas, en Materiales y procesos y en el análisis de
+  impacto cuando el suministro está involucrado.
+
+### 10.3 Gestión de elementos y relaciones
+
+- `PUT /api/v1/elementos/{id}` actualiza nombre, descripción e inventario. El `id` y el `tipo` son
+  inmutables.
+- `DELETE /api/v1/elementos/{id}` elimina el elemento y, en cascada, sus relaciones.
+- `PUT /api/v1/dependencias/{origen}/{destino}` cambia los extremos de una relación.
+- `DELETE /api/v1/dependencias/{origen}/{destino}` elimina una relación.
+- Antes de confirmar una edición o eliminación, la interfaz muestra los elementos afectados
+  calculados por el backend.
+
+### 10.4 Interfaz
+
+- La pestaña «Simulador de fallas» pasa a llamarse «Análisis de impacto».
+- Al entrar desde el botón superior, la pestaña se abre sin resultados; el análisis se ejecuta con
+  el botón «Evaluar impacto». Al entrar desde un elemento de Materiales y procesos, el análisis ya
+  está ejecutado.
+- La pestaña conserva los 10 análisis más recientes y permite reutilizarlos.
+- Los elementos de Materiales y procesos abren una ficha modal con descripción, atributos,
+  relaciones, stock y acciones de editar, eliminar, ver en el mapa y evaluar impacto.
+- Los elementos afectados del análisis abren una ficha de consulta con «Ver en el mapa» e «Iniciar
+  análisis de impacto», sin edición ni eliminación.
+- La guía de usuario se orienta a usuarios finales, explica relaciones, alertas de continuidad,
+  alertas de stock y navegación rápida, sin referencias a F1/F2.
+
+### 10.5 Decisión de alcance
+
+El brief original excluía el inventario real. El cliente solicitó expresamente un inventario
+sencillo de cantidades y umbrales para los suministros. Se implementa como dato de catálogo (no como
+inventario transaccional, compras ni pronósticos) y queda registrado en las decisiones del
+`analyst`.

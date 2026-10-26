@@ -92,7 +92,7 @@ def test_ac_f1_19_los_datos_de_prueba_son_sinteticos_y_del_dominio() -> None:
     """AC-F1-19 / RNF-F1-07: sin datos de personas ni empresas reales."""
     from app.infraestructura.datos_demostracion import _DEPENDENCIAS, _ELEMENTOS
 
-    elementos = {id_valor for id_valor, _, _ in _ELEMENTOS}
+    elementos = {id_valor for id_valor, _, _, _, _ in _ELEMENTOS}
     assert elementos == {
         "PROV-ACERO",
         "INS-BARRA",
@@ -100,19 +100,27 @@ def test_ac_f1_19_los_datos_de_prueba_son_sinteticos_y_del_dominio() -> None:
         "PROC-CORTE",
         "PROD-PANEL",
         "PROD-BANCO",
+        "PROV-MADERA",
+        "INS-TABLERO",
+        "INS-BARNIZ",
+        "PROC-ENSAMBLE",
+        "PROD-ESCRITORIO",
     }
     for origen, destino in _DEPENDENCIAS:
         assert origen in elementos
         assert destino in elementos
-    tipos = {tipo for _, tipo, _ in _ELEMENTOS}
+    tipos = {tipo for _, tipo, _, _, _ in _ELEMENTOS}
     assert tipos <= {"PROVEEDOR", "INSUMO", "PRODUCTO", "PROCESO"}
 
 
 def test_ac_f1_20_las_operaciones_responden_en_tiempo_lineal(cliente_vacio: TestClient) -> None:
     """AC-F1-20 / RNF-F1-09: 200 elementos y 500 dependencias."""
-    elementos_ids = [f"INS-{indice:04d}" for indice in range(200)]
-    for id_valor in elementos_ids:
-        registrar_elemento(cliente_vacio, id_valor, "INSUMO", f"Elemento {id_valor}")
+    proveedores = [f"PROV-{indice:04d}" for indice in range(100)]
+    suministros = [f"INS-{indice:04d}" for indice in range(100)]
+    for id_valor in proveedores:
+        registrar_elemento(cliente_vacio, id_valor, "PROVEEDOR", f"Proveedor {id_valor}")
+    for id_valor in suministros:
+        registrar_elemento(cliente_vacio, id_valor, "INSUMO", f"Suministro {id_valor}")
 
     inicio = time.perf_counter()
     assert len(cliente_vacio.get("/api/v1/elementos").json()["elementos"]) == 200
@@ -122,15 +130,15 @@ def test_ac_f1_20_las_operaciones_responden_en_tiempo_lineal(cliente_vacio: Test
     assert len(cliente_vacio.get("/api/v1/grafo").json()["elementos"]) == 200
     grafo_pequeno = time.perf_counter() - inicio
 
-    # 500 pares distintos, sin aristas reflexivas ni duplicadas.
+    # 500 pares distintos entre proveedores y suministros.
     registrados = 0
-    for origen_indice in range(200):
-        for desplazamiento in range(1, 4):
+    for indice_suministro in range(100):
+        for desplazamiento in range(5):
             if registrados == 500:
                 break
-            destino_indice = (origen_indice + desplazamiento) % 200
+            proveedor = proveedores[(indice_suministro * 5 + desplazamiento) % 100]
             respuesta = registrar_dependencia(
-                cliente_vacio, elementos_ids[origen_indice], elementos_ids[destino_indice]
+                cliente_vacio, proveedor, suministros[indice_suministro]
             )
             assert respuesta.status_code == 201, respuesta.text
             registrados += 1
@@ -146,7 +154,7 @@ def test_ac_f1_20_las_operaciones_responden_en_tiempo_lineal(cliente_vacio: Test
     dependencias_grande = time.perf_counter() - inicio
 
     inicio = time.perf_counter()
-    cliente_vacio.get("/api/v1/dependencias?origen=INS-0007")
+    cliente_vacio.get("/api/v1/dependencias?origen=PROV-0007")
     filtrado = time.perf_counter() - inicio
 
     assert grafo["resumen"]["totalElementos"] == 200
@@ -337,7 +345,9 @@ def test_ac_f1_23_la_composicion_de_dependencias_es_un_unico_punto() -> None:
 
     assert contenido.count("def crear_enrutador") == 1
     assert contenido.count("enrutador.post(") == 2
-    assert contenido.count("enrutador.get(") == 5  # 4 de F1 + 1 de F2
+    assert contenido.count("enrutador.get(") == 6  # elementos, elemento, dependencias, grafo, reglas e impacto
+    assert contenido.count("enrutador.put(") == 2
+    assert contenido.count("enrutador.delete(") == 2
 
 
 def test_ac_f1_23_el_cliente_de_api_no_calcula_sobre_el_grafo() -> None:

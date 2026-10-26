@@ -23,9 +23,20 @@ const elementoDestino = {
   nombre: 'Producto de prueba de interfaz'
 };
 
+const proveedorNuevo = {
+  id: `${marca}-PROVEEDOR`,
+  tipo: 'PROVEEDOR' as const,
+  nombre: 'Proveedor de prueba de interfaz'
+};
+
 beforeAll(async () => {
+  await apiService.crearElemento(proveedorNuevo);
   await apiService.crearElemento(elementoNuevo);
   await apiService.crearElemento(elementoDestino);
+  await apiService.crearDependencia({
+    origen: proveedorNuevo.id,
+    destino: elementoNuevo.id
+  });
 });
 
 describe('Cliente de API contra el backend real', () => {
@@ -151,7 +162,8 @@ describe('Cliente de API contra el backend real', () => {
     expect(impacto.afectados.length).toBe(impacto.total);
     const idsAfectados = impacto.afectados.map((a) => a.id);
     expect(idsAfectados).toContain('INS-BARRA');
-    expect(idsAfectados).not.toContain('INS-TORNILLO');
+    expect(idsAfectados).toContain('INS-TORNILLO');
+    expect(idsAfectados).toContain('PROC-CORTE');
   });
 
   it('AC-F2-04 el cliente maneja un elemento sin afectados (total 0)', async () => {
@@ -183,7 +195,7 @@ it('AC-F2-11 identificador mal formado devuelve error 422 IDENTIFICADOR_INVALIDO
     const impacto = await apiService.obtenerImpacto('INS-TORNILLO');
     const ids = impacto.afectados.map((a) => a.id);
     expect(ids.filter((id) => id === 'PROD-BANCO').length).toBe(1);
-    expect(ids).toEqual(['PROD-BANCO', 'PROD-PANEL']);
+    expect(ids).toEqual(['PROC-CORTE', 'PROD-BANCO', 'PROD-PANEL']);
   });
 
   it('AC-F2-13 los elementos afectados vienen ordenados de forma determinista por id', async () => {

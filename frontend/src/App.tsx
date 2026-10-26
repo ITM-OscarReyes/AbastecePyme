@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type {
+  ActualizarElementoDto,
   CrearDependenciaDto,
   CrearElementoDto,
+  Elemento,
+  ImpactoRespuesta,
+  ReglaDependencia,
   RespuestaGrafo
 } from './types';
 import { apiService, extraerMensajeError } from './services/api';
@@ -13,6 +17,10 @@ import { VistaImpacto } from './components/VistaImpacto';
 import { ModalCrearElemento } from './components/ModalCrearElemento';
 import { ModalCrearDependencia } from './components/ModalCrearDependencia';
 import { ModalAyudaOperativa } from './components/ModalAyudaOperativa';
+import { ModalDetalleElemento } from './components/ModalDetalleElemento';
+import { ModalConfirmarRiesgo } from './components/ModalConfirmarRiesgo';
+import { PanelDetalleNodo, MensajeSinSeleccion } from './components/PanelDetalleNodo';
+import { useHistorialImpactos } from './hooks/useHistorialImpactos';
 import {
   Box,
   GitCommitHorizontal,
@@ -22,7 +30,49 @@ import {
   Sparkles,
   AlertOctagon
 } from 'lucide-react';
-import { obtenerCodigoSku } from './utils/sku';
+
+type AccionPendiente =
+  | {
+      tipo: 'elemento';
+      accion: 'editar';
+      elementoId: string;
+      nombre: string;
+      dto: ActualizarElementoDto;
+    }
+  | {
+      tipo: 'elemento';
+      accion: 'eliminar';
+      elementoId: string;
+      nombre: string;
+    }
+  | {
+      tipo: 'dependencia';
+      accion: 'editar';
+      origenActual: string;
+      destinoActual: string;
+      dto: CrearDependenciaDto;
+    }
+  | {
+      tipo: 'dependencia';
+      accion: 'eliminar';
+      origen: string;
+      destino: string;
+    };
+
+interface EstadoConfirmacion {
+  accion: AccionPendiente;
+  titulo: string;
+  descripcion: string;
+  detalle: string;
+  impacto: ImpactoRespuesta | null;
+  cargando: boolean;
+  error: string | null;
+}
+
+interface SolicitudImpacto {
+  id: string;
+  secuencia: number;
+}
 
 export const App: React.FC = () => {
   const [grafo, setGrafo] = useState<RespuestaGrafo>({
@@ -30,6 +80,7 @@ export const App: React.FC = () => {
     dependencias: [],
     resumen: { totalElementos: 0, totalDependencias: 0 }
   });
+  const [reglas, setReglas] = useState<ReglaDependencia[]>([]);
   const [apiConectada, setApiConectada] = useState<boolean>(false);
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
 
@@ -37,13 +88,25 @@ export const App: React.FC = () => {
   const [nodoSeleccionadoId, setNodoSeleccionadoId] = useState<string | null>(null);
   const [nodosAfectadosIds, setNodosAfectadosIds] = useState<string[]>([]);
   const [cargandoImpactoNodo, setCargandoImpactoNodo] = useState<boolean>(false);
-  const [impactoNodoSeleccionado, setImpactoNodoSeleccionado] = useState<import('./types').ImpactoRespuesta | null>(null);
+  const [impactoNodoSeleccionado, setImpactoNodoSeleccionado] =
+    useState<ImpactoRespuesta | null>(null);
 
   const [modalElementoAbierto, setModalElementoAbierto] = useState<boolean>(false);
+  const [elementoEditar, setElementoEditar] = useState<Elemento | null>(null);
   const [modalDependenciaAbierto, setModalDependenciaAbierto] = useState<boolean>(false);
+  const [relacionEditar, setRelacionEditar] = useState<{ origen: string; destino: string } | null>(
+    null
+  );
   const [modalAyudaAbierto, setModalAyudaAbierto] = useState<boolean>(false);
 
-  // Cargar datos del Grafo desde el backend FastAPI
+  const [elementoDetalleId, setElementoDetalleId] = useState<string | null>(null);
+  const [modoDetalle, setModoDetalle] = useState<'catalogo' | 'afectado'>('catalogo');
+  const [confirmacion, setConfirmacion] = useState<EstadoConfirmacion | null>(null);
+  const [solicitudImpacto, setSolicitudImpacto] = useState<SolicitudImpacto | null>(null);
+  const [claveVistaImpacto, setClaveVistaImpacto] = useState<number>(0);
+
+  const { historial, registrarAnalisis } = useHistorialImpactos();
+
   const cargarGrafo = useCallback(async () => {
     try {
       setErrorGlobal(null);
@@ -56,31 +119,23 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  const cargarReglas = useCallback(async () => {
+    try {
+      const data = await apiService.obtenerReglasDependencia();
+      setReglas(data.reglas);
+    } catch {
+      // Las reglas se muestran en el formulario; si no se pueden cargar, el
+      // backend seguirá rechazando relaciones inválidas al confirmar.
+      setReglas([]);
+    }
+  }, []);
+
   useEffect(() => {
     cargarGrafo();
-  }, [cargarGrafo]);
+    cargarReglas();
+  }, [cargarGrafo, cargarReglas]);
 
-  // Manejar creación de elementos
-  const handleCrearElemento = async (dto: CrearElementoDto) => {
-    try {
-      await apiService.crearElemento(dto);
-      await cargarGrafo();
-    } catch (err) {
-      throw new Error(extraerMensajeError(err));
-    }
-  };
-
-  // Manejar creación de dependencias
-  const handleCrearDependencia = async (dto: CrearDependenciaDto) => {
-    try {
-      await apiService.crearDependencia(dto);
-      await cargarGrafo();
-    } catch (err) {
-      throw new Error(extraerMensajeError(err));
-    }
-  };
-
-  const handleSelectNode = async (nodoId: string | null) => {
+  const handleSelectNode = useCallback(async (nodoId: string | null) => {
     setNodoSeleccionadoId(nodoId);
     setImpactoNodoSeleccionado(null);
     if (!nodoId) {
@@ -92,14 +147,21 @@ export const App: React.FC = () => {
       setCargandoImpactoNodo(true);
       const dataImpacto = await apiService.obtenerImpacto(nodoId);
       setImpactoNodoSeleccionado(dataImpacto);
-      setNodosAfectadosIds(dataImpacto.afectados.map(a => a.id));
+      setNodosAfectadosIds(dataImpacto.afectados.map((afectado) => afectado.id));
     } catch {
-      // Si falla la consulta de impacto, limpiamos afectados y dejamos que el panel muestre el estado correspondiente
       setNodosAfectadosIds([]);
     } finally {
       setCargandoImpactoNodo(false);
     }
-  };
+  }, []);
+
+  const handleTabChange = useCallback((tab: TabActiva) => {
+    if (tab === 'impacto') {
+      setSolicitudImpacto(null);
+      setClaveVistaImpacto((clave) => clave + 1);
+    }
+    setTabActiva(tab);
+  }, []);
 
   useEffect(() => {
     const manejarAtajosTeclado = (e: KeyboardEvent) => {
@@ -109,17 +171,18 @@ export const App: React.FC = () => {
         document.activeElement?.tagName === 'SELECT' ||
         modalElementoAbierto ||
         modalDependenciaAbierto ||
-        modalAyudaAbierto
+        modalAyudaAbierto ||
+        confirmacion
       ) {
         return;
       }
 
       if (e.key === '1') {
-        setTabActiva('red');
+        handleTabChange('red');
       } else if (e.key === '2') {
-        setTabActiva('catalogo');
+        handleTabChange('catalogo');
       } else if (e.key === '3') {
-        setTabActiva('impacto');
+        handleTabChange('impacto');
       } else if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         e.preventDefault();
         setModalAyudaAbierto(true);
@@ -128,27 +191,278 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', manejarAtajosTeclado);
     return () => window.removeEventListener('keydown', manejarAtajosTeclado);
-  }, [modalElementoAbierto, modalDependenciaAbierto, modalAyudaAbierto]);
+  }, [modalElementoAbierto, modalDependenciaAbierto, modalAyudaAbierto, confirmacion, handleTabChange]);
 
-  const nodoSeleccionado = grafo.elementos.find(e => e.id === nodoSeleccionadoId);
-  const proveedoresCount = grafo.elementos.filter(e => e.tipo === 'PROVEEDOR').length;
-  const insumosCount = grafo.elementos.filter(e => e.tipo === 'INSUMO').length;
-  const procesosCount = grafo.elementos.filter(e => e.tipo === 'PROCESO').length;
-  const productosCount = grafo.elementos.filter(e => e.tipo === 'PRODUCTO').length;
+  const abrirNuevoElemento = () => {
+    setElementoEditar(null);
+    setModalElementoAbierto(true);
+  };
+
+  const cerrarModalElemento = () => {
+    setModalElementoAbierto(false);
+    setElementoEditar(null);
+  };
+
+  const abrirNuevaDependencia = () => {
+    setRelacionEditar(null);
+    setModalDependenciaAbierto(true);
+  };
+
+  const cerrarModalDependencia = () => {
+    setModalDependenciaAbierto(false);
+    setRelacionEditar(null);
+  };
+
+  const handleCrearElemento = async (dto: CrearElementoDto) => {
+    try {
+      await apiService.crearElemento(dto);
+      await cargarGrafo();
+    } catch (err) {
+      throw new Error(extraerMensajeError(err));
+    }
+  };
+
+  const handleCrearDependencia = async (dto: CrearDependenciaDto) => {
+    try {
+      await apiService.crearDependencia(dto);
+      await cargarGrafo();
+      if (nodoSeleccionadoId) {
+        await handleSelectNode(nodoSeleccionadoId);
+      }
+    } catch (err) {
+      throw new Error(extraerMensajeError(err));
+    }
+  };
+
+  const nombreDe = (id: string): string =>
+    grafo.elementos.find((elemento) => elemento.id === id)?.nombre ?? id;
+
+  const abrirConfirmacion = async (
+    accion: AccionPendiente,
+    meta: { titulo: string; descripcion: string; detalle: string },
+    idsParaImpacto: string[]
+  ) => {
+    const estado: EstadoConfirmacion = {
+      accion,
+      ...meta,
+      impacto: null,
+      cargando: true,
+      error: null
+    };
+    setConfirmacion(estado);
+
+    try {
+      const idsUnicos = Array.from(new Set(idsParaImpacto));
+      const impactos = await Promise.all(
+        idsUnicos.map((id) => apiService.obtenerImpacto(id).catch(() => null))
+      );
+      const validos = impactos.filter((impacto): impacto is ImpactoRespuesta => impacto !== null);
+      if (validos.length === 0) {
+        setConfirmacion((anterior) =>
+          anterior && anterior.accion === accion ? { ...anterior, cargando: false } : anterior
+        );
+        return;
+      }
+
+      const afectadosPorId = new Map<string, ImpactoRespuesta['afectados'][number]>();
+      validos.forEach((impacto) => {
+        impacto.afectados.forEach((afectado) => afectadosPorId.set(afectado.id, afectado));
+      });
+      const afectados = Array.from(afectadosPorId.values()).sort((a, b) =>
+        a.id.localeCompare(b.id)
+      );
+      const resumen = {
+        totalSuministros: afectados.filter((afectado) => afectado.tipo === 'INSUMO').length,
+        suministrosBajoMinimo: afectados.filter((afectado) => afectado.alertaStock).length
+      };
+      const impactoCombinado: ImpactoRespuesta = {
+        elemento: validos[0].elemento,
+        afectados,
+        total: afectados.length,
+        resumenStock: resumen
+      };
+
+      setConfirmacion((anterior) =>
+        anterior && anterior.accion === accion
+          ? { ...anterior, impacto: impactoCombinado, cargando: false }
+          : anterior
+      );
+    } catch {
+      setConfirmacion((anterior) =>
+        anterior && anterior.accion === accion
+          ? { ...anterior, cargando: false }
+          : anterior
+      );
+    }
+  };
+
+  const solicitarEditarElemento = (dto: ActualizarElementoDto) => {
+    if (!elementoEditar) return;
+    void abrirConfirmacion(
+      {
+        tipo: 'elemento',
+        accion: 'editar',
+        elementoId: elementoEditar.id,
+        nombre: elementoEditar.nombre,
+        dto
+      },
+      {
+        titulo: 'Editar elemento',
+        descripcion: `Vas a guardar cambios en «${elementoEditar.nombre}». Revisa los posibles efectos antes de confirmar.`,
+        detalle:
+          elementoEditar.tipo === 'INSUMO'
+            ? 'Se actualizarán también los datos de inventario del suministro.'
+            : 'Se actualizarán el nombre y la descripción del elemento.'
+      },
+      [elementoEditar.id]
+    );
+  };
+
+  const solicitarEliminarElemento = (elemento: Elemento) => {
+    const relaciones = grafo.dependencias.filter(
+      (dependencia) =>
+        dependencia.origen === elemento.id || dependencia.destino === elemento.id
+    ).length;
+    void abrirConfirmacion(
+      {
+        tipo: 'elemento',
+        accion: 'eliminar',
+        elementoId: elemento.id,
+        nombre: elemento.nombre
+      },
+      {
+        titulo: 'Eliminar elemento',
+        descripcion: `Vas a eliminar «${elemento.nombre}». Esta acción no se puede deshacer.`,
+        detalle:
+          relaciones > 0
+            ? `También se eliminarán ${relaciones} relación(es) de la cadena que tocan este elemento.`
+            : 'El elemento no tiene relaciones registradas.'
+      },
+      [elemento.id]
+    );
+  };
+
+  const solicitarEliminarDependencia = (origen: string, destino: string) => {
+    void abrirConfirmacion(
+      { tipo: 'dependencia', accion: 'eliminar', origen, destino },
+      {
+        titulo: 'Eliminar relación',
+        descripcion: `Vas a eliminar la relación «${nombreDe(origen)} → ${nombreDe(destino)}».`,
+        detalle: 'La relación dejará de aparecer en el mapa y en los análisis de impacto.'
+      },
+      [origen]
+    );
+  };
+
+  const abrirEdicionRelacion = (origen: string, destino: string) => {
+    setRelacionEditar({ origen, destino });
+    setModalDependenciaAbierto(true);
+  };
+
+  const solicitarEditarDependencia = (
+    origenActual: string,
+    destinoActual: string,
+    dto: CrearDependenciaDto
+  ) => {
+    void abrirConfirmacion(
+      { tipo: 'dependencia', accion: 'editar', origenActual, destinoActual, dto },
+      {
+        titulo: 'Editar relación',
+        descripcion: `La relación «${nombreDe(origenActual)} → ${nombreDe(destinoActual)}» pasará a «${nombreDe(dto.origen)} → ${nombreDe(dto.destino)}».`,
+        detalle: 'Revisa los posibles efectos de este cambio en la continuidad de la cadena.'
+      },
+      [origenActual, dto.origen]
+    );
+  };
+
+  const confirmarAccion = async () => {
+    if (!confirmacion) return;
+    const accion = confirmacion.accion;
+    setConfirmacion((anterior) =>
+      anterior ? { ...anterior, cargando: true, error: null } : anterior
+    );
+
+    try {
+      if (accion.tipo === 'elemento' && accion.accion === 'editar') {
+        await apiService.actualizarElemento(accion.elementoId, accion.dto);
+      } else if (accion.tipo === 'elemento' && accion.accion === 'eliminar') {
+        await apiService.eliminarElemento(accion.elementoId);
+      } else if (accion.tipo === 'dependencia' && accion.accion === 'editar') {
+        await apiService.actualizarDependencia(accion.origenActual, accion.destinoActual, accion.dto);
+      } else if (accion.tipo === 'dependencia' && accion.accion === 'eliminar') {
+        await apiService.eliminarDependencia(accion.origen, accion.destino);
+      }
+
+      await cargarGrafo();
+      setConfirmacion(null);
+      setModalElementoAbierto(false);
+      setElementoEditar(null);
+      setModalDependenciaAbierto(false);
+      setRelacionEditar(null);
+
+      if (accion.tipo === 'elemento' && accion.accion === 'eliminar') {
+        if (elementoDetalleId === accion.elementoId) {
+          setElementoDetalleId(null);
+        }
+        if (nodoSeleccionadoId === accion.elementoId) {
+          setNodoSeleccionadoId(null);
+          setNodosAfectadosIds([]);
+          setImpactoNodoSeleccionado(null);
+        }
+      } else if (nodoSeleccionadoId) {
+        await handleSelectNode(nodoSeleccionadoId);
+      }
+    } catch (err) {
+      setConfirmacion((anterior) =>
+        anterior
+          ? { ...anterior, cargando: false, error: extraerMensajeError(err) }
+          : anterior
+      );
+    }
+  };
+
+  const abrirDetalle = (id: string, modo: 'catalogo' | 'afectado') => {
+    setModoDetalle(modo);
+    setElementoDetalleId(id);
+  };
+
+  const verEnMapa = (id: string) => {
+    setElementoDetalleId(null);
+    setTabActiva('red');
+    void handleSelectNode(id);
+  };
+
+  const evaluarImpacto = (id: string) => {
+    setElementoDetalleId(null);
+    setSolicitudImpacto({ id, secuencia: Date.now() });
+    setTabActiva('impacto');
+  };
+
+  const editarDesdeDetalle = (elemento: Elemento) => {
+    setElementoDetalleId(null);
+    setElementoEditar(elemento);
+    setModalElementoAbierto(true);
+  };
+
+  const nodoSeleccionado = grafo.elementos.find((elemento) => elemento.id === nodoSeleccionadoId);
+  const elementoDetalle = grafo.elementos.find((elemento) => elemento.id === elementoDetalleId) ?? null;
+  const proveedoresCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PROVEEDOR').length;
+  const insumosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'INSUMO').length;
+  const procesosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PROCESO').length;
+  const productosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PRODUCTO').length;
+  const suministrosEnAlerta = grafo.elementos.filter((elemento) => elemento.alertaStock);
 
   return (
     <div className="h-dvh overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white">
-      {/* Header & Navbar */}
       <HeaderNavbar
         tabActiva={tabActiva}
-        onTabChange={setTabActiva}
-        onAbrirModalElemento={() => setModalElementoAbierto(true)}
-        onAbrirModalDependencia={() => setModalDependenciaAbierto(true)}
+        onTabChange={handleTabChange}
+        onAbrirModalElemento={abrirNuevoElemento}
+        onAbrirModalDependencia={abrirNuevaDependencia}
         onAbrirAyuda={() => setModalAyudaAbierto(true)}
         apiConectada={apiConectada}
       />
 
-      {/* Alerta de Error Global */}
       {errorGlobal && (
         <div className="shrink-0 bg-red-500/10 border-b border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-400 max-w-7xl mx-auto w-full">
           <div className="flex items-center gap-2 min-w-0">
@@ -164,9 +478,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Contenido Principal */}
       <main className="flex-1 min-h-0 overflow-y-auto max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Métricas Operativas de Planta */}
         <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg border border-slate-800">
             <div>
@@ -181,7 +493,7 @@ export const App: React.FC = () => {
 
           <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg border border-slate-800">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Materias & Insumos</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Materias & Suministros</span>
               <p className="text-2xl font-black text-white mt-1">{insumosCount}</p>
               <span className="text-[10px] text-amber-400 font-medium">Materiales base</span>
             </div>
@@ -213,10 +525,8 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Pestaña 1: Cadena de Suministro */}
         {tabActiva === 'red' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[560px] lg:h-[620px]">
-            {/* Lienzo Interactivo */}
             <div className="lg:col-span-2 relative h-full min-h-0">
               <GraphCanvas
                 elementos={grafo.elementos}
@@ -227,197 +537,116 @@ export const App: React.FC = () => {
               />
             </div>
 
-            {/* Ficha de Inspección Operativa */}
             <div className="h-full min-h-0 space-y-4 overflow-y-auto pr-1">
-              {nodoSeleccionado ? (
-                <div className="glass-card p-5 rounded-2xl shadow-xl space-y-4 animate-in fade-in border border-slate-800">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <span className="font-mono text-xs font-bold text-sky-400">{obtenerCodigoSku(nodoSeleccionado.id)}</span>
-                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                      {nodoSeleccionado.tipo}
-                    </span>
-                  </div>
+              {suministrosEnAlerta.length > 0 && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-[11px] text-red-200 flex items-start gap-2">
+                  <AlertOctagon size={15} className="mt-0.5 shrink-0 text-red-400" />
                   <div>
-                    <h3 className="text-base font-bold text-white">{nodoSeleccionado.nombre}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{nodoSeleccionado.descripcion || 'Sin notas operativas adicionales.'}</p>
-                  </div>
-
-                  {/* Posición en la Cadena de Suministro */}
-                  <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80">
-                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1.5">Etapa del Flujo:</span>
-                    <div className="flex items-center justify-between text-[10px] font-semibold">
-                      <span className={`px-2 py-0.5 rounded transition-colors ${nodoSeleccionado.tipo === 'PROVEEDOR' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold' : 'text-slate-600'}`}>
-                        Proveedor
-                      </span>
-                      <span className="text-slate-700 font-bold">→</span>
-                      <span className={`px-2 py-0.5 rounded transition-colors ${nodoSeleccionado.tipo === 'INSUMO' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold' : 'text-slate-600'}`}>
-                        Insumo
-                      </span>
-                      <span className="text-slate-700 font-bold">→</span>
-                      <span className={`px-2 py-0.5 rounded transition-colors ${nodoSeleccionado.tipo === 'PROCESO' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold' : 'text-slate-600'}`}>
-                        Proceso
-                      </span>
-                      <span className="text-slate-700 font-bold">→</span>
-                      <span className={`px-2 py-0.5 rounded transition-colors ${nodoSeleccionado.tipo === 'PRODUCTO' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold' : 'text-slate-600'}`}>
-                        Producto
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Evaluación de Continuidad Operativa (Impacto F2) */}
-                  <div className="p-3.5 rounded-xl border bg-slate-900/90 border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <AlertOctagon size={14} className={impactoNodoSeleccionado && impactoNodoSeleccionado.total > 0 ? 'text-red-400' : 'text-emerald-400'} />
-                        Riesgo de Continuidad
-                      </span>
-                      {impactoNodoSeleccionado && (
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
-                          impactoNodoSeleccionado.total > 0
-                            ? 'bg-red-500/10 text-red-300 border-red-500/25'
-                            : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
-                        }`}>
-                          {impactoNodoSeleccionado.total === 0 ? 'Sin riesgo en cadena' : `${impactoNodoSeleccionado.total} en riesgo`}
-                        </span>
-                      )}
-                    </div>
-
-                    {cargandoImpactoNodo ? (
-                      <p className="text-[11px] text-slate-400 italic">Evaluando dependencias con el sistema...</p>
-                    ) : impactoNodoSeleccionado ? (
-                      impactoNodoSeleccionado.total === 0 ? (
-                        <p className="text-[11px] text-emerald-300/90 leading-relaxed">
-                          Elemento terminal: Si este producto o componente se retrasa, no paraliza ninguna otra estación de trabajo en la fábrica.
-                        </p>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <p className="text-[11px] text-red-300/90 leading-relaxed">
-                            Alerta: Su indisponibilidad detiene en cascada a los elementos resaltados en rojo en el mapa:
-                          </p>
-                          <div className="flex flex-wrap gap-1 pt-0.5">
-                            {impactoNodoSeleccionado.afectados.map(af => (
-                              <span
-                                key={af.id}
-                                className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-950/80 text-red-200 border border-red-800/40"
-                                title={`${af.nombre} (${af.tipo})`}
-                              >
-                                {af.nombre} [{obtenerCodigoSku(af.id)}]
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    ) : null}
-                  </div>
-
-                  {/* Suministros Previos Requeridos (Entrada) */}
-                  <div className="pt-2 border-t border-slate-800 space-y-2">
-                    <h4 className="text-xs font-semibold text-slate-300">Suministros Requeridos (Entrada):</h4>
-                    <ul className="space-y-1.5 text-xs">
-                      {grafo.dependencias
-                        .filter(d => d.destino === nodoSeleccionado.id)
-                        .map(d => {
-                          const itemOrigen = grafo.elementos.find(e => e.id === d.origen);
-                          return (
-                            <li key={d.origen} className="p-2 bg-slate-950 rounded-lg text-slate-300 flex items-center justify-between border border-slate-800/80">
-                              <span className="font-medium">{itemOrigen?.nombre || d.origen}</span>
-                              <span className="text-slate-500 font-mono text-[10px]">[{obtenerCodigoSku(d.origen)}]</span>
-                            </li>
-                          );
-                        })}
-                      {grafo.dependencias.filter(d => d.destino === nodoSeleccionado.id).length === 0 && (
-                        <li className="text-slate-500 text-[11px] italic p-2 bg-slate-950/50 rounded-lg">
-                          Materia prima base o proveedor inicial (no requiere insumos previos).
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-
-                  {/* Componentes Habilitados (Salida) */}
-                  <div className="pt-2 border-t border-slate-800 space-y-2">
-                    <h4 className="text-xs font-semibold text-slate-300">Abastece Directamente a (Salida):</h4>
-                    <ul className="space-y-1.5 text-xs">
-                      {grafo.dependencias
-                        .filter(d => d.origen === nodoSeleccionado.id)
-                        .map(d => {
-                          const itemDestino = grafo.elementos.find(e => e.id === d.destino);
-                          return (
-                            <li key={d.destino} className="p-2 bg-slate-950 rounded-lg text-slate-300 flex items-center justify-between border border-slate-800/80">
-                              <span className="font-medium">{itemDestino?.nombre || d.destino}</span>
-                              <span className="text-slate-500 font-mono text-[10px]">[{obtenerCodigoSku(d.destino)}]</span>
-                            </li>
-                          );
-                        })}
-                      {grafo.dependencias.filter(d => d.origen === nodoSeleccionado.id).length === 0 && (
-                        <li className="text-slate-500 text-[11px] italic p-2 bg-slate-950/50 rounded-lg">
-                          Producto final manufacturado (listo para entrega a cliente).
-                        </li>
-                      )}
-                    </ul>
+                    <p className="font-bold">Alerta de stock</p>
+                    <p className="mt-0.5 leading-relaxed">
+                      {suministrosEnAlerta.length} suministro(s) por debajo del mínimo aceptable:{' '}
+                      {suministrosEnAlerta.map((elemento) => elemento.nombre).join(', ')}.
+                    </p>
                   </div>
                 </div>
+              )}
+
+              {nodoSeleccionado ? (
+                <PanelDetalleNodo
+                  elemento={nodoSeleccionado}
+                  elementos={grafo.elementos}
+                  dependencias={grafo.dependencias}
+                  impacto={impactoNodoSeleccionado}
+                  cargandoImpacto={cargandoImpactoNodo}
+                  onEditar={(elemento) => {
+                    setElementoEditar(elemento);
+                    setModalElementoAbierto(true);
+                  }}
+                  onEliminar={solicitarEliminarElemento}
+                  onEditarRelacion={abrirEdicionRelacion}
+                  onEliminarRelacion={solicitarEliminarDependencia}
+                />
               ) : (
-                <div className="glass-card p-6 rounded-2xl text-center space-y-3 border border-slate-800">
-                  <Layers size={32} className="mx-auto text-slate-600" />
-                  <h4 className="text-sm font-bold text-white">Inspeccionar Componente de Planta</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Haz clic sobre cualquier material, proveedor, proceso o producto en el mapa para inspeccionar sus requerimientos de abastecimiento y simular su impacto operativo.
-                  </p>
-                </div>
+                <MensajeSinSeleccion />
               )}
             </div>
           </div>
         )}
 
-        {/* Pestaña 2: Catálogo */}
         {tabActiva === 'catalogo' && (
           <div className="space-y-6">
             <CatalogTable
               elementos={grafo.elementos}
-              onSelectNode={(id) => {
-                handleSelectNode(id);
-                setTabActiva('red');
-              }}
-              onConsultarImpacto={(id) => {
-                setNodoSeleccionadoId(id);
-                setTabActiva('impacto');
-              }}
+              onConsultarElemento={(id) => abrirDetalle(id, 'catalogo')}
+              onConsultarImpacto={evaluarImpacto}
             />
           </div>
         )}
 
-        {/* Pestaña 3: Análisis de Impacto (F2) */}
         {tabActiva === 'impacto' && (
           <VistaImpacto
+            key={claveVistaImpacto}
             elementos={grafo.elementos}
-            idInicial={nodoSeleccionadoId}
-            onSeleccionarElementoEnGrafo={(id, afectados) => {
-              setNodoSeleccionadoId(id);
-              setNodosAfectadosIds(afectados);
+            solicitudInicial={solicitudImpacto}
+            historial={historial}
+            onAnalisisRegistrado={registrarAnalisis}
+            onSeleccionarElementoEnGrafo={(id) => {
               setTabActiva('red');
+              void handleSelectNode(id);
             }}
+            onConsultarAfectado={(id) => abrirDetalle(id, 'afectado')}
           />
         )}
       </main>
 
-      {/* Modales de Creación */}
       <ModalCrearElemento
         isOpen={modalElementoAbierto}
         elementos={grafo.elementos}
-        onClose={() => setModalElementoAbierto(false)}
+        elementoEditar={elementoEditar}
+        onClose={cerrarModalElemento}
         onSubmit={handleCrearElemento}
+        onSolicitarGuardar={solicitarEditarElemento}
       />
 
       <ModalCrearDependencia
         isOpen={modalDependenciaAbierto}
         elementos={grafo.elementos}
-        onClose={() => setModalDependenciaAbierto(false)}
+        reglas={reglas}
+        relacionEditar={relacionEditar}
+        onClose={cerrarModalDependencia}
         onSubmit={handleCrearDependencia}
+        onSolicitarEdicion={solicitarEditarDependencia}
+      />
+
+      <ModalDetalleElemento
+        elemento={elementoDetalle}
+        elementos={grafo.elementos}
+        dependencias={grafo.dependencias}
+        modo={modoDetalle}
+        onCerrar={() => setElementoDetalleId(null)}
+        onVerEnMapa={verEnMapa}
+        onEvaluarImpacto={evaluarImpacto}
+        onEditar={editarDesdeDetalle}
+        onEliminar={solicitarEliminarElemento}
+      />
+
+      <ModalConfirmarRiesgo
+        abierto={Boolean(confirmacion)}
+        titulo={confirmacion?.titulo ?? ''}
+        accion={confirmacion?.accion.accion ?? 'editar'}
+        descripcion={confirmacion?.descripcion ?? ''}
+        detalle={confirmacion?.detalle}
+        impacto={confirmacion?.impacto ?? null}
+        cargando={confirmacion?.cargando ?? false}
+        error={confirmacion?.error}
+        onConfirmar={confirmarAccion}
+        onCancelar={() => setConfirmacion(null)}
       />
 
       <ModalAyudaOperativa
         abierto={modalAyudaAbierto}
         onCerrar={() => setModalAyudaAbierto(false)}
+        onNavegar={handleTabChange}
       />
     </div>
   );

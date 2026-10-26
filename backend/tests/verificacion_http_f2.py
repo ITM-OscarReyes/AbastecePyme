@@ -43,7 +43,7 @@ def comprobar(escenario: str, esperado: str, obtenido: str, condicion: bool) -> 
 
 
 def main() -> int:
-    # 1. AC-F2-01: Impacto de PROV-ACERO devuelve 4 afectados
+    # 1. AC-F2-01: Impacto de PROV-ACERO devuelve 5 afectados
     estado, cuerpo = llamar("GET", "/api/v1/impacto/PROV-ACERO")
     comprobar(
         "AC-F2-01 GET /impacto/PROV-ACERO responde 200",
@@ -53,24 +53,24 @@ def main() -> int:
     )
     afectados_ids = [e["id"] for e in cuerpo.get("afectados", [])]
     comprobar(
-        "AC-F2-01 PROV-ACERO afecta exactamente INS-BARRA, PROC-CORTE, PROD-PANEL, PROD-BANCO y no INS-TORNILLO",
-        "4 afectados: INS-BARRA, PROC-CORTE, PROD-BANCO, PROD-PANEL",
+        "AC-F2-01 PROV-ACERO afecta a sus dos suministros, al proceso y a los dos productos",
+        "5 afectados: INS-BARRA, INS-TORNILLO, PROC-CORTE, PROD-BANCO, PROD-PANEL",
         f"{cuerpo.get('total')} afectados: {afectados_ids}",
-        cuerpo.get("total") == 4
-        and afectados_ids == ["INS-BARRA", "PROC-CORTE", "PROD-BANCO", "PROD-PANEL"]
-        and "INS-TORNILLO" not in afectados_ids,
+        cuerpo.get("total") == 5
+        and afectados_ids
+        == ["INS-BARRA", "INS-TORNILLO", "PROC-CORTE", "PROD-BANCO", "PROD-PANEL"],
     )
 
-    # 2. AC-F2-01b: PROD-PANEL solo afecta a PROD-BANCO
+    # 2. AC-F2-01b: un producto es terminal y no afecta a otros elementos
     estado, cuerpo = llamar("GET", "/api/v1/impacto/PROD-PANEL")
     afectados_panel = [e["id"] for e in cuerpo.get("afectados", [])]
     comprobar(
-        "AC-F2-01b PROD-PANEL solo afecta a PROD-BANCO, no invierte el grafo",
-        "1 afectado: PROD-BANCO (sin PROC-CORTE ni INS-BARRA ni PROV-ACERO)",
+        "AC-F2-01b PROD-PANEL es terminal y no invierte el grafo",
+        "0 afectados (sin PROC-CORTE ni INS-BARRA ni PROV-ACERO)",
         f"{cuerpo.get('total')} afectados: {afectados_panel}",
         estado == 200
-        and cuerpo.get("total") == 1
-        and afectados_panel == ["PROD-BANCO"]
+        and cuerpo.get("total") == 0
+        and afectados_panel == []
         and "PROC-CORTE" not in afectados_panel
         and "INS-BARRA" not in afectados_panel
         and "PROV-ACERO" not in afectados_panel,
@@ -130,12 +130,12 @@ def main() -> int:
     afectados_tornillo = [e["id"] for e in cuerpo.get("afectados", [])]
     comprobar(
         "AC-F2-05b elemento alcanzable por múltiples caminos aparece una sola vez",
-        "total 2 y PROD-BANCO aparece exactamente una vez",
+        "total 3 y PROD-BANCO aparece exactamente una vez",
         f"total {cuerpo.get('total')} con repeticiones {afectados_tornillo.count('PROD-BANCO')}",
         estado == 200
-        and cuerpo.get("total") == 2
+        and cuerpo.get("total") == 3
         and afectados_tornillo.count("PROD-BANCO") == 1
-        and set(afectados_tornillo) == {"PROD-PANEL", "PROD-BANCO"},
+        and set(afectados_tornillo) == {"PROC-CORTE", "PROD-PANEL", "PROD-BANCO"},
     )
 
     # 8. AC-F2-11: Identificador mal formado responde 422 ERR-05
@@ -180,13 +180,13 @@ def main() -> int:
         estado == 200 and cuerpo.get("elemento", {}).get("id") == "PROV-ACERO",
     )
 
-    # 12. AC-F2-05c: Con ciclo (PROD-BANCO -> PROD-PANEL), recorrido termina sin duplicados
-    # Registramos la dependencia cíclica
+    # 12. AC-F2-05c: con ciclo, el recorrido termina sin duplicados
+    # Un proceso puede generar un suministro y ese suministro alimentar al proceso.
     estado_dep, _ = llamar(
-        "POST", "/api/v1/dependencias", {"origen": "PROD-BANCO", "destino": "PROD-PANEL"}
+        "POST", "/api/v1/dependencias", {"origen": "PROC-CORTE", "destino": "INS-BARRA"}
     )
     comprobar(
-        "AC-F2-05c F1 admite dependencia cíclica PROD-BANCO -> PROD-PANEL",
+        "AC-F2-05c el sistema admite una relación cíclica proceso ↔ suministro",
         "201",
         str(estado_dep),
         estado_dep == 201,

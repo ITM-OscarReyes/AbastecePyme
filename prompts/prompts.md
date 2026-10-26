@@ -201,7 +201,7 @@ REQUISITOS ESTRICTOS DE ALCANCE Y ARQUITECTURA:
    - Herramientas de soporte operativo para Compras y Planta (minuta de contingencia, exportación de red, estándares de legibilidad de códigos).
 6. Calidad: Mantener Clean Architecture, SOLID, no duplicar reglas de validación del backend y asegurar que las pruebas (`vitest`, `lint`, `build`) pasen sin errores.
 
-## 08 — Auditoría de F1 con el agente auditors
+## 08 — Auditoría de F2 con el agente auditors
 
 Actúa como **Tester / QA** del proyecto AbastecePyme. Estamos trabajando en la Feature 2 (F2 — Análisis de impacto).
 
@@ -243,3 +243,179 @@ Entrega un resumen con:
 6. Conclusión: indica si F2 cumple o no cumple los requisitos.
 
 **No declares F2 aprobada si existen criterios sin verificar.** Si encuentras contradicciones en la documentación, repórtalas en lugar de asumir una solución.
+
+## 09 — Ajustes y mejoras del sistema de mapeo de la cadena de suministro
+
+Prompt utilizado para generar los cambios de inventario, edición y eliminación de elementos y relaciones, análisis de impacto, fichas modales y guía de usuario. Se conserva la redacción del requerimiento; solo se ajustaron los niveles de encabezado para integrarlo en este documento.
+
+### Requerimientos de ajustes y mejoras del sistema de mapeo de la cadena de suministro
+
+#### 1. Requerimiento general
+
+Las cantidades totales que se muestran en la parte superior de la interfaz deben mantenerse sin cambios.
+
+#### 2. Pestaña: Cadena de suministro
+
+##### 2.1. Visualización y gestión de relaciones
+
+Se debe mantener la visualización actual del mapa de la cadena de suministro.
+
+##### 2.2. Validación de relaciones
+
+Se deben mantener las validaciones que impiden crear relaciones entre un suministro y un proceso o producto cuando dicho suministro no está asociado a un proveedor.
+
+Las reglas de creación de relaciones deben corresponder con las dependencias permitidas entre los diferentes tipos de elementos de la cadena de suministro.
+
+##### 2.3. Gestión de inventario y alertas de stock
+
+Se debe incorporar un sistema de inventario para los suministros, que permita conocer la cantidad disponible en stock.
+
+Cada suministro debe contar con un valor mínimo de stock aceptable, configurable por el usuario. Cuando la cantidad disponible sea inferior a este valor, el sistema debe generar una alerta que indique que el suministro está próximo a agotarse.
+
+Al seleccionar un elemento en el mapa, se debe mostrar una tarjeta con su información detallada. Cuando el elemento seleccionado sea un suministro, la tarjeta debe incluir, como mínimo, la cantidad disponible en stock y su estado respecto al nivel mínimo establecido. Si el stock se encuentra por debajo del mínimo aceptable, se debe mostrar la alerta correspondiente. También se debe agregar los botones de editar o eliminar elemento.
+
+##### 2.4. Alertas de continuidad operativa
+
+Al editar o eliminar un elemento o una relación, se debe mantener el mecanismo actual de alertas de riesgo para la continuidad operativa.
+
+Antes de confirmar la acción, el sistema debe informar sobre los posibles efectos que esta podría generar en la cadena de suministro, incluyendo los procesos, productos o elementos que podrían verse afectados.
+
+#### 3. Pestaña: Materiales y procesos
+
+##### 3.1. Consulta de información de los elementos
+
+Se debe modificar el comportamiento de los elementos de esta pestaña. Al hacer clic en cualquiera de ellos, el sistema debe mostrar una ventana modal con su información detallada, incluyendo su descripción y los demás atributos disponibles.
+
+Desde esta ventana se deben habilitar las opciones para editar o eliminar el elemento, manteniendo las alertas de riesgo para la continuidad operativa antes de confirmar cualquiera de estas acciones.
+
+##### 3.2. Visualización en el mapa
+
+El modal debe incluir un botón que permita localizar y visualizar el elemento seleccionado en el mapa de la cadena de suministro, conservando la funcionalidad existente.
+
+##### 3.3. Evaluación de impacto
+
+Se debe mantener el botón **«Evaluar impacto»** y su funcionalidad actual.
+
+#### 4. Pestaña: Simulador de fallas
+
+##### 4.1. Cambio de nombre y propósito
+
+La pestaña debe dejar de llamarse «Simulador de fallas» y pasar a llamarse **«Análisis de impacto»**.
+
+Este cambio debe reflejarse en toda la interfaz, incluyendo títulos, botones, mensajes, descripciones y demás textos relacionados.
+
+##### 4.2. Buscador
+
+Se debe conservar el buscador actual. Únicamente se deben ajustar los textos y la información mostrada para que utilicen los nombres y términos correctos de acuerdo con los cambios realizados en el sistema.
+
+##### 4.3. Componentes disponibles en planta
+
+La sección que actualmente muestra todos los elementos disponibles debe modificarse para mostrar únicamente los **10 análisis de impacto más recientes**.
+
+La información presentada debe corresponder a los últimos análisis realizados y permitir identificar cada uno de ellos.
+
+##### 4.4. Comportamiento de entrada a la pestaña
+
+El comportamiento de la pestaña debe depender de la forma en que el usuario acceda a ella:
+
+- **Acceso desde el botón superior:** la pestaña debe abrirse sin mostrar resultados de un análisis de impacto. El análisis solo debe ejecutarse cuando el usuario presione el botón amarillo, cuyo nuevo nombre será «Evaluar impacto».
+- **Acceso desde el botón de un elemento en Materiales y procesos:** la pestaña debe abrirse con el análisis de impacto del elemento seleccionado ya ejecutado y sus resultados disponibles, sin necesidad de presionar nuevamente el botón «Evaluar impacto».
+
+##### 4.5. Resultados del análisis de impacto
+
+Se debe mantener la funcionalidad actual del análisis y conservar el botón **«Ver en el mapa»**, que permite visualizar el elemento dentro del mapa de la cadena de suministro.
+
+La minuta o informe generado a partir del análisis debe actualizarse para reflejar los cambios realizados en el sistema y utilizar la terminología correcta.
+
+Además, cuando el análisis involucre suministros, se debe tener en cuenta la cantidad disponible en stock para determinar y presentar el impacto correspondiente.
+
+##### 4.6. Detalle de los componentes afectados
+
+En la sección de componentes afectados por el análisis, se debe permitir hacer clic sobre cualquiera de los elementos listados para consultar su información detallada.
+
+Al seleccionar un elemento, se debe abrir un modal con su información, un botón que permita verlo en el mapa y otro que permita ejecutar un nuevo análisis de impacto tomando ese elemento como punto de partida.
+
+En este modal no se deben habilitar opciones para editar o eliminar el elemento. Su propósito es únicamente consultar la información y permitir iniciar un análisis de impacto.
+
+#### 5. Guía de usuario
+
+Se debe conservar la guía actual, pero actualizar su contenido para que esté orientado a usuarios finales.
+
+La documentación debe cumplir con los siguientes criterios:
+
+- Utilizar lenguaje natural, claro y comprensible, evitando términos técnicos relacionados con la estructura interna del grafo o su funcionamiento.
+- Explicar cómo se relacionan los proveedores, suministros, procesos y productos.
+- Describir las alertas de impacto y los riesgos que pueden afectar la continuidad operativa.
+- Incluir una explicación de las alertas de stock, el nivel mínimo aceptable y las condiciones que generan dichas alertas.
+- Explicar cómo consultar los elementos, gestionar sus relaciones y ejecutar análisis de impacto.
+- Mantener los botones de navegación rápida.
+
+La guía no debe incluir referencias a que el sistema cumple con la especificación F1 y F2.
+
+#### 6. Opción: Nuevo componente o elemento
+
+Se debe mantener la funcionalidad actual de generación de identificadores únicos para los nuevos elementos.
+
+Adicionalmente, al crear un elemento de tipo suministro, se debe incorporar un campo para registrar la cantidad inicial disponible en stock y un campo para establecer el nivel mínimo de stock aceptable.
+
+Estos campos deben permitir que el sistema gestione el inventario y genere las alertas correspondientes.
+
+Los campos de inventario deben aplicar únicamente a los elementos para los que corresponda esta funcionalidad.
+
+#### 7. Opción: Enlazar suministro
+
+##### 7.1. Selección de origen y destino
+
+Se debe mantener el funcionamiento general de la opción de creación de relaciones, incluyendo las categorías actuales que facilitan la búsqueda de elementos.
+
+Sin embargo, al seleccionar el origen y el destino de una relación, el usuario debe poder elegir primero el tipo de elemento y, posteriormente, seleccionar el elemento específico, siguiendo una lógica similar a la utilizada en el formulario de creación de nuevos elementos.
+
+##### 7.2. Reglas de dependencia entre elementos
+
+La creación de relaciones debe respetar las siguientes reglas de negocio:
+
+**Proveedor**
+
+- No depende de ningún otro elemento.
+- Puede estar relacionado con suministros, procesos o productos.
+
+**Suministro**
+
+- No puede existir sin estar asociado a un proveedor o proceso.
+- Puede estar relacionado con procesos o productos.
+- Se debe evaluar si un suministro también puede ser generado por un proceso. Si esta relación no es coherente, el suministro únicamente debe depender de un proveedor.
+
+**Proceso**
+
+- No puede existir sin estar asociado a uno o varios suministros, también puede estar asociado a un proveedor.
+- Puede generar productos.
+- Se debe evaluar si un proceso puede generar suministros. Si esta relación no es coherente, los procesos únicamente deben generar productos.
+
+**Producto**
+
+- Debe estar asociado a un proceso o proveedor que lo genere.
+- No debe tener dependencias de entrada adicionales.
+
+Estas reglas deben aplicarse de manera consistente en la creación, edición y validación de las relaciones.
+
+##### 7.3. Validaciones previas a la creación de relaciones
+
+Las reglas generales de dependencia deben mostrarse directamente en la pantalla de creación de relaciones, antes de que el usuario presione el botón «Crear dependencia».
+
+El objetivo es que el usuario conozca de antemano qué relaciones están permitidas y cuáles no, solo seleccionando el tipo de elemento, independientemente de los elementos específicos que seleccione.
+
+Las validaciones deben impedir que se creen relaciones que incumplan las reglas de negocio.
+
+Por otra parte, los mensajes relacionados con condiciones particulares de una relación, como la existencia previa de la misma relación, pueden mostrarse después de que el usuario intente crearla.
+
+#### 8. Criterios generales de implementación
+
+Todos los cambios deben mantener la coherencia entre las diferentes pestañas y funcionalidades del sistema.
+
+En particular, se debe garantizar que:
+
+- Las reglas de dependencia sean consistentes en el mapa, los formularios de creación y edición, y las validaciones de relaciones.
+- Las alertas de continuidad operativa se mantengan al editar o eliminar elementos y relaciones.
+- La información de inventario y las alertas de stock se reflejen tanto en las tarjetas de información como en los análisis de impacto cuando corresponda.
+- Los análisis de impacto puedan iniciarse desde la pestaña correspondiente y desde los elementos de Materiales y procesos.
+- La guía de usuario, los botones, los títulos y los mensajes reflejen los cambios funcionales y utilicen una terminología uniforme.

@@ -1,0 +1,56 @@
+
+======================================================================
+VERIFICACIÓN DE CRITERIOS DE ACEPTACIÓN — F2 (ANÁLISIS DE IMPACTO)
+======================================================================
+[PASÓ] AC-F2-01 GET /impacto/PROV-ACERO responde 200
+        esperado: 200
+        obtenido: 200
+[PASÓ] AC-F2-01 PROV-ACERO afecta a sus dos suministros, al proceso y a los dos productos
+        esperado: 5 afectados: INS-BARRA, INS-TORNILLO, PROC-CORTE, PROD-BANCO, PROD-PANEL
+        obtenido: 5 afectados: ['INS-BARRA', 'INS-TORNILLO', 'PROC-CORTE', 'PROD-BANCO', 'PROD-PANEL']
+[PASÓ] AC-F2-01b PROD-PANEL es terminal y no invierte el grafo
+        esperado: 0 afectados (sin PROC-CORTE ni INS-BARRA ni PROV-ACERO)
+        obtenido: 0 afectados: []
+[PASÓ] AC-F2-02 alcanzar no filtra por tipo: incluye INSUMO, PROCESO y PRODUCTO
+        esperado: {'INSUMO', 'PROCESO', 'PRODUCTO'}
+        obtenido: {'INSUMO', 'PRODUCTO', 'PROCESO'}
+[PASÓ] AC-F2-03 elemento inexistente responde 404 ERR-02
+        esperado: 404 con error.codigo ELEMENTO_NO_ENCONTRADO
+        obtenido: 404 con ELEMENTO_NO_ENCONTRADO
+[PASÓ] AC-F2-03 respuesta de error 404 no incluye datos de negocio
+        esperado: sin elemento, sin afectados, sin total
+        obtenido: claves: ['error']
+[PASÓ] AC-F2-04 elemento existente sin dependencias responde 200 con total 0
+        esperado: 200 con elemento PROD-BANCO, total: 0 y afectados: []
+        obtenido: 200 con total 0 y afectados []
+[PASÓ] AC-F2-05 INS-BARRA afecta PROC-CORTE (directo) y PROD-PANEL, PROD-BANCO (indirectos)
+        esperado: total 3 con PROC-CORTE, PROD-BANCO, PROD-PANEL
+        obtenido: 3 con ['PROC-CORTE', 'PROD-BANCO', 'PROD-PANEL']
+[PASÓ] AC-F2-05b elemento alcanzable por múltiples caminos aparece una sola vez
+        esperado: total 3 y PROD-BANCO aparece exactamente una vez
+        obtenido: total 3 con repeticiones 1
+[PASÓ] AC-F2-11 id mal formado en la ruta responde 422 ERR-05 nunca 404
+        esperado: 422 con error.codigo IDENTIFICADOR_INVALIDO
+        obtenido: 422 con IDENTIFICADOR_INVALIDO
+[PASÓ] AC-F2-13 dos consultas idénticas devuelven misma respuesta en orden id ascendente
+        esperado: respuestas idénticas y orden ordenado ascendente
+        obtenido: iguales: True, ordenado: True
+[PASÓ] AC-F2-14 la respuesta no incluye campos de ciclo ni de orden
+        esperado: sin campos prohibidos
+        obtenido: sin campos prohibidos
+[PASÓ] Normalización de id en minúsculas responde 200 con elemento PROV-ACERO
+        esperado: 200 con elemento.id PROV-ACERO
+        obtenido: 200 con elemento.id PROV-ACERO
+[PASÓ] AC-F2-05c el sistema admite una relación cíclica proceso ↔ suministro
+        esperado: 201
+        obtenido: 201
+[PASÓ] AC-F2-05c con ciclo el recorrido termina y devuelve alcanzables sin duplicar
+        esperado: total 3 con PROC-CORTE, PROD-BANCO, PROD-PANEL (sin duplicados)
+        obtenido: total 3 con ['PROC-CORTE', 'PROD-BANCO', 'PROD-PANEL']
+[PASÓ] AC-F2-15 README.md explica qué significa 'alcanzar' en este negocio
+        esperado: explicación con camino dirigido, origen habilita destino y ejemplo sintético
+        obtenido: presente en README.md
+
+----------------------------------------------------------------------
+Total escenarios F2: 16 · PASÓ: 16 · FALLÓ: 0
+----------------------------------------------------------------------

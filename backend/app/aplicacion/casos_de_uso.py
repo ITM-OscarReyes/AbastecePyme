@@ -1,8 +1,8 @@
-"""Casos de uso de F1 — Catálogo de dependencias.
+"""Casos de uso del catálogo, las relaciones y el análisis de impacto.
 
-Cada caso de uso expresa una operación del catálogo en términos del dominio:
-valida a través de las reglas del dominio, delega en el agregado ``Catalogo``
-y no contiene decisiones de transporte ni de persistencia.
+Cada caso de uso expresa una operación en términos del dominio: valida a
+través de las reglas del dominio, delega en el agregado ``Catalogo`` y no
+contiene decisiones de transporte ni de persistencia.
 """
 
 from collections.abc import Mapping
@@ -12,14 +12,27 @@ from app.dominio.catalogo import Catalogo
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
 from app.dominio.errores import CampoNoPermitido, DetalleError
-from app.dominio.tipo_elemento import TipoElemento
+from app.dominio.reglas_dependencia import ReglaDependencia, reglas_por_tipo
 from app.dominio.validacion import (
     normalizar_identificador,
     normalizar_tipo,
     validar_identificador_consulta,
 )
 
-_CAMPOS_ELEMENTO = {"id", "tipo", "nombre", "descripcion"}
+_CAMPOS_ELEMENTO = {
+    "id",
+    "tipo",
+    "nombre",
+    "descripcion",
+    "stock_disponible",
+    "stock_minimo",
+}
+_CAMPOS_ACTUALIZAR_ELEMENTO = {
+    "nombre",
+    "descripcion",
+    "stock_disponible",
+    "stock_minimo",
+}
 _CAMPOS_DEPENDENCIA = {"origen", "destino"}
 
 
@@ -34,7 +47,7 @@ def _rechazar_campos_desconocidos(datos: Mapping[str, object], permitidos: set[s
 
 
 class CrearElemento:
-    """RF-F1-01/02/03/11: registra un elemento válido con id único."""
+    """Registra un elemento válido con id único y, si es suministro, inventario."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -46,6 +59,8 @@ class CrearElemento:
             tipo=datos.get("tipo"),
             nombre=datos.get("nombre"),
             descripcion=datos.get("descripcion"),
+            stock_disponible=datos.get("stock_disponible"),
+            stock_minimo=datos.get("stock_minimo"),
         )
         catalogo = self._repositorio.obtener()
         catalogo.registrar_elemento(elemento)
@@ -53,8 +68,48 @@ class CrearElemento:
         return elemento
 
 
+class ActualizarElemento:
+    """Actualiza nombre, descripción e inventario de un elemento existente."""
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(self, identificador: object, datos: Mapping[str, object]) -> Elemento:
+        _rechazar_campos_desconocidos(datos, _CAMPOS_ACTUALIZAR_ELEMENTO)
+        id_normalizado = validar_identificador_consulta(identificador, "id")
+        catalogo = self._repositorio.obtener()
+        elemento = catalogo.obtener_elemento(id_normalizado)
+        actualizado = elemento.actualizar(
+            nombre=datos.get("nombre"),
+            descripcion=datos.get("descripcion"),
+            stock_disponible=datos.get("stock_disponible"),
+            stock_minimo=datos.get("stock_minimo"),
+            nombre_presente="nombre" in datos,
+            descripcion_presente="descripcion" in datos,
+            stock_disponible_presente="stock_disponible" in datos,
+            stock_minimo_presente="stock_minimo" in datos,
+        )
+        catalogo.reemplazar_elemento(actualizado)
+        self._repositorio.guardar(catalogo)
+        return actualizado
+
+
+class EliminarElemento:
+    """Elimina un elemento y, en cascada, sus relaciones."""
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(self, identificador: object) -> Elemento:
+        id_normalizado = validar_identificador_consulta(identificador, "id")
+        catalogo = self._repositorio.obtener()
+        elemento = catalogo.eliminar_elemento(id_normalizado)
+        self._repositorio.guardar(catalogo)
+        return elemento
+
+
 class ListarElementos:
-    """RF-F1-04/13: lista elementos con filtro opcional por tipo."""
+    """Lista elementos con filtro opcional por tipo."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -65,7 +120,7 @@ class ListarElementos:
 
 
 class ObtenerElemento:
-    """RF-F1-05: consulta un elemento por id, distinguiendo formato de existencia."""
+    """Consulta un elemento por id, distinguiendo formato de existencia."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -76,7 +131,7 @@ class ObtenerElemento:
 
 
 class RegistrarDependencia:
-    """RF-F1-06/07/08/11: registra una arista entre elementos existentes."""
+    """Registra una arista entre elementos existentes y tipos compatibles."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -91,8 +146,50 @@ class RegistrarDependencia:
         return dependencia
 
 
+class ActualizarDependencia:
+    """Cambia los extremos de una dependencia existente."""
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(
+        self,
+        origen_actual: object,
+        destino_actual: object,
+        datos: Mapping[str, object],
+    ) -> Dependencia:
+        _rechazar_campos_desconocidos(datos, _CAMPOS_DEPENDENCIA)
+        origen_viejo = validar_identificador_consulta(origen_actual, "origen")
+        destino_viejo = validar_identificador_consulta(destino_actual, "destino")
+        origen_nuevo = normalizar_identificador(datos.get("origen"), campo="origen")
+        destino_nuevo = normalizar_identificador(datos.get("destino"), campo="destino")
+        catalogo = self._repositorio.obtener()
+        dependencia = catalogo.actualizar_dependencia(
+            origen_viejo, destino_viejo, origen_nuevo, destino_nuevo
+        )
+        self._repositorio.guardar(catalogo)
+        return dependencia
+
+
+class EliminarDependencia:
+    """Elimina una relación existente."""
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(self, origen: object, destino: object) -> Dependencia:
+        origen_normalizado = validar_identificador_consulta(origen, "origen")
+        destino_normalizado = validar_identificador_consulta(destino, "destino")
+        catalogo = self._repositorio.obtener()
+        dependencia = catalogo.eliminar_dependencia(
+            origen_normalizado, destino_normalizado
+        )
+        self._repositorio.guardar(catalogo)
+        return dependencia
+
+
 class ListarDependencias:
-    """RF-F1-09/13: lista dependencias con filtros opcionales por extremo."""
+    """Lista dependencias con filtros opcionales por extremo."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -112,7 +209,7 @@ class ListarDependencias:
 
 
 class ObtenerGrafo:
-    """RF-F1-10/15: expone la representación del grafo tal como está."""
+    """Expone la representación del grafo tal como está."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -121,13 +218,15 @@ class ObtenerGrafo:
         return self._repositorio.obtener()
 
 
-class ConsultarImpacto:
-    """RF-F2-01/02/03/04/05/07/09: consulta el impacto de un elemento.
+class ObtenerReglasDependencia:
+    """Expone las combinaciones de tipos permitidas y su explicación."""
 
-    Valida el formato del identificador (ERR-05 si mal formado) y delega
-    en el dominio el recorrido hacia adelante. El dominio lanza
-    ElementoNoEncontrado (ERR-02) si el elemento no existe.
-    """
+    def ejecutar(self) -> list[ReglaDependencia]:
+        return reglas_por_tipo()
+
+
+class ConsultarImpacto:
+    """Consulta el impacto de un elemento con el recorrido propio del dominio."""
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
@@ -138,3 +237,19 @@ class ConsultarImpacto:
         elemento = catalogo.obtener_elemento(id_normalizado)
         afectados = catalogo.obtener_impacto(id_normalizado)
         return elemento, afectados
+
+
+__all__ = [
+    "ActualizarDependencia",
+    "ActualizarElemento",
+    "ConsultarImpacto",
+    "CrearElemento",
+    "EliminarDependencia",
+    "EliminarElemento",
+    "ListarDependencias",
+    "ListarElementos",
+    "ObtenerElemento",
+    "ObtenerGrafo",
+    "ObtenerReglasDependencia",
+    "RegistrarDependencia",
+]

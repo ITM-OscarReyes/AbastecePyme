@@ -77,7 +77,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
               }`}
             >
               <ShieldAlert size={14} />
-              <span>Simulador de Fallas</span>
+              <span>Análisis de impacto</span>
               <kbd className="text-[10px] font-mono px-1 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-700/50">3</kbd>
             </button>
           </nav>
@@ -107,7 +107,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <button
               onClick={onAbrirModalElemento}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-sky-600/20 transition-all active:scale-95 cursor-pointer"
-              title="Registrar nuevo proveedor, insumo, proceso o producto"
+              title="Registrar nuevo proveedor, suministro, proceso o producto"
             >
               <Plus size={14} />
               <span className="hidden sm:inline">Nuevo Componente</span>

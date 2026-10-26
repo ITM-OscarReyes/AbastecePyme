@@ -34,10 +34,11 @@ ELEMENTOS_PRUEBA: tuple[tuple[str, str, str], ...] = (
 
 DEPENDENCIAS_PRUEBA: tuple[tuple[str, str], ...] = (
     ("PROV-ACERO", "INS-BARRA"),
+    ("PROV-ACERO", "INS-TORNILLO"),
     ("INS-BARRA", "PROC-CORTE"),
+    ("INS-TORNILLO", "PROC-CORTE"),
     ("PROC-CORTE", "PROD-PANEL"),
-    ("INS-TORNILLO", "PROD-PANEL"),
-    ("PROD-PANEL", "PROD-BANCO"),
+    ("PROC-CORTE", "PROD-BANCO"),
 )
 
 CODIGOS_ERROR = {

@@ -1,10 +1,13 @@
 import axios, { AxiosError } from 'axios';
 import type {
+  ActualizarElementoDto,
   CrearDependenciaDto,
   CrearElementoDto,
   Dependencia,
   Elemento,
   ErrorApiResponse,
+  ImpactoRespuesta,
+  ReglasDependenciaRespuesta,
   RespuestaColeccionDependencias,
   RespuestaColeccionElementos,
   RespuestaGrafo,
@@ -38,7 +41,6 @@ export function extraerMensajeError(error: unknown): string {
 }
 
 export const apiService = {
-  // F1 Endpoints
   async obtenerGrafo(): Promise<RespuestaGrafo> {
     const { data } = await apiClient.get<RespuestaGrafo>('/grafo');
     return data;
@@ -60,6 +62,15 @@ export const apiService = {
     return data;
   },
 
+  async actualizarElemento(id: string, dto: ActualizarElementoDto): Promise<Elemento> {
+    const { data } = await apiClient.put<Elemento>(`/elementos/${encodeURIComponent(id)}`, dto);
+    return data;
+  },
+
+  async eliminarElemento(id: string): Promise<void> {
+    await apiClient.delete(`/elementos/${encodeURIComponent(id)}`);
+  },
+
   async obtenerDependencias(origen?: string, destino?: string): Promise<RespuestaColeccionDependencias> {
     const params: Record<string, string> = {};
     if (origen) params.origen = origen;
@@ -73,9 +84,31 @@ export const apiService = {
     return data;
   },
 
-  // F2 — Análisis de impacto
-  async obtenerImpacto(id: string): Promise<import('../types').ImpactoRespuesta> {
-    const { data } = await apiClient.get<import('../types').ImpactoRespuesta>(`/impacto/${encodeURIComponent(id)}`);
+  async actualizarDependencia(
+    origen: string,
+    destino: string,
+    dto: CrearDependenciaDto
+  ): Promise<Dependencia> {
+    const { data } = await apiClient.put<Dependencia>(
+      `/dependencias/${encodeURIComponent(origen)}/${encodeURIComponent(destino)}`,
+      dto
+    );
+    return data;
+  },
+
+  async eliminarDependencia(origen: string, destino: string): Promise<void> {
+    await apiClient.delete(
+      `/dependencias/${encodeURIComponent(origen)}/${encodeURIComponent(destino)}`
+    );
+  },
+
+  async obtenerReglasDependencia(): Promise<ReglasDependenciaRespuesta> {
+    const { data } = await apiClient.get<ReglasDependenciaRespuesta>('/reglas-dependencia');
+    return data;
+  },
+
+  async obtenerImpacto(id: string): Promise<ImpactoRespuesta> {
+    const { data } = await apiClient.get<ImpactoRespuesta>(`/impacto/${encodeURIComponent(id)}`);
     return data;
   }
 };

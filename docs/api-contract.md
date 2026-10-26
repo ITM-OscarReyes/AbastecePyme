@@ -485,3 +485,49 @@ El endpoint no admite cuerpo ni parámetros de consulta.
 
 El significado de «alcanzar» que da origen a este contrato está documentado en `graph-model.md` §8 y
 en el `README.md` del repositorio (`RF-F2-09`).
+## 9. Ajustes de inventario y gestión (2026-10-25)
+
+### 9.1 Campos de inventario en `Elemento`
+
+| Campo | Tipo | Aplica a | Regla |
+| ----- | ---- | -------- | ----- |
+| `stockDisponible` | entero ≥ 0 | `INSUMO` | Si se omite al crear, vale `0`. En otros tipos se rechaza con `422` (`VALIDACION_FALLIDA`). |
+| `stockMinimo` | entero ≥ 0 | `INSUMO` | Nivel mínimo aceptable. Si se omite al crear, vale `0`. |
+| `estadoStock` | `NO_APLICA` \| `SUFICIENTE` \| `BAJO` | Todos | `BAJO` si `stockDisponible < stockMinimo`; `NO_APLICA` en tipos sin inventario. |
+| `alertaStock` | booleano | Todos | Verdadero solo cuando `estadoStock = "BAJO"`. |
+
+Los campos calculados `estadoStock` y `alertaStock` los produce el backend; el cliente no debe
+recalcularlos.
+
+### 9.2 Endpoints de gestión
+
+| Método | Ruta | Cuerpo | Respuesta |
+| ------ | ---- | ------ | --------- |
+| `PUT` | `/api/v1/elementos/{id}` | `{nombre?, descripcion?, stockDisponible?, stockMinimo?}` | `200` con el elemento actualizado |
+| `DELETE` | `/api/v1/elementos/{id}` | — | `204`; elimina en cascada las relaciones del elemento |
+| `PUT` | `/api/v1/dependencias/{origen}/{destino}` | `{origen, destino}` | `200` con la relación actualizada |
+| `DELETE` | `/api/v1/dependencias/{origen}/{destino}` | — | `204` |
+| `GET` | `/api/v1/reglas-dependencia` | — | `200` con `tipos` y las 16 `reglas` |
+
+Errores nuevos: `DEPENDENCIA_NO_ENCONTRADA` (`404`) al borrar o editar una relación inexistente.
+Los códigos `ERR-01` a `ERR-09` conservan su significado.
+
+### 9.3 Reglas de dependencia
+
+La respuesta de `GET /api/v1/reglas-dependencia` contiene una entrada por cada par de tipos con
+`tipoOrigen`, `tipoDestino`, `permitida` y `motivo`. La matriz permitida es la de
+`graph-model.md` §4.1. Un suministro que se enlaza a un proceso o producto debe tener una arista
+entrante de proveedor o proceso; si no la tiene, la API responde `422` `DEPENDENCIA_INVALIDA` con
+detalle en el campo `origen`.
+
+### 9.4 Impacto enriquecido con stock
+
+`GET /api/v1/impacto/{id}` añade a cada elemento `descripcion`, `stockDisponible`, `stockMinimo`,
+`estadoStock` y `alertaStock`, y un objeto `resumenStock`:
+
+```json
+"resumenStock": { "totalSuministros": 2, "suministrosBajoMinimo": 1 }
+```
+
+El conjunto de afectados y el recorrido no cambian por el stock; el stock es información de
+contexto para el informe y la ficha.
