@@ -201,7 +201,7 @@ REQUISITOS ESTRICTOS DE ALCANCE Y ARQUITECTURA:
    - Herramientas de soporte operativo para Compras y Planta (minuta de contingencia, exportación de red, estándares de legibilidad de códigos).
 6. Calidad: Mantener Clean Architecture, SOLID, no duplicar reglas de validación del backend y asegurar que las pruebas (`vitest`, `lint`, `build`) pasen sin errores.
 
-## 08 — Auditoría de F2 con el agente auditors
+## 08 — Auditoría de F2 con el agente auditor
 
 Actúa como **Tester / QA** del proyecto AbastecePyme. Estamos trabajando en la Feature 2 (F2 — Análisis de impacto).
 
