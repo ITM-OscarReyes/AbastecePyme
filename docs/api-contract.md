@@ -1,11 +1,10 @@
-# Contrato de API — AbastecePyme (F1 y F2)
+# Contrato de API — AbastecePyme (F1, F2 y F3)
 
-Contrato HTTP de **F1 — Catálogo de dependencias** y de **F2 — Análisis de impacto**.
+Contrato HTTP de **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**.
 
 - Requisitos: `requirements.md`. Dirección y estructura: `graph-model.md`.
 - Verificación: `acceptance-criteria.md`.
-- Alcance: las secciones 1 a 7 son de F1 y la sección 8 es de F2. Los endpoints de orden de
-  producción y ciclos (F3) y de tablero (F4) **no** se definen aquí.
+- Alcance: endpoints de F1, F2 y F3. Los endpoints de tablero integrado (F4) **no** se definen aquí.
 
 Los ejemplos en JSON son ilustrativos del formato esperado; no son archivos de datos del proyecto.
 
@@ -67,6 +66,38 @@ Ejemplo de dependencia:
 
 La lectura es: «para producir el panel `PROD-PANEL` necesito el insumo `INS-TORNILLO`».
 
+### 2.3 `PasoProduccion` (F3)
+
+Representa una etapa secuencial dentro del orden de producción válido.
+
+| Campo | Tipo | Obligatorio | Reglas |
+| ----- | ---- | ----------- | ------ |
+| `paso` | entero | Sí | Número secuencial (1-indexado: 1, 2, ...). |
+| `id` | texto | Sí | Identificador del elemento a preparar. |
+| `tipo` | texto | Sí | Tipo del elemento (`PROVEEDOR`, `INSUMO`, `PRODUCTO`, `PROCESO`). |
+| `nombre` | texto | Sí | Nombre del elemento. |
+
+### 2.4 `OrdenProduccionRespuesta` (F3)
+
+Respuesta exitosa cuando la red es un DAG.
+
+| Campo | Tipo | Obligatorio | Reglas |
+| ----- | ---- | ----------- | ------ |
+| `esDag` | booleano | Sí | `true` si el grafo es acíclico. |
+| `orden` | lista de `PasoProduccion` | Sí | Secuencia ordenada topológicamente respetando todas las dependencias. |
+| `totalPasos` | entero | Sí | Cantidad total de elementos en el orden de producción. |
+
+### 2.5 `ReporteCicloRespuesta` (F3)
+
+Cuerpo informativo complementario o de diagnóstico cuando se detecta un ciclo.
+
+| Campo | Tipo | Obligatorio | Reglas |
+| ----- | ---- | ----------- | ------ |
+| `esDag` | booleano | Sí | `false` cuando existen dependencias circulares. |
+| `mensaje` | texto | Sí | Explicación legible del bloqueo de producción. |
+| `ciclo` | lista de textos | Sí | Secuencia ordenada de IDs que forman el lazo cerrado `[c_1, ..., c_k, c_1]`. |
+| `elementosBloqueados` | lista de textos | Sí | Lista de IDs de todos los elementos que no pudieron ordenarse debido a ciclos. |
+
 ## 3. Endpoints
 
 | Método | Ruta | Descripción | Requisitos |
@@ -77,8 +108,8 @@ La lectura es: «para producir el panel `PROD-PANEL` necesito el insumo `INS-TOR
 | `POST` | `/api/v1/dependencias` | Registrar una dependencia dirigida | RF-F1-06, RF-F1-07, RF-F1-08, RF-F1-11 |
 | `GET` | `/api/v1/dependencias` | Listar dependencias, con filtro opcional por `origen` o `destino` | RF-F1-09, RF-F1-13 |
 | `GET` | `/api/v1/grafo` | Obtener la representación del grafo del catálogo | RF-F1-10, RF-F1-15 |
+| `GET` | `/api/v1/orden-produccion` | Obtener orden de preparación válido (DAG) o reporte de ciclo si hay contradicción | RF-F3-01 a RF-F3-06 |
 
-No hay endpoints de modificación ni de eliminación en F1 (ver `requirements.md`, sección 8).
 Cualquier otra ruta del API que no esté definida en este documento responde `404` con `ERR-09`.
 
 ### 3.1 `POST /api/v1/elementos`
@@ -259,6 +290,94 @@ Respuesta `200`:
 
 El grafo vacío responde `200` con colecciones vacías y totales en cero.
 
+### 3.7 `GET /api/v1/orden-produccion`
+
+Calcula el orden secuencial de preparación de todos los elementos del catálogo (F3).
+
+**Comportamiento:**
+1. Obtiene los elementos y dependencias del catálogo.
+2. Si el catálogo está vacío ($V = \emptyset$), responde `200 OK` con `esDag: true`, `orden: []` y `totalPasos: 0`.
+3. Aplica el algoritmo de ordenamiento topológico determinista (Kahn) usando el `id` ascendente para desempatar elementos simultáneamente disponibles.
+4. Si se logra ordenar la totalidad de los elementos ($|orden| == |V|$), el grafo es un DAG y responde `200 OK` con `OrdenProduccionRespuesta`.
+5. Si no se logra ordenar todos los elementos ($|orden| < |V|$), el grafo contiene al menos un ciclo. El sistema **no emite un orden parcial ni falso**; detecta el ciclo cerrado elemental mediante búsqueda en profundidad y responde `409 Conflict` con el sobre de error y código `CONFIGURACION_CICLICA`, incluyendo la secuencia del `ciclo` y los `elementosBloqueados` en `detalles`.
+
+**Respuestas:**
+
+| Código | Cuerpo | Cuándo |
+| ------ | ------ | ------ |
+| `200 OK` | `OrdenProduccionRespuesta` | El grafo es un DAG. Devuelve la secuencia completa de pasos de producción. |
+| `409 Conflict` | Error `ERR-10` (`CONFIGURACION_CICLICA`) | El catálogo contiene dependencias circulares y no existe un orden de producción realizable. |
+
+**Ejemplo de respuesta `200 OK` (Caso DAG acíclico válido):**
+
+```json
+{
+  "esDag": true,
+  "orden": [
+    {
+      "paso": 1,
+      "id": "PROV-ACERO",
+      "tipo": "PROVEEDOR",
+      "nombre": "Proveedor de acero"
+    },
+    {
+      "paso": 2,
+      "id": "INS-BARRA",
+      "tipo": "INSUMO",
+      "nombre": "Barra de acero"
+    },
+    {
+      "paso": 3,
+      "id": "INS-TORNILLO",
+      "tipo": "INSUMO",
+      "nombre": "Tornillo hexagonal M6"
+    },
+    {
+      "paso": 4,
+      "id": "PROC-CORTE",
+      "tipo": "PROCESO",
+      "nombre": "Corte de panel"
+    },
+    {
+      "paso": 5,
+      "id": "PROD-PANEL",
+      "tipo": "PRODUCTO",
+      "nombre": "Panel de montaje"
+    },
+    {
+      "paso": 6,
+      "id": "PROD-BANCO",
+      "tipo": "PRODUCTO",
+      "nombre": "Banco de montaje"
+    }
+  ],
+  "totalPasos": 6
+}
+```
+
+**Ejemplo de respuesta `409 Conflict` (Caso con dependencias circulares detectadas):**
+
+```json
+{
+  "error": {
+    "codigo": "CONFIGURACION_CICLICA",
+    "mensaje": "No se puede generar un orden de producción porque existen dependencias circulares.",
+    "detalles": [
+      {
+        "campo": "ciclo",
+        "mensaje": "INS-BARRA -> PROC-CORTE -> INS-BARRA"
+      },
+      {
+        "campo": "elementosBloqueados",
+        "mensaje": "INS-BARRA, PROC-CORTE, PROD-PANEL, PROD-BANCO"
+      }
+    ]
+  }
+}
+```
+
+Nota: La respuesta `409 Conflict` asegura que ningún consumidor interprete un ciclo como un éxito con lista vacía. Prohíbe de forma tajante órdenes falsos o simulados (RF-F3-05).
+
 ## 4. Reglas de validación
 
 Las reglas se aplican en el dominio. La capa HTTP solo comprueba que la estructura de la petición es
@@ -326,6 +445,7 @@ Sobre único para todos los endpoints:
 | `ERR-07` | `DEPENDENCIA_INVALIDA` | `422` | `origen` y `destino` son el mismo elemento. | RF-F1-07 |
 | `ERR-08` | `DEPENDENCIA_DUPLICADA` | `409` | Ya existe una dependencia con el mismo par `(origen, destino)`. | RF-F1-08 |
 | `ERR-09` | `TIPO_NO_ENCONTRADO` | `404` | La ruta solicitada no existe en la API. | RF-F1-12 |
+| `ERR-10` | `CONFIGURACION_CICLICA` | `409` | El catálogo contiene ciclos de dependencia que impiden generar un orden de producción válido. | RF-F3-03, RF-F3-04, RF-F3-05 |
 
 Ejemplos:
 
@@ -382,6 +502,7 @@ parte del contrato y no se especifica aquí: pertenece a las features que lo con
 | `POST /dependencias` | RF-F1-06, RF-F1-07, RF-F1-08, RF-F1-11 | AC-F1-06, AC-F1-07, AC-F1-08, AC-F1-11 | `graph-model.md`, sección 2.1 |
 | `GET /dependencias` | RF-F1-09, RF-F1-13 | AC-F1-09, AC-F1-13 | `graph-model.md`, sección 2.1 |
 | `GET /grafo` | RF-F1-10, RF-F1-15 | AC-F1-10, AC-F1-15 | `graph-model.md`, sección 3 |
+| `GET /orden-produccion` | RF-F3-01 a RF-F3-06 | AC-F3-01 a AC-F3-06 | `graph-model.md`, sección 6 |
 
 Las decisiones que sustentan este contrato están registradas en `docs/decisions/analyst.md`.
 
