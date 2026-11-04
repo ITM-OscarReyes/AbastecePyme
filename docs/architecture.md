@@ -41,7 +41,11 @@ infraestructura  ──▶  aplicación  ──▶  dominio
 | Traducción de un error de dominio a su código HTTP | Infraestructura |
 | Traducción entre `snake_case` de Python y `lowerCamelCase` del JSON | Infraestructura (sección 3.1) |
 | Persistencia y carga de datos sintéticos | Infraestructura |
-| Recorridos, ciclos y órdenes | **Fuera de F1** |
+| Cálculo de orden de producción topológico (Kahn) | Dominio |
+| Detección y reporte estructurado de ciclos (DFS) | Dominio |
+| Exposición del endpoint de orden de producción (`/orden-produccion`) | Infraestructura (rutas API) |
+| Caso de uso `ObtenerOrdenProduccion` | Aplicación |
+| Recorridos de impacto (F2) | **Fuera de F3** |
 
 ### 1.2 Abstracciones que F1 necesita
 
@@ -141,6 +145,12 @@ Vocabulario obligatorio y coherente en código, API, pruebas y textos de la inte
 | Nombre de la relación | `tipo_relacion` | `tipoRelacion` |
 | Total de elementos | `total_elementos` | `totalElementos` |
 | Total de dependencias | `total_dependencias` | `totalDependencias` |
+| Es DAG | `es_dag` | `esDag` |
+| Orden de producción | `orden` | `orden` |
+| Paso de producción | `paso` | `paso` |
+| Total de pasos | `total_pasos` | `totalPasos` |
+| Ciclo detectado | `ciclo` | `ciclo` |
+| Elementos bloqueados | `elementos_bloqueados` | `elementosBloqueados` |
 
 No se usan términos intercambiables como «nodo», «nodo raíz», «padre», «hijo» o «dependiente» para
 designar un elemento del catálogo.

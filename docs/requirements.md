@@ -3,12 +3,11 @@
 Especificación técnica derivada de `docs/brief.md`.
 
 - **Fuente de verdad:** `docs/brief.md`.
-- **Alcance de este documento:** **F1 — Catálogo de dependencias** (secciones 1 a 8) y **F2 — Análisis
-  de impacto** (sección 9).
-- **Features fuera de este documento:** F3 y F4 **no** se especifican aquí. Solo se mencionan como
-  consumidores del modelo de datos cuando F1 o F2 dejan una consecuencia que debe respetarse. Su
+- **Alcance de este documento:** **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**.
+- **Features fuera de este documento:** F4 **no** se especifica aquí. Solo se menciona como
+  consumidor del modelo de datos cuando F1, F2 o F3 dejan una consecuencia que debe respetarse. Su
   especificación requerirá una ampliación posterior de este documento por `analyst`.
-- **Documentos relacionados:** `graph-model.md` (dirección y representación del grafo),
+- **Documentos relacionados:** `graph-model.md` (dirección, representación, DAG y algoritmos de orden y ciclos),
   `api-contract.md` (contrato HTTP), `architecture.md` (capas y calidad), `acceptance-criteria.md`
   (verificación).
 
@@ -18,10 +17,14 @@ Especificación técnica derivada de `docs/brief.md`.
 | ------- | -------- |
 | `RF-F1-nn` | Requisito funcional de F1 |
 | `RNF-F1-nn` | Requisito no funcional de F1 |
+| `RF-F3-nn` | Requisito funcional de F3 |
+| `RNF-F3-nn` | Requisito no funcional de F3 |
 | `RNF-Q-nn` | Requisito de calidad y arquitectura, verificable |
 | `AC-F1-nn` | Criterio de aceptación de F1 (ver `acceptance-criteria.md`) |
-| `ERR-nn` | Error del catálogo (ver `api-contract.md`) |
-| `AMB-F1-nn` | Ambigüedad o decisión pendiente (ver sección 7) |
+| `AC-F3-nn` | Criterio de aceptación de F3 (ver `acceptance-criteria.md`) |
+| `ERR-nn` | Error del catálogo o de producción (ver `api-contract.md`) |
+| `AMB-F1-nn` | Ambigüedad o decisión pendiente de F1 |
+| `AMB-F3-nn` | Ambigüedad o decisión pendiente de F3 |
 
 ## 2. Necesidades de negocio de F1
 
@@ -211,7 +214,7 @@ Los siguientes puntos se mencionan para evitar que se implementen dentro de F1. 
 corresponde a otras features y a decisiones posteriores de `analyst`.
 
 - Recorridos de grafo, impacto y elementos alcanzados: F2 (especificado en la sección 9 de este documento).
-- Detección de ciclos, orden topológico y orden de preparación: F3.
+- Detección de ciclos, orden topológico y orden de preparación: F3 (especificado en la sección 11 de este documento).
 - Tablero integrado que reúna catálogo, impacto, orden de producción y alerta de ciclos: F4. La
   visualización de la red que F1 sí exige (RF-F1-14) es la representación del catálogo, no un tablero
   integrado: no incluye destacados de impacto, ni veredicto de ciclos, ni orden de trabajo.
@@ -411,3 +414,90 @@ El brief original excluía el inventario real. El cliente solicitó expresamente
 sencillo de cantidades y umbrales para los suministros. Se implementa como dato de catálogo (no como
 inventario transaccional, compras ni pronósticos) y queda registrado en las decisiones del
 `analyst`.
+
+## 11. Requisitos técnicos — F3: Orden y ciclos de producción
+
+Especificación técnica derivada de `docs/brief.md` (Feature 3).
+
+- **Fuente de verdad:** `docs/brief.md`.
+- **Alcance:** orden de producción/preparación válido sin ciclos, detección y reporte útil de ciclos, conceptos de DAG y ordenamiento topológico, sin NetworkX para cálculos.
+- **Documentos relacionados:** `graph-model.md` §6 (DAG y ordenamiento), `api-contract.md` §3.7 y §5 (contrato HTTP de F3), `acceptance-criteria.md` §8 (criterios de F3), `architecture.md` (capas de backend y frontend).
+
+### 11.1 Necesidades de negocio de F3
+
+| Necesidad | Origen |
+| --------- | ------ |
+| N9. El coordinador obtiene un orden válido de preparación cuando no existen ciclos | brief F3, valor de negocio y primer punto de «Debe permitir» |
+| N10. El sistema detecta y reporta un ciclo con información útil y estructurada cuando las dependencias se contradicen | brief F3, segundo punto de «Debe permitir» |
+| N11. El sistema no presenta un orden falso ni parcial cuando existe contradicción/ciclo | brief F3, tercer punto de «Debe permitir» |
+| N12. El orden de preparación y la detección de ciclos se basan en conceptos de DAG y ordenamiento topológico | brief F3, «Pistas, no receta» |
+| N13. El coordinador de producción consulta el orden de preparación | brief, «Usuarios» |
+| N14. Se incluyen pruebas de aceptación de un caso acíclico y uno cíclico | brief F3, cuarto punto de «Debe permitir» |
+
+### 11.2 Requisitos funcionales de F3
+
+| ID | Requisito | Necesidad | Criterio |
+| -- | --------- | --------- | -------- |
+| RF-F3-01 | El sistema debe determinar si la red de dependencias actual constituye un Grafo Dirigido Acíclico (DAG). | N9, N12 | AC-F3-01 |
+| RF-F3-02 | Cuando el grafo es un DAG, el sistema debe generar un orden de producción/preparación válido y determinista respetando todas las precedencias (`origen habilita destino`). | N9, N12, N13 | AC-F3-02 |
+| RF-F3-03 | Cuando el grafo contiene ciclos, el sistema debe detectar la contradicción, rechazar la generación del orden de producción y responder explícitamente que la configuración es irrealizable por dependencias circulares. | N10, N11 | AC-F3-03 |
+| RF-F3-04 | Cuando se detecta un ciclo, el sistema debe reportar una estructura útil que identifique al menos un ciclo cerrado exacto (secuencia de identificadores `[c_1, c_2, ..., c_k, c_1]`) y la lista de elementos bloqueados por el ciclo. | N10 | AC-F3-04 |
+| RF-F3-05 | El sistema no debe devolver un orden de preparación parcial, incompleto o simulado cuando exista al menos un ciclo en el grafo, garantizando integridad absoluta en la respuesta. | N11 | AC-F3-05 |
+| RF-F3-06 | El sistema debe manejar casos límite estructurales: grafo vacío (orden vacío sin ciclo), elementos desconectados o sin dependencias (incluidos al inicio o según orden determinista) y grafos con múltiples componentes conexas acíclicas. | N9, N12 | AC-F3-06 |
+| RF-F3-07 | La interfaz de usuario debe permitir al coordinador de producción consultar el orden de producción y visualizar claramente tanto la secuencia de preparación en caso exitoso como una alerta destacada con el detalle del ciclo en caso de contradicción. | N9, N10, N13 | AC-F3-07 |
+
+### 11.3 Detalle de los requisitos funcionales de F3
+
+**RF-F3-01 — Verificación de DAG:** El sistema evalúa el catálogo actual como un dígrafo $G=(V, E)$. Un grafo es un DAG si no contiene ningún ciclo dirigido. Esta verificación se realiza mediante algoritmos propios en el dominio sin depender de NetworkX.
+
+**RF-F3-02 — Generación de orden topológico determinista:** Cuando el grafo es acíclico, el algoritmo (Kahn) produce una ordenación topológica lineal. Un elemento $u$ precede a $v$ si $u$ habilita a $v$ ($u$ es requisito previo de $v$). Para garantizar el determinismo exigido por las pruebas y la reproducibilidad, si múltiples elementos no tienen dependencias pendientes simultáneamente, se desempatan por su `id` en orden alfabético ascendente.
+
+**RF-F3-03 — Detección de configuración irrealizable:** Si existen ciclos, no existe ordenamiento topológico total posible. El backend debe responder con un error específico de dominio/API (`CONFIGURACION_CICLICA` con código HTTP `409 Conflict` o reporte de imposibilidad en el contrato de orden) que no oculte el error ni lo confunda con un catálogo vacío.
+
+**RF-F3-04 — Reporte estructurado del ciclo:** La respuesta ante ciclos debe ser procesable tanto por máquinas como por humanos. Incluye:
+- `ciclo`: Lista de identificadores que forman la secuencia del ciclo cerrado, donde cada elemento sucesivo es habilitado por el anterior y el último cierra en el primero (ej. `["INS-BARRA", "PROC-CORTE", "INS-BARRA"]`).
+- `elementosBloqueados`: Lista de todos los identificadores de elementos que no pudieron ordenarse por estar inmersos en dependencias circulares.
+
+**RF-F3-05 — Prohibición de órdenes falsos:** Bajo ninguna circunstancia se emitirá un orden que contenga solo los elementos no afectados si el grafo general contiene un ciclo no resuelto, a menos que el contrato especifique explícitamente el estado de error. Si la consulta solicita el orden de producción global, la existencia de contradicción anula la emisión de cualquier orden de producción.
+
+**RF-F3-06 — Manejo de casos límite:**
+- *Catálogo vacío:* $V = \emptyset, E = \emptyset$. Responde orden vacío `[]`, total 0, sin ciclo.
+- *Elementos sin dependencias:* Se consideran con in-degree 0 y se planifican de inmediato.
+- *Grafos disconexos:* Si todas las componentes son acíclicas, se genera un orden global válido unificado desempando por `id`.
+
+**RF-F3-07 — Interfaz de F3:** La interfaz debe consumir el endpoint de orden de producción del backend. Si el resultado es exitoso, muestra la lista de pasos secuenciales numerados. Si se detecta un ciclo, muestra un banner/alerta visible de advertencia identificando los elementos involucrados en el lazo circular y explicando que la producción está bloqueada.
+
+### 11.4 Requisitos no funcionales de F3
+
+| ID | Requisito | Criterio |
+| -- | --------- | -------- |
+| RNF-F3-01 | Algoritmos implementados en el dominio propio en Python 3.12+, sin uso de NetworkX para ordenamiento topológico ni detección de ciclos. | AC-F3-08 |
+| RNF-F3-02 | Complejidad algorítmica: El cálculo del orden topológico y la detección de ciclos deben operar en tiempo lineal $O(|V| + |E|)$ sobre el tamaño del catálogo. | AC-F3-09 |
+| RNF-F3-03 | Determinismo absoluto: Mismo catálogo de elementos y dependencias produce exactamente el mismo orden de preparación o el mismo reporte de ciclo. | AC-F3-10 |
+| RNF-F3-04 | El frontend en React + TypeScript consume el endpoint real de F3 y no implementa algoritmos de ordenamiento ni detección de ciclos en el cliente. | AC-F3-11 |
+
+### 11.5 Trazabilidad de F3
+
+| Necesidad | Requisitos | Criterios | Solución técnica |
+| --------- | ---------- | --------- | ---------------- |
+| N9. Orden válido sin ciclos | RF-F3-01, RF-F3-02 | AC-F3-01, AC-F3-02 | `GET /api/v1/orden-produccion`; Caso de uso `ObtenerOrdenProduccion`; Algoritmo de Kahn |
+| N10. Detección y reporte útil de ciclos | RF-F3-03, RF-F3-04 | AC-F3-03, AC-F3-04 | Detección DFS / in-degree en dominio; sobre de error o respuesta estructurada con `ciclo` y `elementosBloqueados` |
+| N11. No orden falso con contradicciones | RF-F3-05 | AC-F3-05 | Validación estricta que no retorna orden si el número de elementos ordenados es menor a $|V|$ |
+| N12. Modelo de DAG y topología | RF-F3-01, RF-F3-02 | AC-F3-01, AC-F3-02 | `graph-model.md` §6; representación de adyacencias propia |
+| N13. Consulta de coordinador | RF-F3-02, RF-F3-07 | AC-F3-02, AC-F3-07 | Vista de orden de preparación en frontend conectada a API REST |
+| N14. Casos acíclicos y cíclicos | RF-F3-02, RF-F3-03, RF-F3-06 | AC-F3-02, AC-F3-03, AC-F3-06 | Pruebas de aceptación en `acceptance-criteria.md` |
+
+### 11.6 Resoluciones de diseño y ambigüedades resueltas de F3
+
+| ID | Definición | Decisión confirmada | Justificación técnica |
+| -- | ---------- | -------------------- | ---------------------- |
+| AMB-F3-01 | Contenido del elemento en el orden de preparación | Devolver objetos estructurados con `paso`, `id`, `tipo` y `nombre`. | Evita que el frontend tenga que hacer múltiples peticiones secundarias por cada elemento, optimizando el rendimiento y la experiencia del usuario coordinador. |
+| AMB-F3-02 | Código de respuesta HTTP ante ciclos | Responder con código HTTP `409 Conflict` y sobre estándar `ERR-10` (`CONFIGURACION_CICLICA`). | Señala inequívocamente una contradicción de negocio insalvable que impide la producción. Evita que un consumidor asuma éxito con lista vacía. |
+| AMB-F3-03 | Reporte de múltiples ciclos en subgrafos | Reportar de forma determinista el primer ciclo elemental cerrado encontrado (orden alfabético) y la lista de todos los `elementosBloqueados`. | Previene explosión combinatoria algorítmica y provee información inmediata y accionable para corregir el lazo principal. |
+
+### 11.7 Fuera de alcance de F3
+
+Los siguientes puntos se mantienen fuera del alcance de F3:
+- Tablero unificado multipropósito (catálogo + impacto + orden + visualización interactiva): pertenece a F4.
+- Edición, eliminación o reconfiguración automática del grafo para resolver ciclos automáticamente: el sistema reporta la contradicción para que el usuario la resuelva; no altera dependencias por cuenta propia.
+- Tiempos de ejecución, duraciones de procesos, cálculo de camino crítico (PERT/CPM) o asignación de recursos/maquinaria: fuera del alcance del producto.

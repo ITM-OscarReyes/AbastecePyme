@@ -1,13 +1,11 @@
 # Modelo del grafo — AbastecePyme
 
-Documento de referencia para **F1 — Catálogo de dependencias** y **F2 — Análisis de impacto**.
-Define la dirección de las relaciones y la representación del grafo, que son requisitos explícitos
-de F1 en `docs/brief.md`, y su lectura para el análisis de impacto de F2 (sección 8).
+Documento de referencia para **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**.
+Define la dirección de las relaciones, la representación del grafo propio, su lectura para el análisis de impacto de F2 (sección 8), la condición de DAG, el orden topológico determinista de preparación y los algoritmos de detección de ciclos sin bibliotecas de terceros para F3 (sección 9).
 
-- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RNF-F1-03) y, para F2,
-  `requirements.md` §9.
-- Contrato HTTP: `api-contract.md` (secciones 1 a 7 para F1, sección 8 para F2).
-- Verificación: `acceptance-criteria.md` (secciones 1 a 6 para F1, sección 7 para F2).
+- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RNF-F1-03, F2 en §9, y RF-F3-01 a RF-F3-06, RNF-F3-03 en §11).
+- Contrato HTTP: `api-contract.md`.
+- Verificación: `acceptance-criteria.md`.
 
 ## 1. Vocabulario
 
@@ -191,11 +189,55 @@ Ambos estados son parte del modelo, no errores:
   se registra una arista parcial ni un elemento implícito. El grafo nunca contiene nodos derivados
   de una dependencia: los nodos se crean únicamente al registrar elementos.
 
-## 6. Lo que F1 no hace con el grafo
+## 6. Modelo de F3 — Orden de producción y detección de ciclos
 
-Para evitar que la implementación de F1 se adelante a otras features, queda explícito que F1 no
-detecta ciclos, no calcula caminos, no cuenta niveles, no produce orden topológico y no valida que la
-red sea «producible». F1 solo registra, valida, almacena y expone la estructura.
+### 6.1 Definición de Grafo Dirigido Acíclico (DAG) y Orden de Producción
+
+En AbastecePyme, la red de dependencias registrada en el catálogo es un dígrafo $G = (V, E)$. Para que una configuración de producción sea realizable y no contradictoria, el grafo debe ser un **Grafo Dirigido Acíclico** (DAG, por sus siglas en inglés: *Directed Acyclic Graph*).
+
+1. **Definición de DAG:** Un dígrafo que no contiene ningún camino dirigido $v_0, v_1, \dots, v_k$ tal que $v_0 = v_k$ ($k \ge 1$).
+2. **Orden de Producción / Preparación (Ordenamiento Topológico):**
+   Dado que una arista $(u, v) \in E$ significa «$u$ habilita a $v$» («para preparar o producir $v$, se requiere que $u$ esté disponible previamente»), un orden de preparación válido es una secuencia lineal de todos los elementos de $V$, $v_1, v_2, \dots, v_n$, tal que para cada arista dirigida $(u, v) \in E$, $u$ aparece estrictamente **antes** que $v$ en la secuencia.
+3. **Existencia:** Un dígrafo admite un ordenamiento topológico si y solo si es acíclico (es un DAG). Si existe al menos un ciclo, es imposible establecer un orden secuencial válido sin violar alguna dependencia previa; en este caso, el sistema **no debe devolver un orden falso ni parcial**, sino reportar la imposibilidad y alertar sobre los ciclos detectados.
+
+### 6.2 Dirección de las aristas y grado de entrada (In-Degree)
+
+Con la dirección fijada en la sección 2 (`origen habilita destino`):
+- Los **requisitos previos directos** de un elemento $v$ son sus predecesores inmediatos: $\text{Pred}(v) = \{u \in V \mid (u, v) \in E\}$ (representados en `_adyacencia_entrada[v]`).
+- El **grado de entrada** ($\text{in-degree}$) de $v$ es $|\text{Pred}(v)|$. Representa exactamente el **número de requisitos pendientes que deben prepararse antes de $v$**.
+- Elementos con $\text{in-degree} = 0$: son aquellos que **no tienen requisitos pendientes** (por ejemplo, proveedores externos o insumos base que no dependen de ningún proceso o elemento previo). Estos elementos están listos para ser despachados o preparados de inmediato en el paso inicial.
+- Cuando un elemento $u$ se prepara, todos los elementos $v$ a los que habilita ($v \in \text{adyacencia\_salida}[u]$) ven reducido su contador de requisitos pendientes en 1. En cuanto el contador de $v$ llega a 0, $v$ pasa a estar habilitado para su preparación.
+
+### 6.3 Algoritmos propios de resolución (Sin NetworkX)
+
+De acuerdo con `AGENTS.md` (RNF-F3-03), los algoritmos no deben utilizar NetworkX ni bibliotecas externas.
+
+Se especifican dos enfoques complementarios y deterministas implementados en la capa de dominio:
+
+1. **Algoritmo de Kahn (para cálculo del orden topológico y verificación de aciclicidad):**
+   - **Inicialización:** Calcular el in-degree de cada elemento $v \in V$ usando `adyacencia_entrada`.
+   - **Cola de listos:** Los elementos con in-degree igual a 0 se colocan en una estructura ordenada alfabéticamente por `id` ascendente para garantizar **determinismo estricto**.
+   - **Iteración:** En cada paso, se extrae el elemento $u$ disponible con menor `id`, se agrega a la lista `orden`, y para cada $v \in \text{adyacencia\_salida}[u]$, se decrementa su in-degree en 1. Si el in-degree de $v$ llega a 0, $v$ entra a la cola de listos (manteniendo el orden determinista).
+   - **Criterio de finalización:** Si la lista `orden` contiene $|V|$ elementos, el grafo es un DAG y `orden` es el orden de producción determinista válido.
+   - Si la lista `orden` contiene menos de $|V|$ elementos, el grafo contiene al menos un ciclo. En este caso, el orden de producción global es irrealizable.
+
+2. **Detección y reporte estructurado de ciclos (Búsqueda DFS con colores / back-edges):**
+   - Cuando el algoritmo detecta que existen elementos no procesados (o para un análisis determinista recorriendo nodos en orden alfabético), se identifican los ciclos existentes.
+   - Mediante DFS con tres estados de color por nodo:
+     - `BLANCO` (no visitado),
+     - `GRIS` (en la pila de recursión del camino actual),
+     - `NEGRO` (visitado completamente).
+   - Al explorar desde un nodo en orden alfabético y encontrar una arista hacia un nodo `GRIS`, se ha detectado una *back-edge* (arista de retroceso), lo que confirma un ciclo cerrado.
+   - **Reporte del ciclo:** Se reconstruye el ciclo exacto como una secuencia ordenada de identificadores: $[c_1, c_2, \dots, c_k, c_1]$, donde cada paso $(c_i, c_{i+1})$ es una dependencia registrada, terminando en el nodo inicial para evidenciar el lazo cerrado (ej. `["A", "B", "C", "A"]`).
+   - Si existen múltiples componentes o lazos, se reporta al menos un ciclo cerrado elemental unívoco y los elementos involucrados en el bloqueo.
+
+### 6.4 Casos estructurales del grafo en F3
+
+- **Grafo vacío ($V = \emptyset$):** Es un DAG trivial. El orden de preparación es una lista vacía `[]`, sin ciclos (`es_dag: true`).
+- **Nodos aislados (elementos sin dependencias):** Tienen in-degree 0 y out-degree 0. Entran en el orden de preparación inmediatamente (ordenados por su `id`). No generan contradicciones.
+- **Grafos disconexos / Múltiples componentes:** Si todas las componentes son acíclicas, el ordenamiento procesa cada componente según sus dependencias respetando el desempate determinista por `id`. Si alguna componente tiene un ciclo, todo el grafo se clasifica como cíclico para producción general (`es_dag: false`).
+- **Ciclo simple de 2 nodos:** $A \to B$ y $B \to A$. Reporte de ciclo: `["A", "B", "A"]`.
+- **Ciclos en subgrafos:** Si un subgrafo contiene un ciclo pero otros nodos son independientes, el sistema reporta que no es posible generar un orden global válido debido al ciclo en el subgrafo, identificando exactamente la secuencia del ciclo.
 
 ## 7. Decisiones relacionadas
 
@@ -204,7 +246,7 @@ red sea «producible». F1 solo registra, valida, almacena y expone la estructur
 | Dirección única `origen habilita destino` | `docs/decisions/analyst.md` |
 | Representación del grafo con adyacencias de entrada y salida propias del proyecto | `docs/decisions/analyst.md` |
 | F1 registra ciclos sin detectarlos | `docs/decisions/analyst.md` |
-
+| F3 orden topológico determinista (Kahn) y detección de ciclos estructurada (DFS) sin NetworkX | `docs/decisions/analyst.md` |
 
 ## 8. Relevancia para F2 — Análisis de impacto
 
@@ -218,3 +260,53 @@ red sea «producible». F1 solo registra, valida, almacena y expone la estructur
 - **Coherencia:** la dirección definida es invariante; no se invierte el grafo para el análisis de impacto.
 - **Documentación:** este significado de «alcanzar» está escrito en el `README.md` del repositorio, como exige el brief de F2.
 - **Contrato:** la forma de la respuesta y los códigos de error están en `api-contract.md` §8.
+
+## 9. Modelo de F3 — Orden de producción y detección de ciclos
+
+### 9.1 Definición de Grafo Dirigido Acíclico (DAG) y Orden de Producción
+
+En AbastecePyme, la red de dependencias registrada en el catálogo es un dígrafo $G = (V, E)$. Para que una configuración de producción sea realizable y no contradictoria, el grafo debe ser un **Grafo Dirigido Acíclico** (DAG, por sus siglas en inglés: *Directed Acyclic Graph*).
+
+1. **Definición de DAG:** Un dígrafo que no contiene ningún camino dirigido $v_0, v_1, \dots, v_k$ tal que $v_0 = v_k$ ($k \ge 1$).
+2. **Orden de Producción / Preparación (Ordenamiento Topológico):**
+   Dado que una arista $(u, v) \in E$ significa «$u$ habilita a $v$» («para preparar o producir $v$, se requiere que $u$ esté disponible previamente»), un orden de preparación válido es una secuencia lineal de todos los elementos de $V$, $v_1, v_2, \dots, v_n$, tal que para cada arista dirigida $(u, v) \in E$, $u$ aparece estrictamente **antes** que $v$ en la secuencia.
+3. **Existencia:** Un dígrafo admite un ordenamiento topológico si y solo si es acíclico (es un DAG). Si existe al menos un ciclo, es imposible establecer un orden secuencial válido sin violar alguna dependencia previa; en este caso, el sistema **no debe devolver un orden falso ni parcial**, sino reportar la imposibilidad y alertar sobre los ciclos detectados.
+
+### 9.2 Dirección de las aristas y grado de entrada (In-Degree)
+
+Con la dirección fijada en la sección 2 (`origen habilita destino`):
+- Los **requisitos previos directos** de un elemento $v$ son sus predecesores inmediatos: $\text{Pred}(v) = \{u \in V \mid (u, v) \in E\}$ (representados en `_adyacencia_entrada[v]`).
+- El **grado de entrada** ($\text{in-degree}$) de $v$ es $|\text{Pred}(v)|$. Representa exactamente el **número de requisitos pendientes que deben prepararse antes de $v$**.
+- Elementos con $\text{in-degree} = 0$: son aquellos que **no tienen requisitos pendientes** (por ejemplo, proveedores externos o insumos base que no dependen de ningún proceso o elemento previo). Estos elementos están listos para ser despachados o preparados de inmediato en el paso inicial.
+- Cuando un elemento $u$ se prepara, todos los elementos $v$ a los que habilita ($v \in \text{adyacencia\_salida}[u]$) ven reducido su contador de requisitos pendientes en 1. En cuanto el contador de $v$ llega a 0, $v$ pasa a estar habilitado para su preparación.
+
+### 9.3 Algoritmos propios de resolución (Sin NetworkX)
+
+De acuerdo con `AGENTS.md` (RNF-F3-03), los algoritmos no deben utilizar NetworkX ni bibliotecas externas.
+
+Se especifican dos enfoques complementarios y deterministas implementados en la capa de dominio:
+
+1. **Algoritmo de Kahn (para cálculo del orden topológico y verificación de aciclicidad):**
+   - **Inicialización:** Calcular el in-degree de cada elemento $v \in V$ usando `adyacencia_entrada`.
+   - **Cola de listos:** Los elementos con in-degree igual a 0 se colocan en una estructura ordenada alfabéticamente por `id` ascendente para garantizar **determinismo estricto**.
+   - **Iteración:** En cada paso, se extrae el elemento $u$ disponible con menor `id`, se agrega a la lista `orden`, y para cada $v \in \text{adyacencia\_salida}[u]$, se decrementa su in-degree en 1. Si el in-degree de $v$ llega a 0, $v$ entra a la cola de listos (manteniendo el orden determinista).
+   - **Criterio de finalización:** Si la lista `orden` contiene $|V|$ elementos, el grafo es un DAG y `orden` es el orden de producción determinista válido.
+   - Si la lista `orden` contiene menos de $|V|$ elementos, el grafo contiene al menos un ciclo. En este caso, el orden de producción global es irrealizable.
+
+2. **Detección y reporte estructurado de ciclos (Búsqueda DFS con colores / back-edges):**
+   - Cuando el algoritmo detecta que existen elementos no procesados (o para un análisis determinista recorriendo nodos en orden alfabético), se identifican los ciclos existentes.
+   - Mediante DFS con tres estados de color por nodo:
+     - `BLANCO` (no visitado),
+     - `GRIS` (en la pila de recursión del camino actual),
+     - `NEGRO` (visitado completamente).
+   - Al explorar desde un nodo en orden alfabético y encontrar una arista hacia un nodo `GRIS`, se ha detectado una *back-edge* (arista de retroceso), lo que confirma un ciclo cerrado.
+   - **Reporte del ciclo:** Se reconstruye el ciclo exacto como una secuencia ordenada de identificadores: $[c_1, c_2, \dots, c_k, c_1]$, donde cada paso $(c_i, c_{i+1})$ es una dependencia registrada, terminando en el nodo inicial para evidenciar el lazo cerrado (ej. `["A", "B", "C", "A"]`).
+   - Si existen múltiples componentes o lazos, se reporta al menos un ciclo cerrado elemental unívoco y los elementos involucrados en el bloqueo.
+
+### 9.4 Casos estructurales del grafo en F3
+
+- **Grafo vacío ($V = \emptyset$):** Es un DAG trivial. El orden de preparación es una lista vacía `[]`, sin ciclos (`es_dag: true`).
+- **Nodos aislados (elementos sin dependencias):** Tienen in-degree 0 y out-degree 0. Entran en el orden de preparación inmediatamente (ordenados por su `id`). No generan contradicciones.
+- **Grafos disconexos / Múltiples componentes:** Si todas las componentes son acíclicas, el ordenamiento procesa cada componente según sus dependencias respetando el desempate determinista por `id`. Si alguna componente tiene un ciclo, todo el grafo se clasifica como cíclico para producción general (`es_dag: false`).
+- **Ciclo simple de 2 nodos:** $A \to B$ y $B \to A$. Reporte de ciclo: `["A", "B", "A"]`.
+- **Ciclos en subgrafos:** Si un subgrafo contiene un ciclo pero otros nodos son independientes, el sistema reporta que no es posible generar un orden global válido debido al ciclo en el subgrafo, identificando exactamente la secuencia del ciclo.

@@ -1,15 +1,13 @@
-# Criterios de aceptación — AbastecePyme (F1 y F2)
+# Criterios de aceptación — AbastecePyme (F1, F2 y F3)
 
-Criterios de aceptación de **F1 — Catálogo de dependencias** y de **F2 — Análisis de impacto**,
-derivados de `requirements.md` y verificables de extremo a extremo.
+Criterios de aceptación de **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**, derivados de `requirements.md` y
+verificables de extremo a extremo en formato Gherkin y tabular.
 
-- Cada criterio es verificable de forma objetiva: describe una entrada, un resultado esperado y,
-  cuando aplica, el código de error o el elemento del catálogo que se inspecciona.
+- Cada criterio es verificable de forma objetiva: describe una entrada o precondición (Given), una acción (When), y un resultado esperado (Then).
 - Los identificadores son estables y se reutilizan en `requirements.md`, `api-contract.md`,
   `architecture.md` y en las pruebas.
 - `tester` es el único agente autorizado para declarar PASS/FAIL de estos criterios.
-- Los criterios de F3 y F4 **no** están aquí: este documento cubre únicamente F1 (secciones 1 a 6) y
-  F2 (sección 7).
+- Los criterios de F4 **no** están aquí: este documento cubre F1 (secciones 1 a 6), F2 (sección 7) y F3 (sección 8).
 
 ## 1. Datos de prueba
 
@@ -437,3 +435,106 @@ Alcance esperado con el conjunto de prueba, según la dirección `origen habilit
 | Dos consultas idénticas seguidas | Misma respuesta y mismo orden de afectados | AC-F2-13 |
 | Consulta repetida sobre un grafo con ciclo | Sin ciclo infinito ni afectado duplicado | AC-F2-05c |
 
+## 8. Criterios de aceptación de F3 — Orden y ciclos de producción
+
+### RF-F3-01 / RF-F3-02 · Orden de producción válido en Grafo Acíclico (DAG)
+
+- **AC-F3-01 (Caso acíclico estándar en formato Gherkin):**
+  - **Given (Dado):** Un catálogo con los elementos sintéticos de prueba (`PROV-ACERO`, `INS-BARRA`, `INS-TORNILLO`, `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO`) y las dependencias acíclicas válidas:
+    - `PROV-ACERO -> INS-BARRA`
+    - `INS-BARRA -> PROC-CORTE`
+    - `PROC-CORTE -> PROD-PANEL`
+    - `INS-TORNILLO -> PROD-PANEL`
+    - `PROD-PANEL -> PROD-BANCO`
+  - **When (Cuando):** El cliente realiza una solicitud `GET /api/v1/orden-produccion`.
+  - **Then (Entonces):** El backend responde con código de estado HTTP `200 OK`, `esDag: true`, y una lista ordenada secuencialmente donde para cada arista `origen -> destino`, el paso de `origen` es estrictamente menor que el paso de `destino`:
+    1. `PROV-ACERO` (in-degree inicial 0, desempate alfabético frente a `INS-TORNILLO`)
+    2. `INS-BARRA` (habilitado tras `PROV-ACERO`)
+    3. `INS-TORNILLO` (in-degree inicial 0)
+    4. `PROC-CORTE` (habilitado tras `INS-BARRA`)
+    5. `PROD-PANEL` (habilitado tras `PROC-CORTE` e `INS-TORNILLO`)
+    6. `PROD-BANCO` (habilitado tras `PROD-PANEL`)
+    y `totalPasos` es igual a 6.
+
+- **AC-F3-02 (Determinismo estricto de Kahn):**
+  - **Given:** Múltiples elementos independientes sin dependencias pendientes (ej. `PROV-ACERO` e `INS-TORNILLO` ambos con in-degree 0).
+  - **When:** Se solicita el orden de producción en repetidas ejecuciones.
+  - **Then:** El orden de desempate es determinista por `id` ascendente alfabético (`INS-TORNILLO` antes que `PROV-ACERO` o viceversa según orden lexicográfico exacto: `INS-TORNILLO` < `PROV-ACERO`), y dos llamadas sucesivas sobre el mismo estado devuelven exactamente la misma secuencia.
+
+### RF-F3-03 / RF-F3-04 / RF-F3-05 · Detección y reporte útil de ciclos
+
+- **AC-F3-03 (Caso cíclico simple en formato Gherkin):**
+  - **Given (Dado):** Un catálogo donde se han registrado las dependencias circulares `INS-BARRA -> PROC-CORTE` y `PROC-CORTE -> INS-BARRA`.
+  - **When (Cuando):** El cliente realiza una solicitud `GET /api/v1/orden-produccion`.
+  - **Then (Entonces):**
+    - El backend responde con código HTTP `409 Conflict`.
+    - La respuesta contiene el sobre de error estándar con `error.codigo: "CONFIGURACION_CICLICA"`.
+    - `error.mensaje` explica que no se puede generar un orden de producción por dependencias circulares.
+    - `error.detalles` incluye un detalle con `campo: "ciclo"` que describe la secuencia circular exacta cerrada (ej. `["INS-BARRA", "PROC-CORTE", "INS-BARRA"]` o su representación en cadena).
+    - `error.detalles` incluye un detalle con `campo: "elementosBloqueados"` listando los elementos que no pueden prepararse.
+    - El sistema **no** entrega ningún array de `orden` parcial ni simulado.
+
+- **AC-F3-04 (Ciclo complejo / Subgrafo con ciclo):**
+  - **Given:** Un catálogo con un elemento desconectado `PROV-OTRO` y un subgrafo con un ciclo de 3 elementos: `A -> B`, `B -> C`, `C -> A`.
+  - **When:** Se consulta `GET /api/v1/orden-produccion`.
+  - **Then:** El sistema responde `409 Conflict` con `CONFIGURACION_CICLICA`, identificando el ciclo `A -> B -> C -> A`, y reporta que la configuración general es irrealizable. No se emite un orden parcial que contenga solo a `PROV-OTRO`.
+
+- **AC-F3-05 (Prohibición de orden falso):**
+  - **Given:** Un catálogo con cualquier número de elementos donde al menos un ciclo exista.
+  - **When:** Se solicita orden de producción.
+  - **Then:** Bajo ninguna condición la respuesta es `200 OK` con un orden truncado o que viole precedencias.
+
+### RF-F3-06 · Casos límite estructurales
+
+- **AC-F3-06 (Grafo vacío):**
+  - **Given:** Catálogo sin elementos ni dependencias ($V = \emptyset, E = \emptyset$).
+  - **When:** Se solicita `GET /api/v1/orden-produccion`.
+  - **Then:** Responde `200 OK` con `esDag: true`, `orden: []` y `totalPasos: 0`.
+
+- **AC-F3-06b (Elementos aislados sin dependencias):**
+  - **Given:** Catálogo con 3 elementos `PROD-A`, `PROD-B`, `PROD-C` y ninguna dependencia entre ellos.
+  - **When:** Se solicita `GET /api/v1/orden-produccion`.
+  - **Then:** Responde `200 OK` con `totalPasos: 3` y los elementos ordenados alfabéticamente por `id`: `PROD-A`, `PROD-B`, `PROD-C`.
+
+- **AC-F3-06c (Grafos disconexos acíclicos con múltiples cadenas paralelas):**
+  - **Given:** Dos cadenas de producción completamente independientes: `CAD1-INS -> CAD1-PROD` y `CAD2-INS -> CAD2-PROD`.
+  - **When:** Se solicita `GET /api/v1/orden-produccion`.
+  - **Then:** Responde `200 OK` con un orden válido donde para cada cadena, su insumo precede a su producto, y los elementos sin dependencias pendientes se intercalan deterministamente según su `id`.
+
+### RF-F3-07 · Interfaz de usuario de F3
+
+- **AC-F3-07 (Visualización en frontend):**
+  - **Given:** La interfaz del coordinador de producción conectada al backend real.
+  - **When:** El catálogo es acíclico y se carga la vista de orden de producción.
+  - **Then:** Se visualiza la lista numerada paso a paso (`Paso 1`, `Paso 2`, etc.) con el `id`, tipo y nombre de cada elemento, consumiendo los datos de `GET /api/v1/orden-produccion`.
+- **AC-F3-07b (Alerta de ciclos en frontend):**
+  - **Given:** El catálogo contiene un ciclo.
+  - **When:** Se consulta la vista de orden de producción.
+  - **Then:** Se muestra un panel o alerta prominente informando que la producción no puede realizarse debido a dependencias circulares y visualizando los elementos involucrados en el ciclo devuelto por el backend. No se muestra una lista vacía como si todo estuviera en orden.
+
+### RNF-F3 · Restricciones técnicas y de arquitectura
+
+- **AC-F3-08 (Sin NetworkX para algoritmos):**
+  - La inspección del código fuente del backend confirma que el cálculo del orden topológico y la detección de ciclos están implementados con algoritmos propios en `app/dominio/`, sin importar `networkx` ni usar sus métodos de `topological_sort` o `simple_cycles`.
+- **AC-F3-09 (Complejidad lineal):**
+  - Con un grafo de prueba sintético de 200 elementos y 500 dependencias, la respuesta de orden de producción se genera en menos de 100 ms ($O(|V| + |E|)$).
+- **AC-F3-10 (Determinismo backend):**
+  - Diez ejecuciones consecutivas del caso acíclico y del caso cíclico sobre el backend producen exactamente el mismo contenido JSON byte a byte.
+- **AC-F3-11 (Frontend no duplica algoritmos):**
+  - La inspección del frontend confirma que el cliente React consume `/api/v1/orden-produccion` y no implementa Kahn ni DFS en TypeScript.
+
+## 9. Matriz de trazabilidad cruzada F3
+
+| Requisito | Criterios de aceptación |
+| --------- | ----------------------- |
+| RF-F3-01 | AC-F3-01, AC-F3-06, AC-F3-06b, AC-F3-06c |
+| RF-F3-02 | AC-F3-01, AC-F3-02, AC-F3-06b, AC-F3-06c |
+| RF-F3-03 | AC-F3-03, AC-F3-04 |
+| RF-F3-04 | AC-F3-03, AC-F3-04 |
+| RF-F3-05 | AC-F3-03, AC-F3-05 |
+| RF-F3-06 | AC-F3-06, AC-F3-06b, AC-F3-06c |
+| RF-F3-07 | AC-F3-07, AC-F3-07b |
+| RNF-F3-01 | AC-F3-08 |
+| RNF-F3-02 | AC-F3-09 |
+| RNF-F3-03 | AC-F3-10 |
+| RNF-F3-04 | AC-F3-11 |

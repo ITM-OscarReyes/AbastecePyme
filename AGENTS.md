@@ -36,15 +36,15 @@ El proyecto se trabaja **una feature a la vez**. La feature en alcance es la ún
 - Un agente puede conocer el brief completo, pero su trabajo se limita a la feature en alcance.
 - Cuando la feature en alcance termina y es verificada, se solicita explícitamente la siguiente.
 
-**Feature en alcance actualmente: F1 — Catálogo de dependencias.** F2, F3 y F4 están pendientes de solicitud.
+**Feature en alcance actualmente: F3 — Orden de producción y ciclos.** F1 y F2 están implementadas y verificadas. F4 está pendiente de solicitud.
 
 ## Estado actual
 
 | Feature | Especificación | Backend | Frontend | Verificación |
 | ------- | -------------- | ------- | -------- | ------------ |
 | F1 | Documentada en `docs/` | Implementado | Implementado | Verificada por `tester` |
-| F2 | No especificada | No implementada | No implementada | Fuera de alcance |
-| F3 | No especificada | No implementada | No implementada | Fuera de alcance |
+| F2 | Documentada en `docs/` | Implementado | Implementado | Verificada por `tester` |
+| F3 | En especificación | No implementada | No implementada | Pendiente |
 | F4 | No especificada | No implementada | No implementada | Fuera de alcance |
 
 ## Restricciones técnicas
