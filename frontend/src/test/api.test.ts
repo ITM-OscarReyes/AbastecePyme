@@ -23,9 +23,20 @@ const elementoDestino = {
   nombre: 'Producto de prueba de interfaz'
 };
 
+const proveedorNuevo = {
+  id: `${marca}-PROVEEDOR`,
+  tipo: 'PROVEEDOR' as const,
+  nombre: 'Proveedor de prueba de interfaz'
+};
+
 beforeAll(async () => {
+  await apiService.crearElemento(proveedorNuevo);
   await apiService.crearElemento(elementoNuevo);
   await apiService.crearElemento(elementoDestino);
+  await apiService.crearDependencia({
+    origen: proveedorNuevo.id,
+    destino: elementoNuevo.id
+  });
 });
 
 describe('Cliente de API contra el backend real', () => {
@@ -142,5 +153,62 @@ describe('Cliente de API contra el backend real', () => {
     const listado = await apiService.obtenerElementos();
 
     expect(grafo.elementos).toEqual(listado.elementos);
+  });
+
+  it('AC-F2-01 el cliente consulta el impacto real del backend para un elemento existente', async () => {
+    const impacto = await apiService.obtenerImpacto('PROV-ACERO');
+
+    expect(impacto.elemento.id).toBe('PROV-ACERO');
+    expect(impacto.afectados.length).toBe(impacto.total);
+    const idsAfectados = impacto.afectados.map((a) => a.id);
+    expect(idsAfectados).toContain('INS-BARRA');
+    expect(idsAfectados).toContain('INS-TORNILLO');
+    expect(idsAfectados).toContain('PROC-CORTE');
+  });
+
+  it('AC-F2-04 el cliente maneja un elemento sin afectados (total 0)', async () => {
+    const impacto = await apiService.obtenerImpacto('PROD-BANCO');
+
+    expect(impacto.elemento.id).toBe('PROD-BANCO');
+    expect(impacto.total).toBe(0);
+    expect(impacto.afectados).toEqual([]);
+  });
+
+  it('AC-F2-03 elemento inexistente devuelve error ELEMENTO_NO_ENCONTRADO', async () => {
+    try {
+      await apiService.obtenerImpacto('INEXISTENTE-123');
+      throw new Error('Debería haber fallado con 404');
+    } catch (error) {
+      expect(extraerMensajeError(error)).toContain('no existe');
+    }
+  });
+it('AC-F2-11 identificador mal formado devuelve error 422 IDENTIFICADOR_INVALIDO', async () => {
+    try {
+      await apiService.obtenerImpacto('xx');
+      throw new Error('Debería haber fallado con 422');
+    } catch (error) {
+      expect(extraerMensajeError(error)).toContain('no cumple el formato');
+    }
+  });
+
+  it('AC-F2-05b múltiples caminos hacia el mismo destino devuelven el elemento sin duplicados', async () => {
+    const impacto = await apiService.obtenerImpacto('INS-TORNILLO');
+    const ids = impacto.afectados.map((a) => a.id);
+    expect(ids.filter((id) => id === 'PROD-BANCO').length).toBe(1);
+    expect(ids).toEqual(['PROC-CORTE', 'PROD-BANCO', 'PROD-PANEL']);
+  });
+
+  it('AC-F2-13 los elementos afectados vienen ordenados de forma determinista por id', async () => {
+    const impacto = await apiService.obtenerImpacto('PROV-ACERO');
+    const ids = impacto.afectados.map((a) => a.id);
+    expect(ids).toEqual([...ids].sort());
+  });
+
+  it('AC-F2-14 la respuesta de impacto no expone campos de ciclos ni de orden', async () => {
+    const respuesta = await apiClient.get<Record<string, unknown>>('/impacto/PROV-ACERO');
+    const clavesProhibidas = ['ciclos', 'ciclo', 'tieneCiclo', 'orden', 'ordenProduccion', 'nivel'];
+    for (const clave of clavesProhibidas) {
+      expect(respuesta.data).not.toHaveProperty(clave);
+    }
   });
 });

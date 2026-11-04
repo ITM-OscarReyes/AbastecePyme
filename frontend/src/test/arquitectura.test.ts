@@ -171,3 +171,17 @@ describe('AC-F1-23 · Convenciones de nomenclatura', () => {
     expect(infractores).toEqual([]);
   });
 });
+describe('AC-F2-06b / AC-F2-09 · Arquitectura de F2 en frontend', () => {
+  it('AC-F2-06b el frontend no implementa recorridos ni algoritmos de grafo para impacto', () => {
+    const culpables = componentes.filter((ruta) =>
+      /\b(dfs|bfs|shortestPath|dijkstra|topologicalSort)\b/i.test(lectura(ruta))
+    );
+    expect(culpables).toEqual([]);
+  });
+
+  it('AC-F2-09 VistaImpacto no invierte la dirección ni calcula alcanzables por su cuenta', () => {
+    const vista = lectura(join(SRC, 'components', 'VistaImpacto.tsx'));
+    expect(vista).toContain('apiService.obtenerImpacto');
+    expect(vista).not.toMatch(/\b(recorrido|adyacencia|pila|cola)\b/i);
+  });
+});

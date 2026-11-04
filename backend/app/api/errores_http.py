@@ -15,6 +15,7 @@ from app.dominio.errores import (
     CampoNoPermitido,
     DependenciaDuplicada,
     DependenciaInvalida,
+    DependenciaNoEncontrada,
     DetalleError,
     ElementoDuplicado,
     ElementoNoEncontrado,
@@ -35,6 +36,7 @@ _HTTP_POR_CODIGO: dict[str, int] = {
     CampoNoPermitido.codigo: status.HTTP_422_UNPROCESSABLE_CONTENT,
     DependenciaInvalida.codigo: status.HTTP_422_UNPROCESSABLE_CONTENT,
     DependenciaDuplicada.codigo: status.HTTP_409_CONFLICT,
+    DependenciaNoEncontrada.codigo: status.HTTP_404_NOT_FOUND,
     "TIPO_NO_ENCONTRADO": status.HTTP_404_NOT_FOUND,
 }
 

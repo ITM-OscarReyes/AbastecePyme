@@ -116,3 +116,52 @@ def normalizar_descripcion(valor: object) -> str | None:
             [DetalleError("descripcion", f"No puede superar {_LONGITUD_MAX_DESCRIPCION} caracteres.")],
         )
     return normalizado
+
+
+def _normalizar_cantidad_stock(valor: object, campo: str) -> int:
+    """Valida una cantidad de inventario: entero no negativo."""
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        raise ValidacionFallida(
+            "La solicitud contiene datos inválidos.",
+            [DetalleError(campo, "Debe ser un número entero mayor o igual a 0.")],
+        )
+    if valor < 0:
+        raise ValidacionFallida(
+            "La solicitud contiene datos inválidos.",
+            [DetalleError(campo, "Debe ser un número entero mayor o igual a 0.")],
+        )
+    return valor
+
+
+def normalizar_inventario(
+    tipo: TipoElemento,
+    stock_disponible: object = None,
+    stock_minimo: object = None,
+) -> tuple[int | None, int | None]:
+    """Normaliza el inventario de un elemento.
+
+    El inventario solo existe para los suministros (``TipoElemento.INSUMO``).
+    En cualquier otro tipo se rechaza si se envía, para que el dato no se
+    ignore en silencio. En un suministro, las cantidades son enteros no
+    negativos y, si no se indican, se asumen ``0``.
+    """
+    if tipo is not TipoElemento.INSUMO:
+        if stock_disponible is not None or stock_minimo is not None:
+            raise ValidacionFallida(
+                "La solicitud contiene datos inválidos.",
+                [
+                    DetalleError(
+                        "stockDisponible",
+                        "El inventario solo aplica a los suministros.",
+                    )
+                ],
+            )
+        return None, None
+
+    disponible = 0 if stock_disponible is None else _normalizar_cantidad_stock(
+        stock_disponible, "stockDisponible"
+    )
+    minimo = 0 if stock_minimo is None else _normalizar_cantidad_stock(
+        stock_minimo, "stockMinimo"
+    )
+    return disponible, minimo

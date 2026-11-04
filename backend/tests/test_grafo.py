@@ -34,19 +34,19 @@ def test_ac_f1_10_grafo_refleja_elementos_y_dependencias_del_catalogo(cliente: T
 
     assert cuerpo["elementos"] == elementos["elementos"]
     assert cuerpo["dependencias"] == dependencias["dependencias"]
-    assert cuerpo["resumen"]["totalElementos"] == len(cuerpo["elementos"]) == 6
-    assert cuerpo["resumen"]["totalDependencias"] == len(cuerpo["dependencias"]) == 6
+    assert cuerpo["resumen"]["totalElementos"] == len(cuerpo["elementos"]) == 11
+    assert cuerpo["resumen"]["totalDependencias"] == len(cuerpo["dependencias"]) == 11
 
 
 def test_ac_f1_10_grafo_refleja_el_catalogo_tras_cada_alta(cliente_vacio: TestClient) -> None:
-    registrar_elemento(cliente_vacio, "INS-A1", "INSUMO", "Insumo A")
-    registrar_elemento(cliente_vacio, "PROD-B1", "PRODUCTO", "Producto B")
-    registrar_dependencia(cliente_vacio, "INS-A1", "PROD-B1")
+    registrar_elemento(cliente_vacio, "PROC-B1", "PROCESO", "Proceso B")
+    registrar_elemento(cliente_vacio, "PROD-B2", "PRODUCTO", "Producto B")
+    registrar_dependencia(cliente_vacio, "PROC-B1", "PROD-B2")
 
     grafo = cliente_vacio.get("/api/v1/grafo").json()
 
     assert grafo["resumen"] == {"totalElementos": 2, "totalDependencias": 1}
-    assert [e["id"] for e in grafo["elementos"]] == ["INS-A1", "PROD-B1"]
+    assert [e["id"] for e in grafo["elementos"]] == ["PROC-B1", "PROD-B2"]
 
 
 def test_ac_f1_10b_no_hay_nodos_derivados_de_dependencias(cliente_vacio: TestClient) -> None:
@@ -100,31 +100,29 @@ def test_ac_f1_16_un_ciclo_se_registra_integralmente_sin_error(cliente_vacio: Te
     for id_valor, tipo in (
         ("INS-C1", "INSUMO"),
         ("PROC-C2", "PROCESO"),
-        ("PROD-C3", "PRODUCTO"),
     ):
         assert registrar_elemento(cliente_vacio, id_valor, tipo, f"Elemento {id_valor}").status_code == 201
 
     respuestas = [
+        registrar_dependencia(cliente_vacio, "PROC-C2", "INS-C1"),
         registrar_dependencia(cliente_vacio, "INS-C1", "PROC-C2"),
-        registrar_dependencia(cliente_vacio, "PROC-C2", "PROD-C3"),
-        registrar_dependencia(cliente_vacio, "PROD-C3", "INS-C1"),
     ]
 
-    assert [respuesta.status_code for respuesta in respuestas] == [201, 201, 201]
+    assert [respuesta.status_code for respuesta in respuestas] == [201, 201]
 
     grafo = cliente_vacio.get("/api/v1/grafo").json()
     pares = {(d["origen"], d["destino"]) for d in grafo["dependencias"]}
-    assert pares == {("INS-C1", "PROC-C2"), ("PROC-C2", "PROD-C3"), ("PROD-C3", "INS-C1")}
-    assert grafo["resumen"]["totalDependencias"] == 3
+    assert pares == {("PROC-C2", "INS-C1"), ("INS-C1", "PROC-C2")}
+    assert grafo["resumen"]["totalDependencias"] == 2
 
 
 def test_ac_f1_16b_el_grafo_con_ciclo_no_lleva_advertencias_ni_veredictos(
     cliente_vacio: TestClient,
 ) -> None:
-    for id_valor in ("INS-C1", "PROD-C2"):
-        registrar_elemento(cliente_vacio, id_valor, "INSUMO", f"Elemento {id_valor}")
-    registrar_dependencia(cliente_vacio, "INS-C1", "PROD-C2")
-    registrar_dependencia(cliente_vacio, "PROD-C2", "INS-C1")
+    registrar_elemento(cliente_vacio, "INS-C1", "INSUMO", "Elemento INS-C1")
+    registrar_elemento(cliente_vacio, "PROC-C2", "PROCESO", "Elemento PROC-C2")
+    registrar_dependencia(cliente_vacio, "PROC-C2", "INS-C1")
+    registrar_dependencia(cliente_vacio, "INS-C1", "PROC-C2")
 
     grafo = cliente_vacio.get("/api/v1/grafo").json()
     listado = cliente_vacio.get("/api/v1/dependencias").json()

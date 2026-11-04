@@ -13,7 +13,7 @@ def test_ac_f1_04_listado_devuelve_todos_con_total_coincidente(cliente: TestClie
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["total"] == len(cuerpo["elementos"]) == 6
+    assert cuerpo["total"] == len(cuerpo["elementos"]) == 11
     assert {e["id"] for e in cuerpo["elementos"]} == {
         "PROV-ACERO",
         "INS-BARRA",
@@ -21,6 +21,11 @@ def test_ac_f1_04_listado_devuelve_todos_con_total_coincidente(cliente: TestClie
         "PROC-CORTE",
         "PROD-PANEL",
         "PROD-BANCO",
+        "PROV-MADERA",
+        "INS-TABLERO",
+        "INS-BARNIZ",
+        "PROC-ENSAMBLE",
+        "PROD-ESCRITORIO",
     }
 
 
@@ -51,8 +56,13 @@ def test_ac_f1_04c_filtro_por_tipo_devuelve_solo_ese_tipo(cliente: TestClient) -
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["total"] == 2 == len(cuerpo["elementos"])
-    assert {e["id"] for e in cuerpo["elementos"]} == {"INS-BARRA", "INS-TORNILLO"}
+    assert cuerpo["total"] == 4 == len(cuerpo["elementos"])
+    assert {e["id"] for e in cuerpo["elementos"]} == {
+        "INS-BARRA",
+        "INS-TORNILLO",
+        "INS-TABLERO",
+        "INS-BARNIZ",
+    }
     assert {e["tipo"] for e in cuerpo["elementos"]} == {"INSUMO"}
 
 
@@ -60,7 +70,7 @@ def test_ac_f1_04c_filtro_por_tipo_se_normaliza_a_mayusculas(cliente: TestClient
     respuesta = cliente.get("/api/v1/elementos?tipo=insumo")
 
     assert respuesta.status_code == 200
-    assert respuesta.json()["total"] == 2
+    assert respuesta.json()["total"] == 4
 
 
 def test_ac_f1_04d_tipo_desconocido_en_filtro_responde_422_err04(cliente: TestClient) -> None:
@@ -80,6 +90,10 @@ def test_ac_f1_05_consulta_de_elemento_existente(cliente: TestClient) -> None:
         "tipo": "INSUMO",
         "nombre": "Tornillo hexagonal M6",
         "descripcion": None,
+        "stockDisponible": 30,
+        "stockMinimo": 100,
+        "estadoStock": "BAJO",
+        "alertaStock": True,
     }
 
 

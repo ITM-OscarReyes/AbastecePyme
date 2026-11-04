@@ -26,6 +26,7 @@ def catalogo() -> Catalogo:
     agreg.registrar_elemento(Elemento.crear("INS-A1", "INSUMO", "Insumo A"))
     agreg.registrar_elemento(Elemento.crear("INS-A2", "INSUMO", "Insumo B"))
     agreg.registrar_elemento(Elemento.crear("PROD-B1", "PRODUCTO", "Producto C"))
+    agreg.registrar_elemento(Elemento.crear("PROC-P1", "PROCESO", "Proceso P"))
     return agreg
 
 
@@ -40,10 +41,10 @@ def test_invariante_5_todo_elemento_tiene_adyacencia_de_salida_aunque_vacia() ->
 def test_invariante_1_y_3_las_adyacencias_se_actualizan_en_la_misma_operacion(
     catalogo: Catalogo,
 ) -> None:
-    catalogo.registrar_dependencia("INS-A1", "PROD-B1")
+    catalogo.registrar_dependencia("PROC-P1", "PROD-B1")
 
-    assert catalogo.adyacencia_salida("INS-A1") == {"PROD-B1"}
-    assert catalogo.adyacencia_entrada("PROD-B1") == {"INS-A1"}
+    assert catalogo.adyacencia_salida("PROC-P1") == {"PROD-B1"}
+    assert catalogo.adyacencia_entrada("PROD-B1") == {"PROC-P1"}
     assert catalogo.adyacencia_salida("PROD-B1") == set()
 
 
@@ -56,23 +57,25 @@ def test_invariante_2_no_hay_aristas_reflexivas(catalogo: Catalogo) -> None:
 
 
 def test_invariante_3_no_hay_aristas_paralelas(catalogo: Catalogo) -> None:
-    catalogo.registrar_dependencia("INS-A1", "PROD-B1")
+    catalogo.registrar_dependencia("PROC-P1", "PROD-B1")
 
     with pytest.raises(DependenciaDuplicada) as excepcion:
-        catalogo.registrar_dependencia("INS-A1", "PROD-B1")
+        catalogo.registrar_dependencia("PROC-P1", "PROD-B1")
 
     assert excepcion.value.codigo == "DEPENDENCIA_DUPLICADA"
     assert catalogo.total_dependencias() == 1
 
 
 def test_invariante_4_las_aristas_inversas_son_validas(catalogo: Catalogo) -> None:
-    catalogo.registrar_dependencia("INS-A1", "PROD-B1")
-    catalogo.registrar_dependencia("PROD-B1", "INS-A1")
+    # Un proceso puede generar un suministro y ese suministro puede alimentar
+    # al proceso: ambas direcciones son relaciones distintas y válidas.
+    catalogo.registrar_dependencia("PROC-P1", "INS-A1")
+    catalogo.registrar_dependencia("INS-A1", "PROC-P1")
 
     assert catalogo.total_dependencias() == 2
     assert {(d.origen, d.destino) for d in catalogo.listar_dependencias()} == {
-        ("INS-A1", "PROD-B1"),
-        ("PROD-B1", "INS-A1"),
+        ("PROC-P1", "INS-A1"),
+        ("INS-A1", "PROC-P1"),
     }
 
 
@@ -99,29 +102,33 @@ def test_orden_de_elementos_ascendente_por_id() -> None:
 
 
 def test_orden_de_dependencias_por_origen_y_destino(catalogo: Catalogo) -> None:
-    catalogo.registrar_dependencia("INS-A2", "INS-A1")
-    catalogo.registrar_dependencia("INS-A1", "PROD-B1")
-    catalogo.registrar_dependencia("INS-A1", "INS-A2")
+    catalogo.registrar_dependencia("PROC-P1", "INS-A2")
+    catalogo.registrar_dependencia("PROC-P1", "PROD-B1")
+    catalogo.registrar_dependencia("PROC-P1", "INS-A1")
 
     assert [(d.origen, d.destino) for d in catalogo.listar_dependencias()] == [
-        ("INS-A1", "INS-A2"),
-        ("INS-A1", "PROD-B1"),
-        ("INS-A2", "INS-A1"),
+        ("PROC-P1", "INS-A1"),
+        ("PROC-P1", "INS-A2"),
+        ("PROC-P1", "PROD-B1"),
     ]
 
 
 def test_filtros_de_dependencias_por_extremo_se_combinan(catalogo: Catalogo) -> None:
-    catalogo.registrar_dependencia("INS-A1", "PROD-B1")
-    catalogo.registrar_dependencia("INS-A2", "PROD-B1")
-    catalogo.registrar_dependencia("INS-A2", "INS-A1")
+    catalogo.registrar_dependencia("PROC-P1", "PROD-B1")
+    catalogo.registrar_dependencia("PROC-P1", "INS-A1")
+    catalogo.registrar_dependencia("PROC-P1", "INS-A2")
 
-    solo_origen = catalogo.listar_dependencias(origen="INS-A2")
+    solo_origen = catalogo.listar_dependencias(origen="PROC-P1")
     solo_destino = catalogo.listar_dependencias(destino="PROD-B1")
-    ambos = catalogo.listar_dependencias(origen="INS-A2", destino="PROD-B1")
+    ambos = catalogo.listar_dependencias(origen="PROC-P1", destino="PROD-B1")
 
-    assert [(d.origen, d.destino) for d in solo_origen] == [("INS-A2", "INS-A1"), ("INS-A2", "PROD-B1")]
-    assert [(d.origen, d.destino) for d in solo_destino] == [("INS-A1", "PROD-B1"), ("INS-A2", "PROD-B1")]
-    assert [(d.origen, d.destino) for d in ambos] == [("INS-A2", "PROD-B1")]
+    assert [(d.origen, d.destino) for d in solo_origen] == [
+        ("PROC-P1", "INS-A1"),
+        ("PROC-P1", "INS-A2"),
+        ("PROC-P1", "PROD-B1"),
+    ]
+    assert [(d.origen, d.destino) for d in solo_destino] == [("PROC-P1", "PROD-B1")]
+    assert [(d.origen, d.destino) for d in ambos] == [("PROC-P1", "PROD-B1")]
 
 
 def test_listar_por_tipo_filtra_y_mantiene_el_orden(catalogo: Catalogo) -> None:
@@ -133,9 +140,25 @@ def test_listar_por_tipo_filtra_y_mantiene_el_orden(catalogo: Catalogo) -> None:
 
 
 def test_el_tipo_de_relacion_del_dominio_es_habilita(catalogo: Catalogo) -> None:
-    dependencia = catalogo.registrar_dependencia("INS-A1", "PROD-B1")
+    dependencia = catalogo.registrar_dependencia("PROC-P1", "PROD-B1")
 
     assert dependencia.tipo_relacion == "habilita"
+
+
+def test_reglas_de_dependencia_rechazan_tipos_no_permitidos(catalogo: Catalogo) -> None:
+    with pytest.raises(DependenciaInvalida) as excepcion:
+        catalogo.registrar_dependencia("PROD-B1", "INS-A1")
+
+    assert excepcion.value.codigo == "DEPENDENCIA_INVALIDA"
+    assert [d.campo for d in excepcion.value.detalles] == ["destino"]
+
+
+def test_suministro_sin_asociacion_no_puede_enlazarse_a_proceso(catalogo: Catalogo) -> None:
+    with pytest.raises(DependenciaInvalida) as excepcion:
+        catalogo.registrar_dependencia("INS-A1", "PROC-P1")
+
+    assert excepcion.value.codigo == "DEPENDENCIA_INVALIDA"
+    assert [d.campo for d in excepcion.value.detalles] == ["origen"]
 
 
 def test_existencia_de_elemento_consultada_por_el_dominio(catalogo: Catalogo) -> None:

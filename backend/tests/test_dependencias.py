@@ -1,4 +1,4 @@
-﻿"""RF-F1-06/07/08/09 - Dependencias: direccion, reflexividad, duplicados y listado.
+"""RF-F1-06/07/08/09 - Dependencias: direccion, reflexividad, duplicados y listado.
 
 Cubre AC-F1-06, AC-F1-06b, AC-F1-06c, AC-F1-06d, AC-F1-07, AC-F1-08, AC-F1-08b,
 AC-F1-09, AC-F1-09b, AC-F1-09c.
@@ -12,50 +12,50 @@ from .conftest import registrar_dependencia
 def test_ac_f1_06_registro_devuelve_201_con_tipo_relacion_habilita(
     cliente_solo_elementos: TestClient,
 ) -> None:
-    respuesta = registrar_dependencia(cliente_solo_elementos, "INS-TORNILLO", "PROD-PANEL")
+    respuesta = registrar_dependencia(cliente_solo_elementos, "PROC-CORTE", "PROD-PANEL")
 
     assert respuesta.status_code == 201
     assert respuesta.json() == {
-        "origen": "INS-TORNILLO",
+        "origen": "PROC-CORTE",
         "destino": "PROD-PANEL",
         "tipoRelacion": "habilita",
     }
-    assert respuesta.headers["Location"] == "/api/v1/dependencias/INS-TORNILLO/PROD-PANEL"
+    assert respuesta.headers["Location"] == "/api/v1/dependencias/PROC-CORTE/PROD-PANEL"
 
 
 def test_ac_f1_06_dependencia_aparece_en_listado_y_en_grafo(cliente_vacio: TestClient) -> None:
-    tipos = {"INS-TORNILLO": "INSUMO", "PROD-PANEL": "PRODUCTO"}
+    tipos = {"PROV-ACERO": "PROVEEDOR", "INS-BARRA": "INSUMO"}
     for id_valor, tipo in tipos.items():
         cliente_vacio.post(
             "/api/v1/elementos",
             json={"id": id_valor, "tipo": tipo, "nombre": f"Elemento {id_valor}"},
         )
 
-    assert registrar_dependencia(cliente_vacio, "INS-TORNILLO", "PROD-PANEL").status_code == 201
+    assert registrar_dependencia(cliente_vacio, "PROV-ACERO", "INS-BARRA").status_code == 201
 
     listado = cliente_vacio.get("/api/v1/dependencias").json()
     grafo = cliente_vacio.get("/api/v1/grafo").json()
-    esperada = {"origen": "INS-TORNILLO", "destino": "PROD-PANEL", "tipoRelacion": "habilita"}
+    esperada = {"origen": "PROV-ACERO", "destino": "INS-BARRA", "tipoRelacion": "habilita"}
     assert listado["dependencias"] == [esperada]
     assert grafo["dependencias"] == [esperada]
     assert grafo["resumen"]["totalDependencias"] == 1
 
 
 def test_ac_f1_06b_direccion_es_origen_habilita_destino(cliente_vacio: TestClient) -> None:
-    """`INS-TORNILLO -> PROD-PANEL` significa «para el panel necesito tornillos»."""
-    tipos = {"INS-TORNILLO": "INSUMO", "PROD-PANEL": "PRODUCTO"}
+    """`PROV-ACERO -> INS-BARRA` significa «para la barra necesito el proveedor»."""
+    tipos = {"PROV-ACERO": "PROVEEDOR", "INS-BARRA": "INSUMO"}
     for id_valor, tipo in tipos.items():
         cliente_vacio.post(
             "/api/v1/elementos",
             json={"id": id_valor, "tipo": tipo, "nombre": f"Elemento {id_valor}"},
         )
 
-    registrar_dependencia(cliente_vacio, "INS-TORNILLO", "PROD-PANEL")
+    registrar_dependencia(cliente_vacio, "PROV-ACERO", "INS-BARRA")
 
     aristas = cliente_vacio.get("/api/v1/grafo").json()["dependencias"]
     assert len(aristas) == 1
-    assert aristas[0]["origen"] == "INS-TORNILLO"
-    assert aristas[0]["destino"] == "PROD-PANEL"
+    assert aristas[0]["origen"] == "PROV-ACERO"
+    assert aristas[0]["destino"] == "INS-BARRA"
     assert aristas[0]["tipoRelacion"] == "habilita"
 
 
@@ -101,8 +101,10 @@ def test_ac_f1_06d_dependencias_inversas_son_relaciones_distintas(
 ) -> None:
     total_inicial = cliente_solo_elementos.get("/api/v1/dependencias").json()["total"]
 
-    directa = registrar_dependencia(cliente_solo_elementos, "PROC-CORTE", "PROD-PANEL")
-    inversa = registrar_dependencia(cliente_solo_elementos, "PROD-PANEL", "PROC-CORTE")
+    # PROC-CORTE -> INS-BARRA asocia el suministro a un proceso; la relación
+    # inversa queda permitida porque el suministro ya existe en la cadena.
+    directa = registrar_dependencia(cliente_solo_elementos, "PROC-CORTE", "INS-BARRA")
+    inversa = registrar_dependencia(cliente_solo_elementos, "INS-BARRA", "PROC-CORTE")
 
     assert directa.status_code == 201
     assert inversa.status_code == 201
@@ -111,8 +113,8 @@ def test_ac_f1_06d_dependencias_inversas_son_relaciones_distintas(
 
     cuerpo = cliente_solo_elementos.get("/api/v1/dependencias").json()
     pares = {(d["origen"], d["destino"]) for d in cuerpo["dependencias"]}
-    assert ("PROC-CORTE", "PROD-PANEL") in pares
-    assert ("PROD-PANEL", "PROC-CORTE") in pares
+    assert ("PROC-CORTE", "INS-BARRA") in pares
+    assert ("INS-BARRA", "PROC-CORTE") in pares
     assert cuerpo["total"] == total_inicial + 2
 
 
@@ -142,7 +144,7 @@ def test_ac_f1_08_dependencia_duplicada_responde_409_err08_sin_cambiar_total(
 ) -> None:
     antes = cliente.get("/api/v1/dependencias").json()
 
-    repetida = registrar_dependencia(cliente, "INS-TORNILLO", "PROD-PANEL")
+    repetida = registrar_dependencia(cliente, "INS-TORNILLO", "PROC-CORTE")
 
     assert repetida.status_code == 409
     assert repetida.json()["error"]["codigo"] == "DEPENDENCIA_DUPLICADA"
@@ -152,8 +154,8 @@ def test_ac_f1_08_dependencia_duplicada_responde_409_err08_sin_cambiar_total(
 def test_ac_f1_08b_el_par_inverso_no_es_duplicado_del_original(
     cliente_solo_elementos: TestClient,
 ) -> None:
-    assert registrar_dependencia(cliente_solo_elementos, "INS-TORNILLO", "PROD-PANEL").status_code == 201
-    assert registrar_dependencia(cliente_solo_elementos, "PROD-PANEL", "INS-TORNILLO").status_code == 201
+    assert registrar_dependencia(cliente_solo_elementos, "PROC-CORTE", "INS-BARRA").status_code == 201
+    assert registrar_dependencia(cliente_solo_elementos, "INS-BARRA", "PROC-CORTE").status_code == 201
 
     cuerpo = cliente_solo_elementos.get("/api/v1/dependencias").json()
     assert cuerpo["total"] == len(cuerpo["dependencias"])
@@ -165,7 +167,7 @@ def test_ac_f1_09_listado_incluye_tipo_relacion_y_total(cliente_limpio: TestClie
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["total"] == len(cuerpo["dependencias"]) == 5
+    assert cuerpo["total"] == len(cuerpo["dependencias"]) == 6
     for dependencia in cuerpo["dependencias"]:
         assert set(dependencia) == {"origen", "destino", "tipoRelacion"}
         assert dependencia["tipoRelacion"] == "habilita"
@@ -192,7 +194,7 @@ def test_ac_f1_09b_filtro_por_destino(cliente: TestClient) -> None:
 
     cuerpo = respuesta.json()
     assert {d["destino"] for d in cuerpo["dependencias"]} == {"PROD-PANEL"}
-    assert cuerpo["total"] == 2 == len(cuerpo["dependencias"])
+    assert cuerpo["total"] == 1 == len(cuerpo["dependencias"])
 
 
 def test_ac_f1_09b_filtros_combinados_cumplen_ambos(cliente: TestClient) -> None:

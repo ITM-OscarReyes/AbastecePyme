@@ -1,11 +1,13 @@
 # Modelo del grafo — AbastecePyme
 
-Documento de referencia para **F1 — Catálogo de dependencias**. Define la dirección de las
-relaciones y la representación del grafo, que son requisitos explícitos de F1 en `docs/brief.md`.
+Documento de referencia para **F1 — Catálogo de dependencias** y **F2 — Análisis de impacto**.
+Define la dirección de las relaciones y la representación del grafo, que son requisitos explícitos
+de F1 en `docs/brief.md`, y su lectura para el análisis de impacto de F2 (sección 8).
 
-- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RNF-F1-03).
-- Contrato HTTP: `api-contract.md`.
-- Verificación: `acceptance-criteria.md`.
+- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RNF-F1-03) y, para F2,
+  `requirements.md` §9.
+- Contrato HTTP: `api-contract.md` (secciones 1 a 7 para F1, sección 8 para F2).
+- Verificación: `acceptance-criteria.md` (secciones 1 a 6 para F1, sección 7 para F2).
 
 ## 1. Vocabulario
 
@@ -42,14 +44,15 @@ elementos. Ejemplos del dominio, con datos sintéticos:
 
 | Arista | Frase | Lectura de negocio |
 | ------ | ----- | ----------------- |
-| `INS-TORNILLO → PROD-BANCO` | Para producir el banco de montaje necesito el insumo de tornillos | El producto depende del insumo |
-| `PROV-ACERO → INS-BARRA` | Para preparar el insumo de barra de acero necesito al proveedor de acero | El insumo depende del proveedor |
+| `INS-TORNILLO → PROC-CORTE` | Para ejecutar el proceso de corte necesito el suministro de tornillos | El proceso depende del suministro |
+| `PROV-ACERO → INS-BARRA` | Para preparar el suministro de barra de acero necesito al proveedor de acero | El suministro depende del proveedor |
 | `PROC-CORTE → PROD-PANEL` | Para producir el panel necesito el proceso de corte previo | El producto depende de un proceso interno |
-| `PROD-PANEL → PROD-CONJUNTO` | Para producir el conjunto final necesito el panel | Un producto puede requerir otro producto |
+| `PROC-CORTE → PROD-BANCO` | Para producir el banco necesito el proceso de corte previo | Un proceso puede generar más de un producto |
 
 Nótese que la frase sigue siendo coherente cuando el origen es un proveedor o un proceso: lo que
 se necesita es que esté **disponible**, no que se produzca. Esa generalización es lo que permite
 usar **una sola dirección para todos los tipos de elemento**, en lugar de una dirección por tipo.
+Las combinaciones admitidas entre tipos se fijan en la sección 4.1.
 
 ### 2.2 Por qué la flecha apunta del requisito previo al dependiente
 
@@ -59,8 +62,8 @@ usar **una sola dirección para todos los tipos de elemento**, en lugar de una d
    por tipo de elemento.
 2. **La frase se invierte de forma verificable.** El brief pide comprobar si «Para producir \_\_\_
    necesito \_\_\_» deja de tener sentido al invertirla. Con esta dirección, invertir la arista
-   cambia el significado de negocio de forma detectable: `INS-TORNILLO → PROD-BANCO` significa algo
-   y `PROD-BANCO → INS-TORNILLO` significaría que el banco habilita al tornillo, lo cual es falso en
+   cambia el significado de negocio de forma detectable: `PROC-CORTE → PROD-PANEL` significa algo
+   y `PROD-PANEL → PROC-CORTE` significaría que el producto habilita al proceso, lo cual es falso en
    este dominio. La asimetría que exige el brief es observable en el modelo.
 3. **Un solo sentido de recorrido para las features siguientes.** Con esta dirección, «qué se ve
    afectado si falta X» y «qué hay que preparar antes que Y» se obtienen recorriendo la red en el
@@ -143,15 +146,39 @@ representación; son los datos que deben esperar las features posteriores.
 | Arista | Frase |
 | ------ | ----- |
 | `PROV-ACERO → INS-BARRA` | Para preparar la barra de acero necesito al proveedor de acero |
+| `PROV-ACERO → INS-TORNILLO` | Para preparar los tornillos necesito al proveedor de acero |
 | `INS-BARRA → PROC-CORTE` | Para el proceso de corte necesito la barra de acero |
+| `INS-TORNILLO → PROC-CORTE` | Para el proceso de corte necesito los tornillos |
 | `PROC-CORTE → PROD-PANEL` | Para el panel necesito el proceso de corte |
-| `INS-TORNILLO → PROD-PANEL` | Para el panel necesito tornillos |
-| `PROD-PANEL → PROD-BANCO` | Para el banco de montaje necesito el panel |
-| `INS-TORNILLO → PROD-BANCO` | Para el banco de montaje necesito tornillos |
+| `PROC-CORTE → PROD-BANCO` | Para el banco de montaje necesito el proceso de corte |
+| `PROV-MADERA → INS-TABLERO` | Para preparar el tablero necesito al proveedor de madera |
+| `PROV-MADERA → INS-BARNIZ` | Para preparar el barniz necesito al proveedor de madera |
+| `INS-TABLERO → PROC-ENSAMBLE` | Para ensamblar el escritorio necesito el tablero |
+| `INS-BARNIZ → PROC-ENSAMBLE` | Para ensamblar el escritorio necesito el barniz |
+| `PROC-ENSAMBLE → PROD-ESCRITORIO` | Para el escritorio necesito el proceso de ensamble |
 
-Grado de salida de `INS-TORNILLO`: 2. Grado de salida de `INS-BARRA`: 1. Con esta dirección,
-`INS-TORNILLO` alcanza a `PROC-CORTE`, `PROD-PANEL` y `PROD-BANCO`, que son los procesos y
-productos afectados si el insumo no está disponible.
+La red de demostración tiene dos líneas de producto: la línea de acero (paneles y bancos) y la
+línea de madera (escritorios). Ambas respetan la misma dirección y las mismas reglas.
+
+Grado de salida de `PROV-ACERO`: 2. Grado de salida de `PROC-CORTE`: 2. Grado de salida de
+`PROV-MADERA`: 2. Con esta dirección, `PROV-ACERO` alcanza a sus dos suministros, al proceso y a
+los dos productos de su línea; `PROV-MADERA` alcanza a sus dos suministros, al proceso de ensamble y
+al escritorio. Los productos son terminales y no habilitan a otros elementos.
+
+### 4.1 Combinaciones de tipos permitidas
+
+La dirección es única, pero no toda combinación de tipos es una relación de negocio válida:
+
+| Tipo de origen | Puede habilitar a |
+| -------------- | ----------------- |
+| `PROVEEDOR` | `INSUMO`, `PROCESO`, `PRODUCTO` |
+| `INSUMO` | `PROCESO`, `PRODUCTO` |
+| `PROCESO` | `INSUMO`, `PRODUCTO` |
+| `PRODUCTO` | Ninguno: es el final de la cadena |
+
+Además, un `INSUMO` debe estar asociado a un `PROVEEDOR` o a un `PROCESO` antes de enlazarse con
+un proceso o producto. La matriz completa, con el motivo de cada combinación, se expone en
+`GET /api/v1/reglas-dependencia` y la valida el dominio en la creación y edición de relaciones.
 
 ## 5. Elementos sin dependencias y grafo vacío
 
@@ -177,3 +204,17 @@ red sea «producible». F1 solo registra, valida, almacena y expone la estructur
 | Dirección única `origen habilita destino` | `docs/decisions/analyst.md` |
 | Representación del grafo con adyacencias de entrada y salida propias del proyecto | `docs/decisions/analyst.md` |
 | F1 registra ciclos sin detectarlos | `docs/decisions/analyst.md` |
+
+
+## 8. Relevancia para F2 — Análisis de impacto
+
+- **Sentido del recorrido:** para determinar qué se afecta por la indisponibilidad de un elemento `X`, se recorre el grafo en **sentido hacia adelante** desde `X` siguiendo aristas `X → Y` (donde `X` habilita a `Y`). Los elementos alcanzables son los afectados directa o indirectamente.
+- **"Alcanzar":** existe un camino dirigido desde el elemento consultado al elemento alcanzado. Esto define el conjunto de afectados.
+- **Conjunto de afectados:** es exactamente el conjunto de elementos alcanzables hacia adelante. No se filtra por tipo de elemento: un proveedor, un insumo, un proceso o un producto alcanzados son todos afectados.
+- **Predecesores no afectados:** los elementos que habilitan al elemento consultado (sus requisitos previos) no forman parte del conjunto de afectados. La indisponibilidad de un elemento no afecta a quienes dependen de él.
+- **Diferenciación:** elemento inexistente ≠ elemento existente sin dependencias salientes ≠ elemento que afecta una cadena. Un identificador mal formado es, además, una tercera situación, distinta de «inexistente».
+- **Recorrido propio:** el cálculo debe realizarse con recorrido propio del proyecto (sin NetworkX para recorridos/caminos/impacto). NetworkX solo podría usarse para visualizar resultados ya calculados, no para el cálculo.
+- **Ciclos:** si existen ciclos (registrados en F1), el recorrido debe terminar (manejo de visitados) y devolver elementos alcanzables de forma comprensible; no se asume grafo acíclico.
+- **Coherencia:** la dirección definida es invariante; no se invierte el grafo para el análisis de impacto.
+- **Documentación:** este significado de «alcanzar» está escrito en el `README.md` del repositorio, como exige el brief de F2.
+- **Contrato:** la forma de la respuesta y los códigos de error están en `api-contract.md` §8.
