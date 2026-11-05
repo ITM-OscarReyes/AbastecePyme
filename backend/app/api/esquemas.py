@@ -181,3 +181,20 @@ class ReglasDependenciaRespuesta(_EsquemaBase):
 
     tipos: list[str]
     reglas: list[ReglaDependenciaRespuesta]
+
+
+class PasoProduccionRespuesta(_EsquemaBase):
+    """Paso secuencial dentro del orden de producción válido (F3)."""
+
+    paso: int
+    id: str
+    tipo: str
+    nombre: str
+
+
+class OrdenProduccionRespuesta(_EsquemaBase):
+    """Respuesta exitosa de ``GET /api/v1/orden-produccion`` (grafo DAG)."""
+
+    es_dag: bool
+    orden: list[PasoProduccionRespuesta]
+    total_pasos: int

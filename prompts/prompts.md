@@ -419,3 +419,36 @@ En particular, se debe garantizar que:
 - La información de inventario y las alertas de stock se reflejen tanto en las tarjetas de información como en los análisis de impacto cuando corresponda.
 - Los análisis de impacto puedan iniciarse desde la pestaña correspondiente y desde los elementos de Materiales y procesos.
 - La guía de usuario, los botones, los títulos y los mensajes reflejen los cambios funcionales y utilicen una terminología uniforme.
+
+## 10 — Backend de F3 con el agente backend-builder
+
+Hola, por favor con el agente backend-builder continua con el desarrollo del backend necesario **únicamente para el feature 3 (F3 — Orden de producción y ciclos)** de AbastecePyme, aprovechando el backend ya existente del Feature 2 (Análisis de impacto), empleando Python y FastAPI, todo dentro del branch `f3-backend`. Así mismo almacena la documentación del prompt en el archivo `prompts.md` y trata de que el propio código quede con una documentación clara.
+
+**Contexto del proyecto:**
+- F1 y F2 ya están implementados y verificados (Catálogo de dependencias y Análisis de impacto).
+- F3 es "Orden de producción y ciclos": obtener un orden de preparación válido cuando no hay ciclos; detectar y reportar los ciclos de manera útil; no devolver un orden falso cuando existe contradicción. Usa conceptos como DAG y ordenamiento topológico.
+- Debes trabajar en la rama `f3-backend`.
+- Usar Python 3.12+ y FastAPI.
+- No usar NetworkX para cálculos principales (solo visualización).
+- Almacena la documentación del prompt en `prompts.md`.
+- Código con documentación clara.
+
+**Pasos a seguir:**
+1. Primero, explora el código existente del backend (F1 y F2) para entender la estructura, modelos, API y algoritmos del grafo.
+2. Crea/cambia a la rama `f3-backend`.
+3. Documenta este prompt en `prompts.md`.
+4. Implementa los endpoints y lógica para F3:
+   - Endpoint `GET /api/v1/orden-produccion` que devuelva el orden de preparación válido (DAG) o un reporte de ciclo si hay contradicción.
+   - Algoritmo de ordenamiento topológico determinista (Kahn) en el dominio, con desempate alfabético por `id`.
+   - Detección y reporte estructurado de ciclos (DFS con colores) en el dominio.
+   - Manejo de casos: grafo vacío, elementos sin dependencias, ciclos simples y complejos, grafos disconexos.
+   - Respuesta `409 Conflict` con `CONFIGURACION_CICLICA` cuando hay ciclos; nunca un orden parcial ni falso.
+5. Asegura que la implementación respete SOLID, Clean Architecture, y las convenciones del proyecto.
+6. Escribe pruebas básicas para validar la funcionalidad (AC-F3-01 a AC-F3-06).
+
+**REQUISITOS ESTRICTOS DE ALCANCE:**
+1. **Solo F3.** No implementes F4 (dashboard integrado).
+2. No crees endpoints, algoritmos, modelos, casos de uso ni datos de demostración de F4.
+3. `GET /api/v1/orden-produccion` expone el cálculo de orden y detección de ciclos. No le agregues funcionalidades de F4.
+4. Los endpoints del backend deben coincidir exactamente con `docs/api-contract.md` (§3.7 y §5).
+5. La verificación de F3 la realiza `tester`. Tú no declares PASS/FAIL.

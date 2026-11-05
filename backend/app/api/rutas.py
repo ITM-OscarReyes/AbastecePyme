@@ -18,6 +18,8 @@ from app.api.esquemas import (
     ImpactoRespuesta,
     ListaDependenciasRespuesta,
     ListaElementosRespuesta,
+    OrdenProduccionRespuesta,
+    PasoProduccionRespuesta,
     ReglaDependenciaRespuesta,
     ReglasDependenciaRespuesta,
     ResumenGrafo,
@@ -34,6 +36,7 @@ from app.aplicacion.casos_de_uso import (
     ListarElementos,
     ObtenerElemento,
     ObtenerGrafo,
+    ObtenerOrdenProduccion,
     ObtenerReglasDependencia,
     RegistrarDependencia,
 )
@@ -267,6 +270,35 @@ def crear_enrutador() -> APIRouter:
             afectados=[_elemento_a_impacto_respuesta(a) for a in afectados],
             total=len(afectados),
             resumen_stock=_resumen_stock(elemento, afectados),
+        )
+
+    @enrutador.get("/orden-produccion", response_model=OrdenProduccionRespuesta)
+    def obtener_orden_produccion(peticion: Request) -> OrdenProduccionRespuesta:
+        """Devuelve el orden de preparación válido o reporta ciclos (F3).
+
+        Cuando el catálogo es un DAG, responde 200 con la secuencia completa de
+        pasos de producción respetando todas las precedencias
+        (``origen habilita destino``). Cuando hay al menos un ciclo, el caso de
+        uso lanza ``ConfiguracionCiclica`` (dominio), que la capa de
+        infraestructura traduce a 409 con el sobre de error
+        ``CONFIGURACION_CICLICA``, el ciclo cerrado y los elementos
+        bloqueados (RF-F3-03, RF-F3-04, RF-F3-05). Nunca se emite un orden
+        parcial ni falso.
+        """
+        resultado = ObtenerOrdenProduccion(obtener_repositorio(peticion)).ejecutar()
+        orden_respuesta = [
+            PasoProduccionRespuesta(
+                paso=indice + 1,
+                id=elemento.id,
+                tipo=elemento.tipo.value,
+                nombre=elemento.nombre,
+            )
+            for indice, elemento in enumerate(resultado.orden)
+        ]
+        return OrdenProduccionRespuesta(
+            es_dag=True,
+            orden=orden_respuesta,
+            total_pasos=len(orden_respuesta),
         )
 
     return enrutador
