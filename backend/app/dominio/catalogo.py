@@ -7,7 +7,15 @@ misma operación de registro.
 Además del catálogo, el agregado aplica las reglas de dependencia permitidas
 entre tipos de elemento y mantiene la integridad de la red cuando se edita o
 elimina un elemento o una relación. El catálogo vacío es un estado válido.
+
+F3 añade sobre esta representación el cálculo del orden de preparación
+(ordenamiento topológico determinista de Kahn) y la detección y reporte
+estructurado de ciclos (búsqueda en profundidad con colores), todo propio del
+proyecto y sin bibliotecas de terceros (RNF-F3-01, AC-F3-08).
 """
+
+import bisect
+from dataclasses import dataclass
 
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
@@ -25,6 +33,22 @@ from app.dominio.reglas_dependencia import (
     motivo_no_permitida,
 )
 from app.dominio.tipo_elemento import TipoElemento
+
+
+@dataclass(frozen=True)
+class ResultadoOrdenProduccion:
+    """Resultado del cálculo de orden de preparación (F3).
+
+    Cuando ``es_dag`` es ``True``, ``orden`` contiene los identificadores en
+    orden topológico válido. Cuando es ``False``, ``orden`` está vacía,
+    ``ciclo`` identifica el lazo cerrado elemental y
+    ``elementos_bloqueados`` lista los elementos que no pudieron ordenarse.
+    """
+
+    es_dag: bool
+    orden: list[str]
+    ciclo: list[str] | None
+    elementos_bloqueados: list[str]
 
 
 class Catalogo:
@@ -302,3 +326,116 @@ class Catalogo:
     def _quitar_arista(self, origen: str, destino: str) -> None:
         self._adyacencia_salida[origen].discard(destino)
         self._adyacencia_entrada[destino].discard(origen)
+
+    # ------------------------------------------------------------------
+    # F3 — Orden de producción y detección de ciclos
+    # ------------------------------------------------------------------
+
+    def orden_produccion(self) -> ResultadoOrdenProduccion:
+        """Calcula el orden de preparación válido o detecta ciclos (F3).
+
+        Aplica el algoritmo de Kahn para el ordenamiento topológico
+        determinista: los elementos sin requisitos pendientes (grado de
+        entrada cero) se preparan primero, desempatando por identificador
+        ascendente. Cuando un elemento se prepara, se decrementa el contador
+        de requisitos pendientes de cada elemento al que habilita.
+
+        Si no se ordenan todos los elementos, el grafo contiene al menos un
+        ciclo. En ese caso no se devuelve un orden parcial ni falso: se
+        detecta el primer ciclo cerrado elemental mediante búsqueda en
+        profundidad con colores y se reportan los elementos bloqueados.
+
+        Complejidad: ``O(|V| + |E|)`` (lineal en el tamaño del catálogo).
+        """
+        ids = sorted(self._elementos)
+        if not ids:
+            # Grafo vacío: DAG trivial, orden vacío, sin ciclos (AC-F3-06).
+            return ResultadoOrdenProduccion(
+                es_dag=True,
+                orden=[],
+                ciclo=None,
+                elementos_bloqueados=[],
+            )
+
+        # --- Kahn: orden topológico determinista -----------------------
+        in_grado = {
+            id_elem: len(self._adyacencia_entrada[id_elem]) for id_elem in ids
+        }
+        listos: list[str] = sorted(
+            id_elem for id_elem in ids if in_grado[id_elem] == 0
+        )
+        orden: list[Elemento] = []
+        while listos:
+            id_actual = listos.pop(0)  # elemento disponible con menor id
+            orden.append(self._elementos[id_actual])
+            for destino in self._adyacencia_salida[id_actual]:
+                in_grado[destino] -= 1
+                if in_grado[destino] == 0:
+                    _insertar_ordenado(listos, destino)
+
+        if len(orden) == len(ids):
+            # Acíclico: orden válido y completo (RF-F3-01, RF-F3-02).
+            return ResultadoOrdenProduccion(
+                es_dag=True,
+                orden=orden,
+                ciclo=None,
+                elementos_bloqueados=[],
+            )
+
+        # --- Hay ciclo: detectar ciclo cerrado y elementos bloqueados ---
+        # RF-F3-03, RF-F3-04, RF-F3-05: no se emite orden parcial ni falso.
+        ciclo = self._detectar_ciclo()
+        elementos_bloqueados = sorted(set(ids) - {e.id for e in orden})
+        return ResultadoOrdenProduccion(
+            es_dag=False,
+            orden=[],
+            ciclo=ciclo,
+            elementos_bloqueados=elementos_bloqueados,
+        )
+
+    def _detectar_ciclo(self) -> list[str] | None:
+        """Detecta el primer ciclo cerrado elemental mediante DFS con colores.
+
+        Los estados son: BLANCO (no visitado), GRIS (en la pila de recursión
+        del camino actual) y NEGRO (visitado completamente). Al encontrar una
+        arista hacia un nodo GRIS se confirma una arista de retroceso, lo que
+        indica un ciclo cerrado. El ciclo se reconstruye como la secuencia
+        ordenada ``[c_1, ..., c_k, c_1]`` donde cada paso es una dependencia
+        registrada (RF-F3-04).
+
+        El recorrido visita los nodos en orden alfabético por identificador,
+        lo que garantiza determinismo: siempre se reporta el mismo primer
+        ciclo elemental cerrado (AC-F3-03, AC-F3-04, RNF-F3-03).
+        """
+        BLANCO, GRIS, NEGRO = 0, 1, 2
+        color = {id_elem: BLANCO for id_elem in self._elementos}
+        camino: list[str] = []
+
+        def dfs(nodo: str) -> list[str] | None:
+            color[nodo] = GRIS
+            camino.append(nodo)
+            for destino in sorted(self._adyacencia_salida[nodo]):
+                if color[destino] == GRIS:
+                    # Arista de retroceso: ciclo desde ``destino`` hasta
+                    # ``nodo``, cerrando de nuevo en ``destino``.
+                    indice = camino.index(destino)
+                    return camino[indice:] + [destino]
+                if color[destino] == BLANCO:
+                    hallado = dfs(destino)
+                    if hallado is not None:
+                        return hallado
+            camino.pop()
+            color[nodo] = NEGRO
+            return None
+
+        for nodo in sorted(self._elementos):
+            if color[nodo] == BLANCO:
+                hallado = dfs(nodo)
+                if hallado is not None:
+                    return hallado
+        return None
+
+
+def _insertar_ordenado(lista: list[str], valor: str) -> None:
+    """Inserta ``valor`` en ``lista`` manteniéndola ordenada ascendentemente."""
+    bisect.insort(lista, valor)

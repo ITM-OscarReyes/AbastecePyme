@@ -8,10 +8,10 @@ contiene decisiones de transporte ni de persistencia.
 from collections.abc import Mapping
 
 from app.aplicacion.puertos import RepositorioCatalogo
-from app.dominio.catalogo import Catalogo
+from app.dominio.catalogo import Catalogo, ResultadoOrdenProduccion
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
-from app.dominio.errores import CampoNoPermitido, DetalleError
+from app.dominio.errores import CampoNoPermitido, ConfiguracionCiclica, DetalleError
 from app.dominio.reglas_dependencia import ReglaDependencia, reglas_por_tipo
 from app.dominio.validacion import (
     normalizar_identificador,
@@ -239,6 +239,38 @@ class ConsultarImpacto:
         return elemento, afectados
 
 
+class ObtenerOrdenProduccion:
+    """Calcula el orden de preparación válido o reporta ciclos (F3).
+
+    Orquesta la consulta al agregado ``Catalogo`` y devuelve el
+    ``ResultadoOrdenProduccion`` del dominio: un orden topológico completo
+    cuando el grafo es un DAG, o la señal de ciclo con el lazo cerrado y los
+    elementos bloqueados cuando existe una contradicción. Nunca devuelve un
+    orden parcial ni simulado (RF-F3-05).
+    """
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(self) -> ResultadoOrdenProduccion:
+        catalogo = self._repositorio.obtener()
+        resultado = catalogo.orden_produccion()
+        if not resultado.es_dag:
+            # RF-F3-03, RF-F3-04, RF-F3-05: no se emite orden parcial ni falso;
+            # se lanza el error de dominio y la capa HTTP lo traduce a 409.
+            raise ConfiguracionCiclica(
+                "No se puede generar un orden de producción porque existen dependencias circulares.",
+                detalles=[
+                    DetalleError("ciclo", " -> ".join(resultado.ciclo)),
+                    DetalleError(
+                        "elementosBloqueados",
+                        ", ".join(resultado.elementos_bloqueados),
+                    ),
+                ],
+            )
+        return resultado
+
+
 __all__ = [
     "ActualizarDependencia",
     "ActualizarElemento",
@@ -250,6 +282,7 @@ __all__ = [
     "ListarElementos",
     "ObtenerElemento",
     "ObtenerGrafo",
+    "ObtenerOrdenProduccion",
     "ObtenerReglasDependencia",
     "RegistrarDependencia",
 ]

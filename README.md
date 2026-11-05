@@ -23,11 +23,7 @@ la traza manual del ejemplo pequeño y la salida de la última ejecución del sc
 
 ## Estado del proyecto
 
-Implementadas la **F1 — Catálogo de dependencias** y la **F2 — Análisis de impacto**, con las
-mejoras solicitadas sobre la interfaz: inventario y alertas de stock para suministros, edición y
-eliminación de elementos y relaciones con aviso de continuidad, reglas de dependencia por tipo,
-ficha modal de cada elemento, historial de los 10 análisis de impacto más recientes y guía de uso.
-F3 (orden de producción y ciclos) y F4 (tablero integrado) siguen fuera del alcance actual.
+Implementadas la **F1 — Catálogo de dependencias**, la **F2 — Análisis de impacto** y la **F3 — Orden de producción y ciclos**, con las mejoras solicitadas sobre la interfaz: inventario y alertas de stock para suministros, edición y eliminación de elementos y relaciones con aviso de continuidad, reglas de dependencia por tipo, ficha modal de cada elemento, historial de los 10 análisis de impacto más recientes y guía de uso. F4 (tablero integrado) sigue fuera del alcance actual.
 
 ## Requisitos
 
@@ -160,6 +156,7 @@ recorridos, ciclos ni órdenes de producción.
 | `GET` | `/api/v1/reglas-dependencia` | Consultar las combinaciones de tipos permitidas |
 | `GET` | `/api/v1/grafo` | Obtener la representación del grafo |
 | `GET` | `/api/v1/impacto/{id}` | Consultar los elementos afectados por la indisponibilidad de un elemento |
+| `GET` | `/api/v1/orden-produccion` | Obtener el orden de preparación válido (DAG) o reporte de ciclo si hay contradicción |
 
 Los suministros (`INSUMO`) incluyen `stockDisponible`, `stockMinimo`, `estadoStock` y
 `alertaStock`. La alerta se activa cuando la cantidad disponible es inferior al mínimo aceptable.
