@@ -505,3 +505,47 @@ Estandariza todos los diálogos modales, formularios, controles de entrada y vis
    - **Proceso:** Fondo violeta pastel `bg-purple-50 dark:bg-purple-500/10`, borde `border-purple-200 dark:border-purple-500/30`, texto púrpura vivo `text-purple-700 dark:text-purple-400`.
    - **Producto:** Fondo esmeralda pastel `bg-emerald-50 dark:bg-emerald-500/10`, borde `border-emerald-200 dark:border-emerald-500/30`, texto esmeralda profundo `text-emerald-700 dark:text-emerald-400`.
 5. **Verificación:** `npm run build` completado exitosamente sin errores, 14 pruebas de arquitectura en verde y 3 pruebas unitarias de F3 aprobadas.
+
+## 14 — Verificación de F3 (tester)
+
+Actúa como `tester` de AbastecePyme y verifica de forma objetiva la Feature 3 (F3 — Orden de producción y ciclos). No implementes ni corrijas código de producción; tu tarea es crear/completar las pruebas necesarias, ejecutarlas realmente y emitir un informe con veredicto PASS/FAIL/BLOCKED.
+
+**Contexto:**
+- `docs/brief.md` es la fuente de verdad. La especificación derivada está en `docs/requirements.md`, `docs/acceptance-criteria.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/graph-model.md`.
+- F1 y F2 ya están implementadas y verificadas. F3 está implementada (backend y frontend) y es la única feature en alcance.
+- La rama de trabajo es `f3-order-and-cycles`.
+- No se puede usar NetworkX ni otra librería para reemplazar los algoritmos propios del proyecto.
+
+**Alcance de la verificación:**
+- Verificar F3 y la integración F1/F2/API/frontend estrictamente necesaria.
+- No verificar ni implementar F4.
+- No modificar código de producción ni refactorizar para hacer pasar las pruebas.
+
+**Casos mínimos a cubrir:**
+1. Detección de ciclos en grafo dirigido.
+2. Identificación de los nodos que forman parte de un ciclo.
+3. Ciclos directos e indirectos.
+4. Grafos acíclicos.
+5. Múltiples ciclos y ciclos que comparten nodos.
+6. Orden topológico correcto.
+7. Respeto de la dirección de las dependencias (`origen -> destino`).
+8. Elementos aislados sin dependencias.
+9. Grafo vacío y grafo con un solo elemento.
+10. Configuraciones que no permiten un orden válido.
+11. Validación de entrada y respuestas de error de la API.
+12. Determinismo y rendimiento.
+13. AC-F3-01 a AC-F3-11, incluida la interfaz de usuario (lista numerada y alerta de ciclo).
+
+**Restricciones:**
+- Ejecutar las pruebas de verdad; no declarar PASS por inspección.
+- Marcar como `BLOCKED` toda prueba no ejecutable, con la razón concreta.
+- No aprobar F3 si algún criterio de aceptación queda sin verificar.
+- Reportar contradicciones documentales en lugar de asumir una resolución.
+- Registrar en `docs/decisions/tester.md` las decisiones de verificación relevantes.
+
+**Entregable:**
+- Informe con totales PASS/FAIL/BLOCKED.
+- Matriz de todos los criterios de aceptación de F3.
+- Fallos con criterio, esperado, obtenido y evidencia reproducible.
+- Pruebas bloqueadas y su razón.
+- Cobertura de criterios de aceptación y conclusión final.

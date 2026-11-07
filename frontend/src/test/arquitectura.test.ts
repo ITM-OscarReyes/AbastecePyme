@@ -185,3 +185,42 @@ describe('AC-F2-06b / AC-F2-09 · Arquitectura de F2 en frontend', () => {
     expect(vista).not.toMatch(/\b(recorrido|adyacencia|pila|cola)\b/i);
   });
 });
+
+/**
+ * Elimina literales de cadena para distinguir código de textos de interfaz.
+ * Así una mención descriptiva a «Kahn» en una etiqueta no se confunde con una
+ * implementación del algoritmo en TypeScript.
+ */
+function codigoSinCadenas(fuente: string): string {
+  return fuente
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/`(?:\\.|[^`\\])*`/g, '``');
+}
+
+describe('AC-F3-11 · El frontend consume el orden de producción del backend', () => {
+  it('AC-F3-11 el cliente de API consume GET /api/v1/orden-produccion', () => {
+    const cliente = lectura(RUTA_CLIENTE);
+    expect(cliente).toContain("'/orden-produccion'");
+    expect(cliente).toContain('obtenerOrdenProduccion');
+  });
+
+  it('AC-F3-11 la vista de producción usa el servicio del backend', () => {
+    const vista = lectura(join(SRC, 'components', 'VistaOrdenProduccion.tsx'));
+    expect(vista).toContain('apiService.obtenerOrdenProduccion');
+    expect(vista).toContain('extraerReporteCiclo');
+    expect(vista).not.toContain('apiClient.get');
+  });
+
+  it('AC-F3-11 el frontend no implementa Kahn, DFS ni ordenamiento topológico', () => {
+    // Se buscan declaraciones y estructuras de algoritmo, no menciones en
+    // textos de interfaz como «Kahn determinista» (que describen al backend).
+    const patronImplementacion =
+      /(?:function|const|let|var|class)\s+\w*(?:kahn|topolog|dfs)\w*|topologicalSort|inDegree|gradoEntrada|\badyacencia\b|\bvisitados\b|\bdfs\s*\(/i;
+    const implementaciones = ARCHIVOS.filter((ruta) =>
+      patronImplementacion.test(codigoSinCadenas(lectura(ruta)))
+    );
+
+    expect(implementaciones).toEqual([]);
+  });
+});
