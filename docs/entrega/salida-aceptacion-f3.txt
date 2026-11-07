@@ -1,0 +1,31 @@
+﻿
+======================================================================
+VERIFICACI├ôN DE CRITERIOS DE ACEPTACI├ôN ÔÇö F3 (ORDEN Y CICLOS)
+======================================================================
+[PAS├ô] AC-F3-01 GET /orden-produccion responde 200 en cat├ílogo ac├¡clico
+        esperado: 200 OK con esDag: True
+        obtenido: 200 con esDag: True
+[PAS├ô] AC-F3-01 Respeto estricto de precedencias origen habilita destino en todos los pasos
+        esperado: Toda dependencia origen -> destino cumple paso(origen) < paso(destino)
+        obtenido: Precedencias 100% respetadas
+[PAS├ô] AC-F3-02 Determinismo byte a byte y desempate alfab├®tico por ID
+        esperado: Respuestas consecutivas id├®nticas byte a byte
+        obtenido: Respuestas id├®nticas
+[PAS├ô] AC-F3-03 Cat├ílogo c├¡clico responde 409 Conflict con c├│digo CONFIGURACION_CICLICA
+        esperado: 409 Conflict con CONFIGURACION_CICLICA
+        obtenido: 409 con c├│digo: CONFIGURACION_CICLICA
+[PAS├ô] AC-F3-03 Detalles incluyen lazo cerrado ('ciclo') y elementos bloqueados
+        esperado: Detalle con campo 'ciclo' y campo 'elementosBloqueados'
+        obtenido: Campos presentes: ['ciclo', 'elementosBloqueados']
+[PAS├ô] AC-F3-05 Prohibici├│n de orden falso ante ciclos (no devuelve clave 'orden')
+        esperado: Cuerpo de error sin array de orden de producci├│n
+        obtenido: Claves devueltas: ['error']
+[PAS├ô] AC-F3-08 Sin NetworkX para orden topol├│gico ni detecci├│n de ciclos en dominio
+        esperado: Cero menciones a NetworkX en backend/app/dominio
+        obtenido: Libre de NetworkX
+[PAS├ô] AC-F3-11 El frontend no duplica algoritmos de orden topol├│gico en TypeScript
+        esperado: Frontend libre de algoritmos de grafo
+        obtenido: Frontend act├║a estrictamente como presentaci├│n
+----------------------------------------------------------------------
+Total escenarios F3: 8 ┬À PAS├ô: 8 ┬À FALL├ô: 0
+----------------------------------------------------------------------

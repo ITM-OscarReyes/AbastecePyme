@@ -29,7 +29,9 @@ def llamar(metodo: str, ruta: str, cuerpo: Any = None, cabeceras: dict | None = 
         peticion.add_header(clave, valor)
     try:
         with urlopen(peticion) as respuesta:
-            return respuesta.status, json.loads(respuesta.read())
+            crudo = respuesta.read()
+            # DELETE responde 204 sin cuerpo: no es JSON y no debe intentarse decodificar.
+            return respuesta.status, json.loads(crudo) if crudo else None
     except HTTPError as error:
         crudo = error.read()
         try:
