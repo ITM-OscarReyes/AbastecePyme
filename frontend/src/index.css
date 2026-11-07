@@ -1,41 +1,113 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==========================================================================
+   TEMA VISUAL DE ALTO RENDIMIENTO — DUAL LIGHT & DARK (ABASTECEPYME)
+   ========================================================================== */
+
+:root {
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+}
+
+html.dark {
+  --bg-app: #030712;
+  --bg-surface: #0b1120;
+  --bg-surface-subtle: #0f172a;
+  --border-subtle: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+}
+
 @layer base {
-  body {
-    background-color: #030712;
-    color: #f8fafc;
+  html, body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-/* Fondo blueprint de alta tecnología para el lienzo del grafo */
+/* ==========================================================================
+   ADAPTACIÓN LIGHT & DARK MODE — ESPECIFICACIONES VISUALES
+   ========================================================================== */
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Modales */
+html:not(.dark) .fixed.bg-slate-950\/80 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* ==========================================================================
+   CANVAS DEL GRAFO (FONDO RETICULAR HIGH-END)
+   ========================================================================== */
+
 .graph-canvas-bg {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(rgba(148, 163, 184, 0.35) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+  background-position: 0 0;
+}
+
+.dark .graph-canvas-bg {
   background-color: #070d19;
   background-image: 
-    radial-gradient(rgba(56, 189, 248, 0.18) 1.2px, transparent 1.2px),
-    radial-gradient(rgba(148, 163, 184, 0.06) 1.2px, transparent 1.2px);
+    radial-gradient(rgba(56, 189, 248, 0.22) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(148, 163, 184, 0.08) 1.2px, transparent 1.2px);
   background-size: 28px 28px, 14px 14px;
   background-position: 0 0, 14px 14px;
 }
 
-/* Tarjetas con efecto Glassmorphism refinado */
+/* ==========================================================================
+   TARJETAS GLASSMORPHISM CON SOPORTE DUAL
+   ========================================================================== */
+
 .glass-card {
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.45);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.06);
+  color: #0f172a;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
+  border-color: rgba(2, 132, 199, 0.35);
+  box-shadow: 0 8px 30px 0 rgba(2, 132, 199, 0.1);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  color: #f8fafc;
+}
+
+.dark .glass-card:hover {
   border-color: rgba(56, 189, 248, 0.35);
   box-shadow: 0 12px 40px 0 rgba(2, 132, 199, 0.12);
 }
 
-/* Pulso animado sutil para estados de alerta y éxito */
+/* ==========================================================================
+   ANIMACIONES Y SCROLLBARS
+   ========================================================================== */
+
 @keyframes glow-pulse-red {
   0%, 100% {
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 10px rgba(239, 68, 68, 0.2);
@@ -62,17 +134,22 @@
   animation: glow-pulse-emerald 3s infinite ease-in-out;
 }
 
-/* Scrollbars estilizadas */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.dark ::-webkit-scrollbar-track {
   background: #090d16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #0284c7;

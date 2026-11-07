@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
-import cytoscape from 'cytoscape';
 import type { Core, NodeSingular } from 'cytoscape';
+import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
-import type { Elemento, Dependencia } from '../types';
-import { obtenerCodigoSku } from '../utils/sku';
+import { Crosshair, Download, Layers, Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import type { Dependencia, Elemento } from '../types';
 import { etiquetaTipo } from '../utils/etiquetas';
-import { Maximize2, Minimize2, RefreshCw, ZoomIn, ZoomOut, Layers, Download, Crosshair } from 'lucide-react';
+import { obtenerCodigoSku } from '../utils/sku';
 
 try {
   cytoscape.use(dagre);
@@ -39,6 +39,7 @@ interface GraphCanvasProps {
   nodoSeleccionadoId?: string | null;
   nodosAfectadosIds?: string[];
   onSelectNode?: (nodoId: string | null) => void;
+  esModoOscuro?: boolean;
 }
 
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
@@ -46,7 +47,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   dependencias,
   nodoSeleccionadoId,
   nodosAfectadosIds = [],
-  onSelectNode
+  onSelectNode,
+  esModoOscuro = true
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -55,36 +57,64 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Modelado de nodos con mayor tamaño, claridad y badges legibles
+    // Paleta visual empresarial de alto contraste calibrada para Modo Claro y Modo Oscuro
     const cyNodes = elementos.map(e => {
-      let colorFondo = '#1e3a8a'; // Azul cobalto (PROVEEDOR)
-      let colorBorde = '#60a5fa';
+      let colorFondo: string;
+      let colorBorde: string;
+      let colorTexto: string;
       let borderWidth = 2;
       const icono = e.tipo === 'PROVEEDOR' ? '🏢' : e.tipo === 'INSUMO' ? '📦' : e.tipo === 'PROCESO' ? '⚙️' : '🏆';
 
-      if (e.tipo === 'INSUMO') {
-        colorFondo = '#92400e'; // Ámbar intenso
-        colorBorde = '#fbbf24';
-      } else if (e.tipo === 'PROCESO') {
-        colorFondo = '#5b21b6'; // Púrpura eléctrico
-        colorBorde = '#c084fc';
-      } else if (e.tipo === 'PRODUCTO') {
-        colorFondo = '#065f46'; // Esmeralda profundo
-        colorBorde = '#34d399';
+      if (esModoOscuro) {
+        // MODO OSCURO: Fondos profundos con bordes brillantes y tipografía blanca
+        colorFondo = '#1e3a8a'; // Azul cobalto
+        colorBorde = '#60a5fa';
+        colorTexto = '#ffffff';
+
+        if (e.tipo === 'INSUMO') {
+          colorFondo = '#92400e'; // Ámbar intenso
+          colorBorde = '#fbbf24';
+        } else if (e.tipo === 'PROCESO') {
+          colorFondo = '#5b21b6'; // Púrpura eléctrico
+          colorBorde = '#c084fc';
+        } else if (e.tipo === 'PRODUCTO') {
+          colorFondo = '#065f46'; // Esmeralda profundo
+          colorBorde = '#34d399';
+        }
+      } else {
+        // MODO CLARO: Fondos suaves tintados, bordes saturados nítidos y texto oscuro legible (WCAG AAA)
+        colorFondo = '#eff6ff'; // Azul pastel limpio (blue-50)
+        colorBorde = '#2563eb'; // Borde azul cobalto (blue-600)
+        colorTexto = '#1e3a8a'; // Azul marino legible (blue-900)
+
+        if (e.tipo === 'INSUMO') {
+          colorFondo = '#fffbeb'; // Ámbar pastel (amber-50)
+          colorBorde = '#d97706'; // Borde ámbar (amber-600)
+          colorTexto = '#78350f'; // Ámbar oscuro legible (amber-900)
+        } else if (e.tipo === 'PROCESO') {
+          colorFondo = '#faf5ff'; // Púrpura pastel (purple-50)
+          colorBorde = '#9333ea'; // Borde púrpura (purple-600)
+          colorTexto = '#581c87'; // Púrpura oscuro legible (purple-900)
+        } else if (e.tipo === 'PRODUCTO') {
+          colorFondo = '#ecfdf5'; // Esmeralda pastel (emerald-50)
+          colorBorde = '#059669'; // Borde esmeralda (emerald-600)
+          colorTexto = '#064e3b'; // Esmeralda oscuro legible (emerald-900)
+        }
       }
 
       const esSeleccionado = nodoSeleccionadoId === e.id;
       const esAfectado = nodosAfectadosIds.includes(e.id);
 
       if (esSeleccionado) {
-        colorBorde = '#38bdf8';
+        colorBorde = esModoOscuro ? '#38bdf8' : '#0284c7';
         borderWidth = 4;
       } else if (esAfectado) {
-        colorFondo = '#7f1d1d'; // Rojo oscuro de alerta de impacto
-        colorBorde = '#ef4444'; // Borde rojo brillante
+        colorFondo = esModoOscuro ? '#7f1d1d' : '#fef2f2'; // Rojo suave en claro, rojo oscuro en oscuro
+        colorBorde = esModoOscuro ? '#ef4444' : '#dc2626'; // Borde rojo vivo
+        colorTexto = esModoOscuro ? '#ffffff' : '#7f1d1d'; // Texto rojo carmesí
         borderWidth = 3;
       } else if (e.alertaStock) {
-        colorBorde = '#f97316'; // Naranja de alerta de stock
+        colorBorde = esModoOscuro ? '#f97316' : '#ea580c'; // Naranja alerta
         borderWidth = 3;
       }
 
@@ -97,6 +127,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           tipo: e.tipo,
           colorFondo,
           colorBorde,
+          colorTexto,
           borderWidth
         }
       };
@@ -114,8 +145,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           source: d.origen,
           target: d.destino,
           label: 'habilita',
-          lineColor: aristaEnCadenaImpacto ? '#ef4444' : '#475569',
-          arrowColor: aristaEnCadenaImpacto ? '#f87171' : '#64748b',
+          lineColor: aristaEnCadenaImpacto
+            ? '#ef4444'
+            : esModoOscuro
+            ? '#475569'
+            : '#94a3b8',
+          arrowColor: aristaEnCadenaImpacto
+            ? '#f87171'
+            : esModoOscuro
+            ? '#64748b'
+            : '#64748b',
           width: aristaEnCadenaImpacto ? 3.5 : 2.5
         }
       };
@@ -137,9 +176,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           style: {
             'background-color': 'data(colorFondo)',
             'label': 'data(label)',
-            'color': '#ffffff',
+            'color': 'data(colorTexto)',
             'font-size': '11px',
-            'font-weight': 600,
+            'font-weight': 700,
             'text-valign': 'center',
             'text-halign': 'center',
             'text-wrap': 'wrap',
@@ -167,12 +206,15 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'label': 'habilita',
             'font-size': '10px',
             'font-weight': 600,
-            'color': '#94a3b8',
+            'color': esModoOscuro ? '#94a3b8' : '#475569',
             'opacity': 'data(opacidad)' as unknown as number,
-            'text-background-color': '#030712',
-            'text-background-opacity': 0.85,
-            'text-background-padding': '2px',
+            'text-background-color': esModoOscuro ? '#090d16' : '#ffffff',
+            'text-background-opacity': esModoOscuro ? 0.9 : 0.95,
+            'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': esModoOscuro ? '#1e293b' : '#cbd5e1',
+            'text-border-width': 1,
+            'text-border-opacity': 0.8,
             'text-rotation': 'autorotate',
             'text-margin-y': -8
           }
@@ -180,7 +222,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         {
           selector: ':selected',
           style: {
-            'border-color': '#38bdf8',
+            'border-color': esModoOscuro ? '#38bdf8' : '#0284c7',
             'border-width': 4,
             'overlay-color': '#0284c7',
             'overlay-opacity': 0.15
@@ -222,7 +264,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode]);
+  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode, esModoOscuro]);
 
   const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
@@ -302,14 +344,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
   const handleExportarPNG = () => {
     if (!cyRef.current) return;
-    const uri = cyRef.current.png({ full: true, scale: 2, bg: '#020617' });
+    const uri = cyRef.current.png({ full: true, scale: 2, bg: esModoOscuro ? '#020617' : '#ffffff' });
     const a = document.createElement('a');
     a.href = uri;
     a.download = `abastecepyme-red-${new Date().toISOString().slice(0, 10)}.png`;
     a.click();
   };
 
-// En pantalla completa el ancho y la altura los fijan los insets: ocupa el viewport menos el
+  // En pantalla completa el ancho y la altura los fijan los insets: ocupa el viewport menos el
   // margen, sin desbordar. En modo normal el lienzo se estira al alto disponible y puede encogerse
   // (`min-h-0`), en vez de imponer una altura fija que empujaría el borde inferior fuera del viewport.
   const clasePosicion = esPantallaCompleta
@@ -325,44 +367,42 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       <div ref={containerRef} className="w-full h-full absolute inset-0 graph-canvas-bg" />
 
       {/* Leyenda y Estado Superior */}
-      <div className="absolute top-3 left-3 z-10 bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-xs flex flex-wrap items-center gap-3 shadow-xl">
+      <div className="absolute top-3 left-3 z-10 bg-white/95 dark:bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex flex-wrap items-center gap-3 shadow-md dark:shadow-xl">
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-blue-600 border border-blue-400 inline-block shadow-sm"></span>
-          <span className="text-slate-300 font-semibold text-[11px]">Proveedor</span>
+          <span className="w-3 h-3 rounded-md bg-blue-100 dark:bg-blue-600 border border-blue-600 dark:border-blue-400 inline-block shadow-sm"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proveedor</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-amber-600 border border-amber-400 inline-block shadow-sm"></span>
-          <span className="text-slate-300 font-semibold text-[11px]">Suministro</span>
+          <span className="w-3 h-3 rounded-md bg-amber-100 dark:bg-amber-600 border border-amber-600 dark:border-amber-400 inline-block shadow-sm"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Suministro</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-purple-600 border border-purple-400 inline-block shadow-sm"></span>
-          <span className="text-slate-300 font-semibold text-[11px]">Proceso</span>
+          <span className="w-3 h-3 rounded-md bg-purple-100 dark:bg-purple-600 border border-purple-600 dark:border-purple-400 inline-block shadow-sm"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proceso</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-emerald-600 border border-emerald-400 inline-block shadow-sm"></span>
-          <span className="text-slate-300 font-semibold text-[11px]">Producto</span>
+          <span className="w-3 h-3 rounded-md bg-emerald-100 dark:bg-emerald-600 border border-emerald-600 dark:border-emerald-400 inline-block shadow-sm"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Producto</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-slate-800 border-2 border-orange-500 inline-block shadow-sm"></span>
-          <span className="text-slate-300 font-semibold text-[11px]">Stock bajo</span>
+          <span className="w-3 h-3 rounded-md bg-white dark:bg-slate-800 border-2 border-orange-500 inline-block shadow-sm"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Stock bajo</span>
         </div>
       </div>
 
-
-
       {/* Controles de Vista y Pantalla Completa */}
-      <div className="absolute bottom-3 right-3 z-10 bg-slate-950/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-800 flex items-center gap-1 shadow-2xl">
+      <div className="absolute bottom-3 right-3 z-10 bg-white/95 dark:bg-slate-950/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1 shadow-md dark:shadow-2xl">
         <button
           onClick={handleZoomIn}
           title="Acercar (+)"
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
+          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
         >
           <ZoomIn size={17} />
         </button>
         <button
           onClick={handleZoomOut}
           title="Alejar (-)"
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
+          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
         >
           <ZoomOut size={17} />
         </button>
@@ -370,7 +410,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           <button
             onClick={handleCentrarSeleccion}
             title="Centrar vista en componente seleccionado"
-            className="p-2 text-sky-400 hover:text-white hover:bg-sky-500/20 rounded-lg transition-colors active:scale-95"
+            className="p-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-white dark:hover:bg-sky-500/20 rounded-lg transition-colors active:scale-95 cursor-pointer"
           >
             <Crosshair size={17} />
           </button>
@@ -378,37 +418,37 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         <button
           onClick={handleFit}
           title="Ajustar vista"
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
+          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
         >
           <Layers size={17} />
         </button>
         <button
           onClick={handleRelayout}
           title="Reorganizar Grafo (LR)"
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
+          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
         >
           <RefreshCw size={17} />
         </button>
         <button
           onClick={handleExportarPNG}
           title="Exportar diagrama en imagen (PNG)"
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95"
+          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
         >
           <Download size={17} />
         </button>
-        <div className="w-[1px] h-5 bg-slate-800 mx-0.5" />
+        <div className="w-[1px] h-5 bg-slate-200 dark:bg-slate-800 mx-0.5" />
         <button
           onClick={() => setEsPantallaCompleta(!esPantallaCompleta)}
           title={esPantallaCompleta ? "Salir de Pantalla Completa" : "Pantalla Completa"}
-          className="p-2 text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 rounded-lg transition-colors active:scale-95"
+          className="p-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-500/10 rounded-lg transition-colors active:scale-95 cursor-pointer"
         >
           {esPantallaCompleta ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
         </button>
       </div>
 
       {elementos.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm z-20">
-          <p className="text-slate-400 font-medium text-sm">El catálogo está vacío. Agrega elementos para visualizar la red.</p>
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm z-20">
+          <p className="text-slate-600 dark:text-slate-400 font-medium text-sm">El catálogo está vacío. Agrega elementos para visualizar la red.</p>
         </div>
       )}
     </div>

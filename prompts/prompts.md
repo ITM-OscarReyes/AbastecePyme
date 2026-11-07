@@ -452,3 +452,56 @@ Hola, por favor con el agente backend-builder continua con el desarrollo del bac
 3. `GET /api/v1/orden-produccion` expone el cálculo de orden y detección de ciclos. No le agregues funcionalidades de F4.
 4. Los endpoints del backend deben coincidir exactamente con `docs/api-contract.md` (§3.7 y §5).
 5. La verificación de F3 la realiza `tester`. Tú no declares PASS/FAIL.
+
+
+## 11 — Frontend de F3 con el equipo de Frontend y Diseño (ArchitectUX & frontend-builder)
+
+Desarrolla la interfaz necesaria **únicamente para el Feature 3 (F3 — Orden de producción y ciclos)** de AbastecePyme con React + TypeScript, consumiendo la API real del backend (`GET /api/v1/orden-produccion`), dentro de la rama `f3-order-and-cycles`. Asimismo, incorpora selector de modo oscuro / modo claro (Dark / Light mode) con persistencia en `localStorage` y documenta este prompt en `prompts.md`.
+
+**Contexto del proyecto:**
+- F1 y F2 están implementados y verificados.
+- El backend de F3 ya está implementado en FastAPI con `GET /api/v1/orden-produccion`.
+- Cuando el grafo es acíclico (DAG), el backend devuelve `200 OK` con `esDag: true` y la lista de etapas `orden[]` calculada mediante Kahn determinista.
+- Cuando existen dependencias circulares, el backend devuelve `409 Conflict` con código `CONFIGURACION_CICLICA`, la secuencia del ciclo cerrado y los elementos bloqueados.
+- El frontend jamás debe inventar ni mostrar un orden falso o parcial cuando hay contradicción.
+- Cero cálculos de grafos en el cliente (no NetworkX, no Kahn en JS, no detección de ciclos en el cliente).
+
+**Requisitos implementados:**
+1. Tipos en `frontend/src/types/index.ts`: `PasoProduccion`, `OrdenProduccionRespuesta`, `ReporteCicloError`.
+2. Servicio en `frontend/src/services/api.ts`: método `apiService.obtenerOrdenProduccion()` y extractor `extraerReporteCiclo()`.
+3. Componente `VistaOrdenProduccion.tsx`:
+   - Visualización de secuencia de fabricación (stepper / timeline lineal ordenado paso a paso).
+   - Manejo de estados: DAG válido (200), catálogo vacío (totalPasos: 0), y bloqueo crítico por dependencias circulares (409 Conflict).
+   - Desglose del lazo cíclico detectado con flechas direccionales y lista de componentes bloqueados.
+   - Herramienta de copiado de plan de trabajo para el personal de planta.
+4. Soporte Dark Mode / Light Mode en `HeaderNavbar.tsx` y `App.tsx` con clase `dark` y almacenamiento local.
+5. Pestaña "Orden de producción" en `HeaderNavbar.tsx` con atajo de teclado accesible `[4]`.
+6. Pruebas y verificación: 14 pruebas de arquitectura en verde (`arquitectura.test.ts`), pruebas unitarias de contrato (`ordenProduccion.test.ts`), y compilación `tsc -b && vite build` exitosa.
+
+
+## 12 — Refactorización del Sistema de Diseño Dual (Light & Dark) y Contraste WCAG AAA (Orquestador Supremo & frontend-builder)
+
+Ajusta la arquitectura de estilos de la interfaz de AbastecePyme para garantizar una experiencia visual en Modo Claro (Light Mode) impecable, eliminando artefactos oscuros y asegurando contraste de legibilidad en todos los componentes y en el lienzo gráfico interactivo (Cytoscape), cumpliendo las directrices WCAG AAA.
+
+**Problemas resueltos:**
+1. **Alertas de stock desvanecidas:** En modo claro, `text-red-200` sobre `bg-red-500/10` generaba contraste casi nulo (texto rosa pálido sobre fondo rosa pálido). Corregido a `bg-red-50 text-red-900 border-red-200` en modo claro y `dark:bg-red-500/10 dark:text-red-200 dark:border-red-500/30` en modo oscuro.
+2. **Cajas negras en etiquetas de aristas de Cytoscape:** La arista "habilita" tenía fondo rígido `#030712`. Ahora conmuta dinámicamente: fondo blanco `#ffffff` con borde gris suave `#cbd5e1` en modo claro y `#090d16` con `#1e293b` en modo oscuro.
+3. **Nodos de Cytoscape opacos/lodosos en fondo blanco:** Se parametrizó `GraphCanvas.tsx` con la prop `esModoOscuro`, implementando una paleta SaaS enterprise de alto contraste: fondos pasteles tintados (azul `#eff6ff`, ámbar `#fffbeb`, púrpura `#faf5ff`, esmeralda `#ecfdf5`), bordes vibrantes (`#2563eb`, `#d97706`, `#9333ea`, `#059669`) y tipografía oscura de alta fidelidad (`colorTexto` data binding).
+4. **Textos oscurecidos en botones primarios:** Se eliminó la regla destructiva `html:not(.dark) .text-white { color: #0f172a !important; }` de `index.css` que convertía en texto negro los botones primarios azules/índigo.
+5. **Pestañas y paneles de detalle:** Se adaptaron `HeaderNavbar.tsx`, `PanelDetalleNodo.tsx`, `TarjetaStock.tsx`, `CatalogTable.tsx` y `VistaOrdenProduccion.tsx` con clases duales de Tailwind v4.
+6. **Verificación:** `npm run build` en 2.44s sin errores, 14 pruebas de arquitectura en verde y 3 pruebas unitarias de contrato.
+
+## 13 — Estandarización Integral de Modales, Formularios y Vistas con el Estándar Corporativo de Badges (Orquestador Supremo & frontend-builder)
+
+Estandariza todos los diálogos modales, formularios, controles de entrada y vistas de análisis de impacto de AbastecePyme para erradicar cualquier bloque oscuro persistente en Modo Claro y asegurar una experiencia visual unificada con la guía de diseño del proyecto.
+
+**Problemas detectados y resueltos:**
+1. **Modales con monolito negro en Modo Claro:** `ModalAyudaOperativa.tsx`, `ModalCrearElemento.tsx`, `ModalCrearDependencia.tsx`, `ModalDetalleElemento.tsx` y `ModalConfirmarRiesgo.tsx` utilizaban clases rígidas `bg-slate-900`, `bg-slate-950` y `border-slate-800`. Se refactorizaron a contenedores duales: `bg-white dark:bg-slate-900`, `border-slate-200 dark:border-slate-800`, con tipografía de alto contraste `text-slate-900 dark:text-white` y subtítulos en `text-slate-600 dark:text-slate-400`.
+2. **Campos de formulario e inputs ilegibles:** Todos los `input`, `select` y `textarea` fueron actualizados a `bg-slate-50 dark:bg-slate-950`, con borde `border-slate-200 dark:border-slate-800`, foco claro `focus:bg-white dark:focus:bg-slate-950`, texto `text-slate-900 dark:text-white` y placeholders accesibles.
+3. **Pestaña de Análisis de Impacto (`VistaImpacto.tsx`):** Se eliminó el fondo negro del contenedor principal, buscador, historial de los 10 análisis recientes, tarjetas de métricas por tipo y lista de afectados, adoptando fondos limpios en modo claro con bordes nítidos y números de impacto de gran visibilidad.
+4. **Adopción del estándar corporativo de badges de categoría:** Se integró la función utilitaria `claseBadgeTipo()` en todas las vistas y modales para coincidir exactamente con el estándar de diseño:
+   - **Proveedor:** Fondo azul pastel `bg-blue-50 dark:bg-blue-500/10`, borde `border-blue-200 dark:border-blue-500/30`, texto cobalto `text-blue-700 dark:text-blue-400`.
+   - **Suministro:** Fondo ámbar pastel `bg-amber-50 dark:bg-amber-500/10`, borde `border-amber-200 dark:border-amber-500/30`, texto industrial profundo `text-amber-800 dark:text-amber-400`.
+   - **Proceso:** Fondo violeta pastel `bg-purple-50 dark:bg-purple-500/10`, borde `border-purple-200 dark:border-purple-500/30`, texto púrpura vivo `text-purple-700 dark:text-purple-400`.
+   - **Producto:** Fondo esmeralda pastel `bg-emerald-50 dark:bg-emerald-500/10`, borde `border-emerald-200 dark:border-emerald-500/30`, texto esmeralda profundo `text-emerald-700 dark:text-emerald-400`.
+5. **Verificación:** `npm run build` completado exitosamente sin errores, 14 pruebas de arquitectura en verde y 3 pruebas unitarias de F3 aprobadas.
