@@ -119,3 +119,25 @@ export interface AnalisisReciente {
   fecha: string;
   total: number;
 }
+
+// F3 — Orden de producción y ciclos
+export interface PasoProduccion {
+  paso: number;
+  id: string;
+  tipo: TipoElemento;
+  nombre: string;
+}
+
+export interface OrdenProduccionRespuesta {
+  esDag: boolean;
+  orden: PasoProduccion[];
+  totalPasos: number;
+}
+
+export interface ReporteCicloError {
+  esDag: false;
+  mensaje: string;
+  ciclo: string[];
+  elementosBloqueados: string[];
+}
+

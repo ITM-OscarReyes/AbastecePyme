@@ -7,7 +7,7 @@ import type {
 } from '../types';
 import { apiService, extraerMensajeError } from '../services/api';
 import { obtenerCodigoSku } from '../utils/sku';
-import { etiquetaEstadoStock, etiquetaTipo, formatearFechaHora } from '../utils/etiquetas';
+import { claseBadgeTipo, etiquetaEstadoStock, etiquetaTipo, formatearFechaHora } from '../utils/etiquetas';
 import {
   ShieldAlert,
   Search,
@@ -94,13 +94,13 @@ const extraerIdObjetivo = (texto: string, listaElementos: Elemento[]): string =>
 const getTipoIcono = (tipo: TipoElemento) => {
   switch (tipo) {
     case 'PROVEEDOR':
-      return <Building2 size={16} className="text-blue-400" />;
+      return <Building2 size={16} className="text-blue-600 dark:text-blue-400" />;
     case 'INSUMO':
-      return <Package size={16} className="text-amber-400" />;
+      return <Package size={16} className="text-amber-600 dark:text-amber-400" />;
     case 'PROCESO':
-      return <Cog size={16} className="text-purple-400" />;
+      return <Cog size={16} className="text-purple-600 dark:text-purple-400" />;
     case 'PRODUCTO':
-      return <CheckSquare size={16} className="text-emerald-400" />;
+      return <CheckSquare size={16} className="text-emerald-600 dark:text-emerald-400" />;
     default:
       return <Package size={16} className="text-slate-400" />;
   }
@@ -324,19 +324,19 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="glass-card p-6 rounded-2xl shadow-xl space-y-5 border border-slate-800">
-        <div className="flex items-start gap-3.5 border-b border-slate-800/80 pb-5">
-          <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+      <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl space-y-5 text-slate-900 dark:text-white">
+        <div className="flex items-start gap-3.5 border-b border-slate-200 dark:border-slate-800/80 pb-5">
+          <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-200 dark:border-amber-500/20">
             <ShieldAlert size={26} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-black text-white">Análisis de Impacto</h2>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+              <h2 className="text-base font-black text-slate-900 dark:text-white">Análisis de Impacto</h2>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20">
                 Continuidad operativa
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
               Evalúa qué procesos y productos se ven afectados cuando un elemento de la cadena
               deja de estar disponible. El análisis considera también el stock de los suministros.
             </p>
@@ -345,7 +345,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
 
         <form onSubmit={manejarEnvio} className="flex flex-col sm:flex-row gap-3">
           <div ref={contenedorBusquedaRef} className="relative flex-1">
-            <Search className="absolute left-3.5 top-3 text-slate-500" size={16} />
+            <Search className="absolute left-3.5 top-3 text-slate-400 dark:text-slate-500" size={16} />
             <input
               ref={inputBusquedaRef}
               type="text"
@@ -366,14 +366,14 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                 }
               }}
               onKeyDown={manejarTeclasInput}
-              className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 transition-all font-sans"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-950 focus:ring-1 focus:ring-amber-500 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all font-sans"
             />
 
             {terminoBusqueda && (
               <button
                 type="button"
                 onClick={handleLimpiarBusqueda}
-                className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 p-0.5 rounded transition-colors"
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-0.5 rounded transition-colors"
                 title="Limpiar búsqueda"
               >
                 <X size={15} />
@@ -384,7 +384,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               <div
                 id="sugerencias-componentes"
                 role="listbox"
-                className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-slate-900 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-72 overflow-y-auto divide-y divide-slate-800/80"
+                className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80"
               >
                 {sugerencias.length > 0 ? (
                   sugerencias.map((elemento, index) => {
@@ -405,32 +405,32 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                         }}
                         className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-3 transition-colors ${
                           estaSeleccionado
-                            ? 'bg-amber-500/20 text-white'
-                            : 'hover:bg-slate-800/80 text-slate-200'
+                            ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-900 dark:text-white'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="p-1 rounded-md bg-slate-950 border border-slate-800 shrink-0">
+                          <span className="p-1 rounded-md bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shrink-0">
                             {getTipoIcono(elemento.tipo)}
                           </span>
                           <div className="truncate">
-                            <span className="text-xs font-semibold block truncate">
+                            <span className="text-xs font-semibold block truncate text-slate-900 dark:text-white">
                               {elemento.nombre}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-400">
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                               {obtenerCodigoSku(elemento.id)}
                             </span>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-950 text-slate-400 border border-slate-800 uppercase">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${claseBadgeTipo(elemento.tipo)}`}>
                           {etiquetaTipo(elemento.tipo)}
                         </span>
                       </button>
                     );
                   })
                 ) : (
-                  <div className="p-3 text-center text-slate-400 text-xs">
-                    <p className="font-medium text-slate-300">
+                  <div className="p-3 text-center text-slate-500 dark:text-slate-400 text-xs">
+                    <p className="font-medium text-slate-700 dark:text-slate-300">
                       Sin coincidencias para &quot;{terminoBusqueda}&quot;
                     </p>
                     <p className="text-[10px] text-slate-500 mt-0.5">
@@ -462,10 +462,10 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           </button>
         </form>
 
-        <div className="pt-2 border-t border-slate-800/80">
+        <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <History size={13} className="text-sky-400" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <History size={13} className="text-sky-600 dark:text-sky-400" />
               Últimos 10 análisis de impacto
             </span>
             <span className="text-[10px] text-slate-500">
@@ -474,7 +474,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           </div>
 
           {historial.length === 0 ? (
-            <p className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[11px] text-slate-500">
+            <p className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 px-3 py-2.5 text-[11px] text-slate-500">
               Todavía no se han ejecutado análisis de impacto. Selecciona un elemento y presiona
               «Evaluar impacto».
             </p>
@@ -485,28 +485,28 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                   key={`${analisis.elementoId}-${analisis.fecha}`}
                   type="button"
                   onClick={() => ejecutarConsulta(analisis.elementoId)}
-                  className={`rounded-xl border p-2.5 text-left transition-colors ${
+                  className={`rounded-xl border p-2.5 text-left transition-colors cursor-pointer ${
                     resultado?.elemento.id === analisis.elementoId
-                      ? 'border-amber-500/40 bg-amber-500/10'
-                      : 'border-slate-800 bg-slate-950 hover:border-slate-700 hover:bg-slate-900'
+                      ? 'border-amber-400 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                   title={`Volver a evaluar ${analisis.nombre}`}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="truncate text-[11px] font-semibold text-slate-200">
+                    <span className="truncate text-[11px] font-semibold text-slate-800 dark:text-slate-200">
                       {analisis.nombre}
                     </span>
                     {getTipoIcono(analisis.tipo)}
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-1">
-                    <span className="font-mono text-[9px] text-sky-400">
+                    <span className="font-mono text-[9px] text-sky-600 dark:text-sky-400">
                       {obtenerCodigoSku(analisis.elementoId)}
                     </span>
                     <span
                       className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
                         analisis.total > 0
-                          ? 'bg-red-500/10 text-red-300'
-                          : 'bg-emerald-500/10 text-emerald-300'
+                          ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/20'
+                          : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20'
                       }`}
                     >
                       {analisis.total} afectado(s)
@@ -523,13 +523,13 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
       </div>
 
       {errorConsulta && (
-        <div className="p-5 rounded-2xl bg-red-500/10 border border-red-500/25 text-red-300 space-y-2 animate-in fade-in">
-          <div className="flex items-center gap-2 font-bold text-sm text-red-400">
+        <div className="p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/25 text-red-800 dark:text-red-300 space-y-2 animate-in fade-in">
+          <div className="flex items-center gap-2 font-bold text-sm text-red-700 dark:text-red-400">
             <AlertTriangle size={18} />
             <span>Atención: no fue posible completar el análisis de impacto</span>
           </div>
-          <p className="text-xs text-red-200">{errorConsulta}</p>
-          <div className="text-[11px] text-red-400/80 flex items-center gap-1.5 pt-1">
+          <p className="text-xs text-red-700 dark:text-red-200">{errorConsulta}</p>
+          <div className="text-[11px] text-red-600 dark:text-red-400/80 flex items-center gap-1.5 pt-1">
             <Info size={13} />
             <span>
               {errorCodigo === 'ELEMENTO_NO_ENCONTRADO'
@@ -543,10 +543,10 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
       )}
 
       {!resultado && !cargando && !errorConsulta && (
-        <div className="glass-card p-8 rounded-2xl text-center space-y-3 border border-slate-800">
-          <Sparkles size={30} className="mx-auto text-amber-400" />
-          <h3 className="text-sm font-bold text-white">Comienza un análisis de impacto</h3>
-          <p className="mx-auto max-w-xl text-xs leading-relaxed text-slate-400">
+        <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl text-center space-y-3 text-slate-900 dark:text-white">
+          <Sparkles size={30} className="mx-auto text-amber-500 dark:text-amber-400" />
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Comienza un análisis de impacto</h3>
+          <p className="mx-auto max-w-xl text-xs leading-relaxed text-slate-600 dark:text-slate-400">
             Busca un proveedor, suministro, proceso o producto y presiona el botón
             «Evaluar impacto». También puedes abrir la ficha de un elemento desde
             Materiales y procesos y lanzar el análisis desde allí.
@@ -556,23 +556,23 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
 
       {resultado && (
         <div className="space-y-4 animate-in fade-in">
-          <div className="glass-card p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800">
+          <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-slate-900 dark:text-white">
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Punto de partida del análisis
               </span>
               <div className="flex items-center gap-3 mt-1.5">
-                <span className="p-1.5 rounded-lg bg-slate-800 border border-slate-700">
+                <span className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                   {getTipoIcono(resultado.elemento.tipo)}
                 </span>
                 <div>
-                  <h3 className="text-base font-bold text-white">{resultado.elemento.nombre}</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{resultado.elemento.nombre}</h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-xs text-sky-400">
+                    <span className="font-mono text-xs text-sky-600 dark:text-sky-400">
                       {obtenerCodigoSku(resultado.elemento.id)}
                     </span>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-slate-400 font-medium">
+                    <span className="text-slate-400">•</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${claseBadgeTipo(resultado.elemento.tipo)}`}>
                       {etiquetaTipo(resultado.elemento.tipo)}
                     </span>
                   </div>
@@ -580,14 +580,14 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-800">
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200 dark:border-slate-800">
               <div className="text-right mr-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Severidad operativa
                 </span>
                 <p
                   className={`text-base font-black ${
-                    resultado.total > 0 ? 'text-red-400' : 'text-emerald-400'
+                    resultado.total > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
                   }`}
                 >
                   {resultado.total > 0
@@ -599,10 +599,10 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               <button
                 type="button"
                 onClick={handleCopiarInforme}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-white rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 title="Copiar el informe del análisis al portapapeles"
               >
-                {copiadoInforme ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                {copiadoInforme ? <Check size={15} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={15} />}
                 <span>{copiadoInforme ? '¡Copiado!' : 'Copiar informe'}</span>
               </button>
 
@@ -615,7 +615,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                       resultado.afectados.map((afectado) => afectado.id)
                     )
                   }
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-white rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                   title="Ver la ruta de afectación resaltada en el mapa de la cadena"
                 >
                   <Network size={15} />
@@ -632,13 +632,13 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           )}
 
           {resultado.total === 0 ? (
-            <div className="glass-card p-6 rounded-2xl text-center space-y-3 border border-emerald-500/20 bg-emerald-500/5">
-              <CheckCircle2 size={36} className="mx-auto text-emerald-400" />
-              <h3 className="text-base font-bold text-white">
+            <div className="glass-card bg-emerald-50/60 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/20 p-6 rounded-2xl text-center space-y-3">
+              <CheckCircle2 size={36} className="mx-auto text-emerald-600 dark:text-emerald-400" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Sin afectación en la cadena
               </h3>
-              <p className="text-xs text-slate-300 max-w-xl mx-auto leading-relaxed">
-                El elemento <span className="font-semibold text-white">{resultado.elemento.nombre}</span>{' '}
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed">
+                El elemento <span className="font-semibold text-slate-900 dark:text-white">{resultado.elemento.nombre}</span>{' '}
                 no habilita a otros procesos o productos. Si deja de estar disponible, no
                 detiene otras estaciones ni productos de la cadena.
               </p>
@@ -646,8 +646,8 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           ) : (
             <div className="space-y-4">
               {resultado.resumenStock.suministrosBajoMinimo > 0 && (
-                <div className="flex items-start gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-xs text-red-200">
-                  <AlertTriangle size={17} className="mt-0.5 shrink-0 text-red-400" />
+                <div className="flex items-start gap-2 rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10 p-4 text-xs text-red-800 dark:text-red-200">
+                  <AlertTriangle size={17} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
                   <div>
                     <p className="font-bold">Alerta de stock en el análisis</p>
                     <p className="mt-0.5 leading-relaxed">
@@ -660,46 +660,46 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-slate-900/90 border border-amber-500/20 space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-amber-400">
+                <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-slate-900/90 border border-amber-200 dark:border-amber-500/20 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400">
                     Suministros afectados
                   </span>
-                  <p className="text-2xl font-black text-white">{insumosAfectados.length}</p>
-                  <p className="text-[11px] text-slate-400">Suministros que dependen de este origen</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{insumosAfectados.length}</p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">Suministros que dependen de este origen</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-900/90 border border-purple-500/20 space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-purple-400">
+                <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-slate-900/90 border border-purple-200 dark:border-purple-500/20 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-purple-800 dark:text-purple-400">
                     Procesos afectados
                   </span>
-                  <p className="text-2xl font-black text-white">{procesosAfectados.length}</p>
-                  <p className="text-[11px] text-slate-400">Estaciones de trabajo que se detienen</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{procesosAfectados.length}</p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">Estaciones de trabajo que se detienen</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-900/90 border border-red-500/20 space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-red-400">
+                <div className="p-4 rounded-xl bg-red-50/60 dark:bg-slate-900/90 border border-red-200 dark:border-red-500/20 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-red-800 dark:text-red-400">
                     Productos afectados
                   </span>
-                  <p className="text-2xl font-black text-white">{productosAfectados.length}</p>
-                  <p className="text-[11px] text-slate-400">Artículos finales que no se pueden despachar</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{productosAfectados.length}</p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">Artículos finales que no se pueden despachar</p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <ArrowRight size={14} className="text-red-400" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <ArrowRight size={14} className="text-red-500 dark:text-red-400" />
                     Elementos afectados ({resultado.total})
                   </h4>
 
-                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] font-semibold">
                     <button
                       type="button"
                       onClick={() => setFiltroTipoAfectados('TODOS')}
                       className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                         filtroTipoAfectados === 'TODOS'
-                          ? 'bg-slate-800 text-white shadow'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Todos ({resultado.total})
@@ -710,8 +710,8 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                         onClick={() => setFiltroTipoAfectados('INSUMO')}
                         className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                           filtroTipoAfectados === 'INSUMO'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : 'text-slate-400 hover:text-amber-300'
+                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-300'
                         }`}
                       >
                         Suministros ({insumosAfectados.length})
@@ -723,8 +723,8 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                         onClick={() => setFiltroTipoAfectados('PROCESO')}
                         className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                           filtroTipoAfectados === 'PROCESO'
-                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                            : 'text-slate-400 hover:text-purple-300'
+                            ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-500/30'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-purple-700 dark:hover:text-purple-300'
                         }`}
                       >
                         Procesos ({procesosAfectados.length})
@@ -736,8 +736,8 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                         onClick={() => setFiltroTipoAfectados('PRODUCTO')}
                         className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                           filtroTipoAfectados === 'PRODUCTO'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'text-slate-400 hover:text-emerald-300'
+                            ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300'
                         }`}
                       >
                         Productos ({productosAfectados.length})
@@ -753,10 +753,10 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                         key={afectado.id}
                         type="button"
                         onClick={() => onConsultarAfectado(afectado.id)}
-                        className={`p-4 rounded-xl bg-slate-900 border text-left transition-colors space-y-2 relative overflow-hidden group ${
+                        className={`p-4 rounded-xl bg-white dark:bg-slate-900 border text-left transition-colors space-y-2 relative overflow-hidden group shadow-sm cursor-pointer ${
                           afectado.alertaStock
-                            ? 'border-red-500/30 hover:border-red-500/50'
-                            : 'border-red-500/20 hover:border-red-500/40'
+                            ? 'border-red-300 dark:border-red-500/30 hover:border-red-400 dark:hover:border-red-500/50'
+                            : 'border-slate-200 dark:border-red-500/20 hover:border-sky-300 dark:hover:border-red-500/40'
                         }`}
                         title={`Consultar información de ${afectado.nombre}`}
                       >
@@ -764,31 +764,30 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                           <span className="text-[10px] font-mono font-bold text-slate-500">
                             Elemento #{indice + 1}
                           </span>
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-800">
-                            {getTipoIcono(afectado.tipo)}
-                            <span>{etiquetaTipo(afectado.tipo)}</span>
-                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${claseBadgeTipo(afectado.tipo)}`}>
+                            {etiquetaTipo(afectado.tipo)}
+                          </span>
                         </div>
-                        <div className="font-mono text-xs font-bold text-red-300">
+                        <div className="font-mono text-xs font-bold text-slate-900 dark:text-red-300">
                           {obtenerCodigoSku(afectado.id)}
                         </div>
-                        <div className="text-xs font-medium text-slate-200 truncate">
+                        <div className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
                           {afectado.nombre}
                         </div>
                         {afectado.tipo === 'INSUMO' && (
-                          <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/70 px-2 py-1 text-[10px]">
-                            <span className="text-slate-400">
+                          <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 px-2 py-1 text-[10px]">
+                            <span className="text-slate-600 dark:text-slate-400">
                               Stock {afectado.stockDisponible ?? 0} / mín. {afectado.stockMinimo ?? 0}
                             </span>
                             {afectado.alertaStock && (
-                              <span className="flex items-center gap-1 font-bold text-red-400">
+                              <span className="flex items-center gap-1 font-bold text-red-600 dark:text-red-400">
                                 <AlertTriangle size={10} />
                                 Alerta
                               </span>
                             )}
                           </div>
                         )}
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-sky-400 opacity-80 group-hover:opacity-100">
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-sky-600 dark:text-sky-400 opacity-80 group-hover:opacity-100">
                           <Info size={11} />
                           Ver detalle
                         </span>
@@ -796,7 +795,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400">
+                  <div className="p-4 text-center rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                     No se registran elementos de la categoría seleccionada en esta cadena de
                     afectación.
                   </div>
@@ -817,33 +816,35 @@ const TarjetaStockInline: React.FC<{ resultado: ImpactoRespuesta }> = ({ resulta
   return (
     <div
       className={`rounded-2xl border p-4 space-y-2 ${
-        bajoMinimo ? 'border-red-500/30 bg-red-950/30' : 'border-slate-800 bg-slate-950/70'
+        bajoMinimo
+          ? 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-200'
+          : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 text-slate-800 dark:text-slate-300'
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <Package size={14} className={bajoMinimo ? 'text-red-400' : 'text-amber-400'} />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+          <Package size={14} className={bajoMinimo ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'} />
           Stock del suministro analizado
         </span>
         <span
           className={`rounded border px-2 py-0.5 text-[10px] font-bold ${
             bajoMinimo
-              ? 'border-red-500/25 bg-red-500/10 text-red-300'
-              : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+              ? 'border-red-200 dark:border-red-500/25 bg-red-100 dark:bg-red-500/10 text-red-800 dark:text-red-300'
+              : 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
           }`}
         >
           {bajoMinimo ? 'Bajo el mínimo' : 'Stock suficiente'}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-300">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-700 dark:text-slate-300">
         <span>
-          Disponible: <strong className="text-white">{elemento.stockDisponible ?? 0}</strong> unidades
+          Disponible: <strong className="text-slate-900 dark:text-white">{elemento.stockDisponible ?? 0}</strong> unidades
         </span>
         <span>
-          Mínimo aceptable: <strong className="text-white">{elemento.stockMinimo ?? 0}</strong> unidades
+          Mínimo aceptable: <strong className="text-slate-900 dark:text-white">{elemento.stockMinimo ?? 0}</strong> unidades
         </span>
       </div>
-      <p className={`text-[11px] leading-relaxed ${bajoMinimo ? 'text-red-200' : 'text-slate-400'}`}>
+      <p className={`text-[11px] leading-relaxed ${bajoMinimo ? 'text-red-700 dark:text-red-200' : 'text-slate-600 dark:text-slate-400'}`}>
         {bajoMinimo
           ? 'El suministro ya está por debajo del mínimo aceptable: el impacto sobre la cadena puede ser inmediato.'
           : 'El stock disponible puede mantener la operación mientras se repone el suministro. El impacto se materializa al agotarse.'}
