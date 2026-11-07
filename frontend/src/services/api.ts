@@ -7,7 +7,9 @@ import type {
   Elemento,
   ErrorApiResponse,
   ImpactoRespuesta,
+  OrdenProduccionRespuesta,
   ReglasDependenciaRespuesta,
+  ReporteCicloError,
   RespuestaColeccionDependencias,
   RespuestaColeccionElementos,
   RespuestaGrafo,
@@ -38,6 +40,34 @@ export function extraerMensajeError(error: unknown): string {
     return error.message;
   }
   return 'Error en la comunicación con el servidor.';
+}
+
+export function extraerReporteCiclo(error: unknown): ReporteCicloError | null {
+  if (axios.isAxiosError(error)) {
+    const axiosErr = error as AxiosError<ErrorApiResponse>;
+    if (axiosErr.response?.status === 409 && axiosErr.response?.data?.error) {
+      const errPayload = axiosErr.response.data.error;
+      if (errPayload.codigo === 'CONFIGURACION_CICLICA') {
+        const cicloDetalle = errPayload.detalles?.find(d => d.campo === 'ciclo');
+        const bloqueadosDetalle = errPayload.detalles?.find(d => d.campo === 'elementosBloqueados');
+
+        const cicloArray = cicloDetalle?.mensaje
+          ? cicloDetalle.mensaje.split(' -> ').map(s => s.trim()).filter(Boolean)
+          : [];
+        const bloqueadosArray = bloqueadosDetalle?.mensaje
+          ? bloqueadosDetalle.mensaje.split(',').map(s => s.trim()).filter(Boolean)
+          : [];
+
+        return {
+          esDag: false,
+          mensaje: errPayload.mensaje,
+          ciclo: cicloArray,
+          elementosBloqueados: bloqueadosArray,
+        };
+      }
+    }
+  }
+  return null;
 }
 
 export const apiService = {
@@ -109,6 +139,11 @@ export const apiService = {
 
   async obtenerImpacto(id: string): Promise<ImpactoRespuesta> {
     const { data } = await apiClient.get<ImpactoRespuesta>(`/impacto/${encodeURIComponent(id)}`);
+    return data;
+  },
+
+  async obtenerOrdenProduccion(): Promise<OrdenProduccionRespuesta> {
+    const { data } = await apiClient.get<OrdenProduccionRespuesta>('/orden-produccion');
     return data;
   }
 };
