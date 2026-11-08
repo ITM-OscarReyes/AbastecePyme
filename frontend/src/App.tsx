@@ -490,7 +490,7 @@ export const App: React.FC = () => {
       />
 
       {errorGlobal && (
-        <div className="shrink-0 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-800 dark:text-red-400 max-w-7xl mx-auto w-full">
+        <div className="shrink-0 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-800 dark:text-red-400 w-full">
           <div className="flex items-center gap-2 min-w-0">
             <AlertTriangle size={16} className="shrink-0 text-red-600 dark:text-red-400" />
             <span className="truncate">{errorGlobal}</span>
@@ -504,7 +504,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 min-h-0 overflow-y-auto max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 min-h-0 overflow-y-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
         <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
             <div>
@@ -552,7 +552,7 @@ export const App: React.FC = () => {
         </div>
 
         {tabActiva === 'red' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[560px] lg:h-[620px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[440px] lg:min-h-0 h-full">
             <div className="lg:col-span-2 relative h-full min-h-0">
               <GraphCanvas
                 elementos={grafo.elementos}

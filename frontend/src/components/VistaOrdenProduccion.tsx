@@ -149,7 +149,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="space-y-6 w-full py-2">
       {/* Encabezado Principal */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm dark:shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-3">
