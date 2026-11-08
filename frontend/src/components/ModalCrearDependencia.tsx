@@ -133,7 +133,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              {esEdicion ? 'Editar Relación de Suministro' : 'Enlazar Suministro'}
+              {esEdicion ? 'Editar relación' : 'Crear relación'}
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400">
               Elige primero el tipo de elemento y luego el elemento concreto.

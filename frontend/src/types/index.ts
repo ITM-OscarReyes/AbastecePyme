@@ -120,7 +120,7 @@ export interface AnalisisReciente {
   total: number;
 }
 
-// F3 — Orden de producción y ciclos
+// F3 — Orden de producción, ciclos y plan de entrega
 export interface PasoProduccion {
   paso: number;
   id: string;
@@ -128,10 +128,34 @@ export interface PasoProduccion {
   nombre: string;
 }
 
+export interface CicloDetectado {
+  secuencia: string[];
+}
+
 export interface OrdenProduccionRespuesta {
   esDag: boolean;
   orden: PasoProduccion[];
   totalPasos: number;
+  ciclos: CicloDetectado[];
+  elementosBloqueados: string[];
+  productosBloqueados: string[];
+  productosPlanificables: string[];
+}
+
+export interface ProductoEntrega {
+  id: string;
+  tipo: string;
+  nombre: string;
+  estado: 'PLANIFICABLE' | 'BLOQUEADO';
+}
+
+export interface PlanEntregaRespuesta {
+  productos: ProductoEntrega[];
+  esPlanificable: boolean;
+  pasos: PasoProduccion[];
+  totalPasos: number;
+  ciclos: CicloDetectado[];
+  elementosBloqueados: string[];
 }
 
 export interface ReporteCicloError {

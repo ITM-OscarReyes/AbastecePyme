@@ -146,10 +146,10 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <button
               onClick={onAbrirModalDependencia}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition-all active:scale-95 cursor-pointer"
-              title="Vincular relación de suministro entre componentes"
+              title="Crear relación entre componentes del catálogo"
             >
               <Link2 size={14} />
-              <span className="hidden sm:inline">Enlazar Suministro</span>
+              <span className="hidden sm:inline">Crear relación</span>
             </button>
           </div>
         </div>

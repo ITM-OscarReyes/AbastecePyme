@@ -36,18 +36,44 @@ from app.dominio.tipo_elemento import TipoElemento
 
 
 @dataclass(frozen=True)
-class ResultadoOrdenProduccion:
-    """Resultado del cálculo de orden de preparación (F3).
+class CicloDetectado:
+    """Secuencia cerrada de identificadores que forman un ciclo dirigido."""
 
-    Cuando ``es_dag`` es ``True``, ``orden`` contiene los identificadores en
-    orden topológico válido. Cuando es ``False``, ``orden`` está vacía,
-    ``ciclo`` identifica el lazo cerrado elemental y
-    ``elementos_bloqueados`` lista los elementos que no pudieron ordenarse.
-    """
+    secuencia: list[str]
+
+
+@dataclass(frozen=True)
+class ProductoEntrega:
+    """Estado de planificación de un producto solicitado."""
+
+    id: str
+    tipo: str
+    nombre: str
+    estado: str  # "PLANIFICABLE" | "BLOQUEADO"
+
+
+@dataclass(frozen=True)
+class ResultadoOrdenProduccion:
+    """Resultado del diagnóstico global de planta (F3)."""
 
     es_dag: bool
-    orden: list[str]
-    ciclo: list[str] | None
+    orden: list[Elemento]
+    total_pasos: int
+    ciclos: list[CicloDetectado]
+    elementos_bloqueados: list[str]
+    productos_bloqueados: list[str]
+    productos_planificables: list[str]
+
+
+@dataclass(frozen=True)
+class ResultadoPlanEntrega:
+    """Resultado del plan de entrega por producto (F3)."""
+
+    productos: list[ProductoEntrega]
+    es_planificable: bool
+    pasos: list[Elemento]
+    total_pasos: int
+    ciclos: list[CicloDetectado]
     elementos_bloqueados: list[str]
 
 
@@ -328,45 +354,43 @@ class Catalogo:
         self._adyacencia_entrada[destino].discard(origen)
 
     # ------------------------------------------------------------------
-    # F3 — Orden de producción y detección de ciclos
+    # F3 — Orden de producción, diagnóstico global y plan de entrega
     # ------------------------------------------------------------------
 
     def orden_produccion(self) -> ResultadoOrdenProduccion:
-        """Calcula el orden de preparación válido o detecta ciclos (F3).
+        """Diagnóstico global de planta (F3).
 
-        Aplica el algoritmo de Kahn para el ordenamiento topológico
-        determinista: los elementos sin requisitos pendientes (grado de
-        entrada cero) se preparan primero, desempatando por identificador
-        ascendente. Cuando un elemento se prepara, se decrementa el contador
-        de requisitos pendientes de cada elemento al que habilita.
-
-        Si no se ordenan todos los elementos, el grafo contiene al menos un
-        ciclo. En ese caso no se devuelve un orden parcial ni falso: se
-        detecta el primer ciclo cerrado elemental mediante búsqueda en
-        profundidad con colores y se reportan los elementos bloqueados.
-
-        Complejidad: ``O(|V| + |E|)`` (lineal en el tamaño del catálogo).
+        Evalúa la red completa como DAG:
+        - Si es acíclico, devuelve el orden completo (Kahn) desempatado por id,
+          con es_dag=True, total_pasos=|V|, ciclos=[], elementos_bloqueados=[],
+          productos_bloqueados=[] y todos los productos en productos_planificables.
+        - Si contiene ciclos, devuelve es_dag=False, orden=[], total_pasos=0,
+          ciclos con un ciclo representativo por SCC cíclica ordenados por el
+          menor id de cada SCC, elementos_bloqueados (elementos de regiones
+          cíclicas y sus alcanzables hacia adelante), productos_bloqueados y
+          productos_planificables (productos no bloqueados).
         """
         ids = sorted(self._elementos)
+        todos_los_productos = sorted(
+            [e.id for e in self._elementos.values() if e.tipo is TipoElemento.PRODUCTO]
+        )
         if not ids:
-            # Grafo vacío: DAG trivial, orden vacío, sin ciclos (AC-F3-06).
             return ResultadoOrdenProduccion(
                 es_dag=True,
                 orden=[],
-                ciclo=None,
+                total_pasos=0,
+                ciclos=[],
                 elementos_bloqueados=[],
+                productos_bloqueados=[],
+                productos_planificables=[],
             )
 
-        # --- Kahn: orden topológico determinista -----------------------
-        in_grado = {
-            id_elem: len(self._adyacencia_entrada[id_elem]) for id_elem in ids
-        }
-        listos: list[str] = sorted(
-            id_elem for id_elem in ids if in_grado[id_elem] == 0
-        )
+        # Kahn sobre el grafo completo
+        in_grado = {id_elem: len(self._adyacencia_entrada[id_elem]) for id_elem in ids}
+        listos: list[str] = sorted(id_elem for id_elem in ids if in_grado[id_elem] == 0)
         orden: list[Elemento] = []
         while listos:
-            id_actual = listos.pop(0)  # elemento disponible con menor id
+            id_actual = listos.pop(0)
             orden.append(self._elementos[id_actual])
             for destino in self._adyacencia_salida[id_actual]:
                 in_grado[destino] -= 1
@@ -374,66 +398,262 @@ class Catalogo:
                     _insertar_ordenado(listos, destino)
 
         if len(orden) == len(ids):
-            # Acíclico: orden válido y completo (RF-F3-01, RF-F3-02).
             return ResultadoOrdenProduccion(
                 es_dag=True,
                 orden=orden,
-                ciclo=None,
+                total_pasos=len(orden),
+                ciclos=[],
                 elementos_bloqueados=[],
+                productos_bloqueados=[],
+                productos_planificables=todos_los_productos,
             )
 
-        # --- Hay ciclo: detectar ciclo cerrado y elementos bloqueados ---
-        # RF-F3-03, RF-F3-04, RF-F3-05: no se emite orden parcial ni falso.
-        ciclo = self._detectar_ciclo()
-        elementos_bloqueados = sorted(set(ids) - {e.id for e in orden})
+        # Hay ciclo en el grafo completo
+        # Obtener SCCs cíclicas y ciclos representativos
+        sccs = self._tarjan_scc(ids)
+        sccs_ciclicas = [
+            scc for scc in sccs
+            if len(scc) > 1 or (len(scc) == 1 and scc[0] in self._adyacencia_salida[scc[0]])
+        ]
+        # Ordenar SCCs cíclicas por su menor id
+        sccs_ciclicas.sort(key=lambda scc: min(scc))
+
+        ciclos: list[CicloDetectado] = []
+        nodos_en_sccs_ciclicas: set[str] = set()
+        for scc in sccs_ciclicas:
+            nodos_en_sccs_ciclicas.update(scc)
+            ciclo_seq = self._encontrar_ciclo_en_scc(scc)
+            if ciclo_seq:
+                ciclos.append(CicloDetectado(secuencia=ciclo_seq))
+
+        # elementos_bloqueados: los nodos de las SCCs cíclicas + todos los alcanzables desde ellos hacia adelante
+        bloqueados_set: set[str] = set(nodos_en_sccs_ciclicas)
+        pila = list(nodos_en_sccs_ciclicas)
+        while pila:
+            curr = pila.pop()
+            for nxt in self._adyacencia_salida[curr]:
+                if nxt not in bloqueados_set:
+                    bloqueados_set.add(nxt)
+                    pila.append(nxt)
+
+        elementos_bloqueados = sorted(bloqueados_set)
+        productos_bloqueados = sorted([
+            pid for pid in elementos_bloqueados
+            if self._elementos[pid].tipo is TipoElemento.PRODUCTO
+        ])
+        productos_planificables = sorted([
+            pid for pid in todos_los_productos
+            if pid not in bloqueados_set
+        ])
+
         return ResultadoOrdenProduccion(
             es_dag=False,
             orden=[],
-            ciclo=ciclo,
+            total_pasos=0,
+            ciclos=ciclos,
             elementos_bloqueados=elementos_bloqueados,
+            productos_bloqueados=productos_bloqueados,
+            productos_planificables=productos_planificables,
         )
 
-    def _detectar_ciclo(self) -> list[str] | None:
-        """Detecta el primer ciclo cerrado elemental mediante DFS con colores.
+    def plan_entrega(self, productos_ids: list[str]) -> ResultadoPlanEntrega:
+        """Calcula el plan de preparación para uno o varios productos (F3).
 
-        Los estados son: BLANCO (no visitado), GRIS (en la pila de recursión
-        del camino actual) y NEGRO (visitado completamente). Al encontrar una
-        arista hacia un nodo GRIS se confirma una arista de retroceso, lo que
-        indica un ciclo cerrado. El ciclo se reconstruye como la secuencia
-        ordenada ``[c_1, ..., c_k, c_1]`` donde cada paso es una dependencia
-        registrada (RF-F3-04).
-
-        El recorrido visita los nodos en orden alfabético por identificador,
-        lo que garantiza determinismo: siempre se reporta el mismo primer
-        ciclo elemental cerrado (AC-F3-03, AC-F3-04, RNF-F3-03).
+        - Calcula los ancestros de los productos solicitados (requisitos hacia atrás).
+        - Si los requisitos de un producto tocan una SCC cíclica, queda BLOQUEADO.
+        - Si no tocan ningún ciclo, queda PLANIFICABLE.
+        - Los pasos contienen el orden topológico (Kahn) de la unión de requisitos
+          de los productos PLANIFICABLES.
+        - ciclos y elementos_bloqueados reportan únicamente los ciclos y bloqueos
+          dentro del subgrafo de los productos solicitados.
         """
-        BLANCO, GRIS, NEGRO = 0, 1, 2
-        color = {id_elem: BLANCO for id_elem in self._elementos}
-        camino: list[str] = []
+        # Deduplicar preservando tipo producto
+        p_ids = sorted(set(productos_ids))
+        info_productos: list[ProductoEntrega] = []
 
-        def dfs(nodo: str) -> list[str] | None:
-            color[nodo] = GRIS
-            camino.append(nodo)
-            for destino in sorted(self._adyacencia_salida[nodo]):
-                if color[destino] == GRIS:
-                    # Arista de retroceso: ciclo desde ``destino`` hasta
-                    # ``nodo``, cerrando de nuevo en ``destino``.
-                    indice = camino.index(destino)
-                    return camino[indice:] + [destino]
-                if color[destino] == BLANCO:
-                    hallado = dfs(destino)
-                    if hallado is not None:
-                        return hallado
-            camino.pop()
-            color[nodo] = NEGRO
+        # Determinar ancestros de cada producto
+        ancestros_por_prod: dict[str, set[str]] = {}
+        for pid in p_ids:
+            ancestros = self._obtener_ancestros(pid)
+            ancestros_por_prod[pid] = ancestros
+
+        subgrafo_total = set().union(*ancestros_por_prod.values()) if ancestros_por_prod else set()
+
+        # Encontrar ciclos dentro de subgrafo_total
+        sccs_sub = self._tarjan_scc(sorted(subgrafo_total))
+        sccs_ciclicas_sub = [
+            scc for scc in sccs_sub
+            if len(scc) > 1 or (len(scc) == 1 and scc[0] in self._adyacencia_salida[scc[0]])
+        ]
+        sccs_ciclicas_sub.sort(key=lambda scc: min(scc))
+
+        ciclos_sub: list[CicloDetectado] = []
+        nodos_scc_ciclicas_sub: set[str] = set()
+        for scc in sccs_ciclicas_sub:
+            nodos_scc_ciclicas_sub.update(scc)
+            c_seq = self._encontrar_ciclo_en_scc(scc)
+            if c_seq:
+                ciclos_sub.append(CicloDetectado(secuencia=c_seq))
+
+        # Calcular elementos bloqueados dentro del subgrafo_total
+        bloqueados_en_subgrafo: set[str] = set(nodos_scc_ciclicas_sub)
+        pila_b = list(nodos_scc_ciclicas_sub)
+        while pila_b:
+            curr = pila_b.pop()
+            for nxt in self._adyacencia_salida[curr]:
+                if nxt in subgrafo_total and nxt not in bloqueados_en_subgrafo:
+                    bloqueados_en_subgrafo.add(nxt)
+                    pila_b.append(nxt)
+
+        # Determinar estado de cada producto solicitado
+        productos_planificables_ids: list[str] = []
+        for pid in p_ids:
+            elem = self._elementos[pid]
+            # Si el producto o alguno de sus ancestros está en una región cíclica
+            ancestros_prod = ancestros_por_prod[pid]
+            if any(anc in nodos_scc_ciclicas_sub for anc in ancestros_prod):
+                estado = "BLOQUEADO"
+            else:
+                estado = "PLANIFICABLE"
+                productos_planificables_ids.append(pid)
+
+            info_productos.append(
+                ProductoEntrega(
+                    id=elem.id,
+                    tipo=elem.tipo.value,
+                    nombre=elem.nombre,
+                    estado=estado,
+                )
+            )
+
+        es_planificable = (len(productos_planificables_ids) == len(p_ids)) and len(p_ids) > 0
+
+        # Subgrafo para los pasos: unión de ancestros de productos PLANIFICABLES
+        if productos_planificables_ids:
+            subgrafo_plan = set().union(
+                *(ancestros_por_prod[pid] for pid in productos_planificables_ids)
+            )
+            # Aplicar Kahn sobre subgrafo_plan
+            pasos = self._ordenar_subgrafo_kahn(subgrafo_plan)
+        else:
+            pasos = []
+
+        return ResultadoPlanEntrega(
+            productos=info_productos,
+            es_planificable=es_planificable,
+            pasos=pasos,
+            total_pasos=len(pasos),
+            ciclos=ciclos_sub,
+            elementos_bloqueados=sorted(bloqueados_en_subgrafo),
+        )
+
+    def _obtener_ancestros(self, id_elemento: str) -> set[str]:
+        """Obtiene el conjunto de ancestros (hacia atrás por adyacencia_entrada) incluyendo id_elemento."""
+        ancestros: set[str] = {id_elemento}
+        pila = [id_elemento]
+        while pila:
+            actual = pila.pop()
+            for predecesor in self._adyacencia_entrada[actual]:
+                if predecesor not in ancestros:
+                    ancestros.add(predecesor)
+                    pila.append(predecesor)
+        return ancestros
+
+    def _ordenar_subgrafo_kahn(self, nodos_subgrafo: set[str]) -> list[Elemento]:
+        """Aplica Kahn determinista sobre el subgrafo inducido por nodos_subgrafo."""
+        nodos_ordenados = sorted(nodos_subgrafo)
+        in_grado = {
+            n: sum(1 for p in self._adyacencia_entrada[n] if p in nodos_subgrafo)
+            for n in nodos_ordenados
+        }
+        listos: list[str] = sorted(n for n in nodos_ordenados if in_grado[n] == 0)
+        resultado: list[Elemento] = []
+
+        while listos:
+            actual = listos.pop(0)
+            resultado.append(self._elementos[actual])
+            for sucesor in sorted(self._adyacencia_salida[actual]):
+                if sucesor in nodos_subgrafo:
+                    in_grado[sucesor] -= 1
+                    if in_grado[sucesor] == 0:
+                        _insertar_ordenado(listos, sucesor)
+
+        return resultado
+
+    def _tarjan_scc(self, nodos_considerados: list[str]) -> list[list[str]]:
+        """Algoritmo de Tarjan para encontrar componentes fuertemente conexas (SCCs)."""
+        idx = 0
+        indices: dict[str, int] = {}
+        lowlinks: dict[str, int] = {}
+        en_pila: dict[str, bool] = {n: False for n in nodos_considerados}
+        pila: list[str] = []
+        sccs: list[list[str]] = []
+        nodos_set = set(nodos_considerados)
+
+        def strongconnect(v: str) -> None:
+            nonlocal idx
+            indices[v] = idx
+            lowlinks[v] = idx
+            idx += 1
+            pila.append(v)
+            en_pila[v] = True
+
+            for w in sorted(self._adyacencia_salida[v]):
+                if w not in nodos_set:
+                    continue
+                if w not in indices:
+                    strongconnect(w)
+                    lowlinks[v] = min(lowlinks[v], lowlinks[w])
+                elif en_pila[w]:
+                    lowlinks[v] = min(lowlinks[v], indices[w])
+
+            if lowlinks[v] == indices[v]:
+                scc: list[str] = []
+                while True:
+                    w = pila.pop()
+                    en_pila[w] = False
+                    scc.append(w)
+                    if w == v:
+                        break
+                sccs.append(sorted(scc))
+
+        for n in sorted(nodos_considerados):
+            if n not in indices:
+                strongconnect(n)
+
+        return sccs
+
+    def _encontrar_ciclo_en_scc(self, scc: list[str]) -> list[str] | None:
+        """Encuentra un ciclo cerrado elemental representativo en la SCC."""
+        scc_set = set(scc)
+        if len(scc) == 1:
+            nodo = scc[0]
+            if nodo in self._adyacencia_salida[nodo]:
+                return [nodo, nodo]
             return None
 
-        for nodo in sorted(self._elementos):
-            if color[nodo] == BLANCO:
-                hallado = dfs(nodo)
-                if hallado is not None:
-                    return hallado
-        return None
+        # DFS buscando arista de retroceso dentro de la SCC comenzando por el menor id
+        nodo_inicio = min(scc)
+        camino: list[str] = []
+        visitados_en_camino: set[str] = set()
+
+        def dfs(u: str) -> list[str] | None:
+            camino.append(u)
+            visitados_en_camino.add(u)
+            for v in sorted(self._adyacencia_salida[u]):
+                if v not in scc_set:
+                    continue
+                if v in visitados_en_camino:
+                    idx = camino.index(v)
+                    return camino[idx:] + [v]
+                res = dfs(v)
+                if res is not None:
+                    return res
+            visitados_en_camino.remove(u)
+            camino.pop()
+            return None
+
+        return dfs(nodo_inicio)
 
 
 def _insertar_ordenado(lista: list[str], valor: str) -> None:

@@ -192,9 +192,39 @@ class PasoProduccionRespuesta(_EsquemaBase):
     nombre: str
 
 
+class CicloDetectadoRespuesta(_EsquemaBase):
+    """Secuencia cerrada representativa de un ciclo detectado (F3)."""
+
+    secuencia: list[str]
+
+
+class ProductoEntregaRespuesta(_EsquemaBase):
+    """Información de un producto solicitado en el plan de entrega (F3)."""
+
+    id: str
+    tipo: str
+    nombre: str
+    estado: str  # PLANIFICABLE | BLOQUEADO
+
+
 class OrdenProduccionRespuesta(_EsquemaBase):
-    """Respuesta exitosa de ``GET /api/v1/orden-produccion`` (grafo DAG)."""
+    """Diagnóstico global de planta de ``GET /api/v1/orden-produccion`` (F3)."""
 
     es_dag: bool
     orden: list[PasoProduccionRespuesta]
     total_pasos: int
+    ciclos: list[CicloDetectadoRespuesta]
+    elementos_bloqueados: list[str]
+    productos_bloqueados: list[str]
+    productos_planificables: list[str]
+
+
+class PlanEntregaRespuesta(_EsquemaBase):
+    """Respuesta de ``GET /api/v1/plan-entrega`` (F3)."""
+
+    productos: list[ProductoEntregaRespuesta]
+    es_planificable: bool
+    pasos: list[PasoProduccionRespuesta]
+    total_pasos: int
+    ciclos: list[CicloDetectadoRespuesta]
+    elementos_bloqueados: list[str]
