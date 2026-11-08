@@ -55,8 +55,8 @@ async function enlazar(
   tipoDestino: string,
   destino: string
 ): Promise<void> {
-  await page.getByRole('button', { name: /Enlazar Suministro/i }).click();
-  const modal = page.locator('.fixed').filter({ hasText: 'Enlazar Suministro' });
+  await page.getByRole('button', { name: /Crear relación/i }).click();
+  const modal = page.locator('.fixed').filter({ hasText: 'Crear relación' });
   await expect(modal).toBeVisible();
   const selectores = modal.locator('select');
   await selectores.nth(0).selectOption(tipoOrigen);
@@ -219,12 +219,12 @@ test.describe('Cadena de suministro y catálogo sobre la API real', () => {
   test('el alta de relación aparece en el grafo del backend', async ({ page }) => {
     const marca = `REL${Date.now().toString(36).toUpperCase()}`;
     const origen = `${marca}-PROV`;
-    const destino = `${marca}-PROD`;
+    const destino = `${marca}-INS`;
     await abrirAplicacion(page);
     await crearElemento(page, origen, 'Proveedor de relación', 'PROVEEDOR');
-    await crearElemento(page, destino, 'Producto de relación', 'PRODUCTO');
+    await crearElemento(page, destino, 'Suministro de relación', 'INSUMO');
 
-    await enlazar(page, 'PROVEEDOR', origen, 'PRODUCTO', destino);
+    await enlazar(page, 'PROVEEDOR', origen, 'INSUMO', destino);
     await expect(page.locator('.fixed')).toBeHidden();
 
     const grafo = await leerGrafo();
@@ -237,20 +237,20 @@ test.describe('Cadena de suministro y catálogo sobre la API real', () => {
   test('el duplicado de relación se muestra como error del backend', async ({ page }) => {
     const marca = `DUPREL${Date.now().toString(36).toUpperCase()}`;
     const origen = `${marca}-PROV`;
-    const destino = `${marca}-PROD`;
+    const destino = `${marca}-INS`;
     await abrirAplicacion(page);
     await crearElemento(page, origen, 'Proveedor duplicado', 'PROVEEDOR');
-    await crearElemento(page, destino, 'Producto duplicado', 'PRODUCTO');
+    await crearElemento(page, destino, 'Suministro duplicado', 'INSUMO');
 
-    await enlazar(page, 'PROVEEDOR', origen, 'PRODUCTO', destino);
+    await enlazar(page, 'PROVEEDOR', origen, 'INSUMO', destino);
     await expect(page.locator('.fixed')).toBeHidden();
 
-    await page.getByRole('button', { name: /Enlazar Suministro/i }).click();
-    const modal = page.locator('.fixed').filter({ hasText: 'Enlazar Suministro' });
+    await page.getByRole('button', { name: /Crear relación/i }).click();
+    const modal = page.locator('.fixed').filter({ hasText: 'Crear relación' });
     const selectores = modal.locator('select');
     await selectores.nth(0).selectOption('PROVEEDOR');
     await selectores.nth(1).selectOption(origen);
-    await selectores.nth(2).selectOption('PRODUCTO');
+    await selectores.nth(2).selectOption('INSUMO');
     await selectores.nth(3).selectOption(destino);
     await modal.getByRole('button', { name: /Crear dependencia/i }).click();
 

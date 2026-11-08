@@ -1,58 +1,50 @@
-import { describe, expect, it } from 'vitest';
-import { apiService, extraerReporteCiclo } from '../services/api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { apiClient, apiService } from '../services/api';
 
-describe('F3 · Contrato e integración del frontend con orden de producción', () => {
-  it('apiService expone el método obtenerOrdenProduccion', () => {
-    expect(apiService.obtenerOrdenProduccion).toBeDefined();
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('F3 · Contrato del cliente de API', () => {
+  it('expone obtenerOrdenProduccion y obtenerPlanEntrega', () => {
     expect(typeof apiService.obtenerOrdenProduccion).toBe('function');
-  });
-
-  it('extraerReporteCiclo extrae correctamente el ciclo y los elementos bloqueados ante 409 Conflict', () => {
-    const error409 = {
-      isAxiosError: true,
-      response: {
-        status: 409,
-        data: {
-          error: {
-            codigo: 'CONFIGURACION_CICLICA',
-            mensaje: 'El catálogo contiene dependencias circulares.',
-            detalles: [
-              { campo: 'ciclo', mensaje: 'INS-TABLERO -> PROC-ENSAMBLE -> INS-TABLERO' },
-              { campo: 'elementosBloqueados', mensaje: 'INS-TABLERO, PROC-ENSAMBLE, PROD-ESCRITORIO' }
-            ]
-          }
-        }
-      }
-    };
-
-    const reporte = extraerReporteCiclo(error409);
-    expect(reporte).not.toBeNull();
-    expect(reporte?.esDag).toBe(false);
-    expect(reporte?.mensaje).toBe('El catálogo contiene dependencias circulares.');
-    expect(reporte?.ciclo).toEqual(['INS-TABLERO', 'PROC-ENSAMBLE', 'INS-TABLERO']);
-    expect(reporte?.elementosBloqueados).toEqual(['INS-TABLERO', 'PROC-ENSAMBLE', 'PROD-ESCRITORIO']);
-  });
-
-  it('extraerReporteCiclo devuelve null para errores que no son de configuración cíclica', () => {
-    const error404 = {
-      isAxiosError: true,
-      response: {
-        status: 404,
-        data: {
-          error: {
-            codigo: 'ELEMENTO_NO_ENCONTRADO',
-            mensaje: 'No existe el elemento'
-          }
-        }
-      }
-    };
-
-    expect(extraerReporteCiclo(error404)).toBeNull();
-    expect(extraerReporteCiclo(new Error('Fallo de red'))).toBeNull();
-  });
-
-  it('apiService expone el método obtenerPlanEntrega', () => {
-    expect(apiService.obtenerPlanEntrega).toBeDefined();
     expect(typeof apiService.obtenerPlanEntrega).toBe('function');
+  });
+
+  it('obtenerOrdenProduccion consulta el diagnóstico global', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: {
+        esDag: true,
+        orden: [],
+        totalPasos: 0,
+        ciclos: [],
+        elementosBloqueados: [],
+        productosBloqueados: [],
+        productosPlanificables: []
+      }
+    });
+
+    await apiService.obtenerOrdenProduccion();
+
+    expect(get).toHaveBeenCalledWith('/orden-produccion');
+  });
+
+  it('obtenerPlanEntrega envía los productos como lista separada por comas', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: {
+        productos: [],
+        esPlanificable: true,
+        pasos: [],
+        totalPasos: 0,
+        ciclos: [],
+        elementosBloqueados: []
+      }
+    });
+
+    await apiService.obtenerPlanEntrega(['PROD-B', 'PROD-A']);
+
+    expect(get).toHaveBeenCalledWith('/plan-entrega', {
+      params: { productos: 'PROD-B,PROD-A' }
+    });
   });
 });

@@ -161,15 +161,16 @@ describe('Cliente de API contra el backend real', () => {
     expect(impacto.elemento.id).toBe('PROV-ACERO');
     expect(impacto.afectados.length).toBe(impacto.total);
     const idsAfectados = impacto.afectados.map((a) => a.id);
-    expect(idsAfectados).toContain('INS-BARRA');
-    expect(idsAfectados).toContain('INS-TORNILLO');
-    expect(idsAfectados).toContain('PROC-CORTE');
+    expect(idsAfectados).toContain('INS-PANEL-METAL');
+    expect(idsAfectados).toContain('INS-TUBO');
+    expect(idsAfectados).toContain('PROC-ENSAMBLE-MESA');
+    expect(idsAfectados).toContain('PROD-MESA-TRABAJO');
   });
 
   it('AC-F2-04 el cliente maneja un elemento sin afectados (total 0)', async () => {
-    const impacto = await apiService.obtenerImpacto('PROD-BANCO');
+    const impacto = await apiService.obtenerImpacto('PROD-MESA-TRABAJO');
 
-    expect(impacto.elemento.id).toBe('PROD-BANCO');
+    expect(impacto.elemento.id).toBe('PROD-MESA-TRABAJO');
     expect(impacto.total).toBe(0);
     expect(impacto.afectados).toEqual([]);
   });
@@ -179,7 +180,7 @@ describe('Cliente de API contra el backend real', () => {
       await apiService.obtenerImpacto('INEXISTENTE-123');
       throw new Error('Debería haber fallado con 404');
     } catch (error) {
-      expect(extraerMensajeError(error)).toContain('no existe');
+      expect(extraerMensajeError(error)).toContain('No existe');
     }
   });
 it('AC-F2-11 identificador mal formado devuelve error 422 IDENTIFICADOR_INVALIDO', async () => {
@@ -194,8 +195,15 @@ it('AC-F2-11 identificador mal formado devuelve error 422 IDENTIFICADOR_INVALIDO
   it('AC-F2-05b múltiples caminos hacia el mismo destino devuelven el elemento sin duplicados', async () => {
     const impacto = await apiService.obtenerImpacto('INS-TORNILLO');
     const ids = impacto.afectados.map((a) => a.id);
-    expect(ids.filter((id) => id === 'PROD-BANCO').length).toBe(1);
-    expect(ids).toEqual(['PROC-CORTE', 'PROD-BANCO', 'PROD-PANEL']);
+    expect(ids.filter((id) => id === 'PROD-ESCRITORIO').length).toBe(1);
+    expect(ids).toEqual([
+      'PROC-ENSAMBLE-ESCRITORIO',
+      'PROC-ENSAMBLE-MESA',
+      'PROC-ENSAMBLE-REPISA',
+      'PROD-ESCRITORIO',
+      'PROD-MESA-TRABAJO',
+      'PROD-REPISA'
+    ]);
   });
 
   it('AC-F2-13 los elementos afectados vienen ordenados de forma determinista por id', async () => {
@@ -210,5 +218,32 @@ it('AC-F2-11 identificador mal formado devuelve error 422 IDENTIFICADOR_INVALIDO
     for (const clave of clavesProhibidas) {
       expect(respuesta.data).not.toHaveProperty(clave);
     }
+  });
+});
+
+describe('F3 · Cliente de API contra el backend real', () => {
+  it('AC-F3-10 el cliente obtiene el diagnóstico global real de la planta', async () => {
+    const orden = await apiService.obtenerOrdenProduccion();
+
+    expect(orden.esDag).toBe(true);
+    expect(orden.orden).toHaveLength(orden.totalPasos);
+    expect(orden.orden.map((paso) => paso.paso)).toEqual(
+      Array.from({ length: orden.totalPasos }, (_, indice) => indice + 1)
+    );
+    expect(orden).toHaveProperty('ciclos');
+    expect(orden).toHaveProperty('elementosBloqueados');
+    expect(orden).toHaveProperty('productosBloqueados');
+    expect(orden).toHaveProperty('productosPlanificables');
+  });
+
+  it('AC-F3-10 el cliente obtiene el plan de entrega real de un producto', async () => {
+    const plan = await apiService.obtenerPlanEntrega(['PROD-ESCRITORIO']);
+
+    expect(plan.productos).toHaveLength(1);
+    expect(plan.productos[0].id).toBe('PROD-ESCRITORIO');
+    expect(plan.productos[0].estado).toBe('PLANIFICABLE');
+    expect(plan.esPlanificable).toBe(true);
+    expect(plan.pasos).toHaveLength(plan.totalPasos);
+    expect(plan.pasos[plan.pasos.length - 1].id).toBe('PROD-ESCRITORIO');
   });
 });
