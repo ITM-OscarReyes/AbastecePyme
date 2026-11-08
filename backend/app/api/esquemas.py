@@ -190,6 +190,7 @@ class PasoProduccionRespuesta(_EsquemaBase):
     id: str
     tipo: str
     nombre: str
+    descripcion: str | None
 
 
 class CicloDetectadoRespuesta(_EsquemaBase):
@@ -204,7 +205,8 @@ class ProductoEntregaRespuesta(_EsquemaBase):
     id: str
     tipo: str
     nombre: str
-    estado: str  # PLANIFICABLE | BLOQUEADO
+    descripcion: str | None
+    estado: str  # PLANIFICABLE | BLOQUEADO | INCOMPLETO
 
 
 class OrdenProduccionRespuesta(_EsquemaBase):
@@ -217,6 +219,8 @@ class OrdenProduccionRespuesta(_EsquemaBase):
     elementos_bloqueados: list[str]
     productos_bloqueados: list[str]
     productos_planificables: list[str]
+    elementos_incompletos: list[str]
+    productos_incompletos: list[str]
 
 
 class PlanEntregaRespuesta(_EsquemaBase):
@@ -228,3 +232,5 @@ class PlanEntregaRespuesta(_EsquemaBase):
     total_pasos: int
     ciclos: list[CicloDetectadoRespuesta]
     elementos_bloqueados: list[str]
+    elementos_incompletos: list[str]
+    productos_incompletos: list[str]

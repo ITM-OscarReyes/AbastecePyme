@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
 from app.dominio.errores import (
+    CadenaIncompleta,
     DependenciaDuplicada,
     DependenciaInvalida,
     DependenciaNoEncontrada,
@@ -49,7 +50,8 @@ class ProductoEntrega:
     id: str
     tipo: str
     nombre: str
-    estado: str  # "PLANIFICABLE" | "BLOQUEADO"
+    descripcion: str | None
+    estado: str  # "PLANIFICABLE" | "BLOQUEADO" | "INCOMPLETO"
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,8 @@ class ResultadoOrdenProduccion:
     elementos_bloqueados: list[str]
     productos_bloqueados: list[str]
     productos_planificables: list[str]
+    elementos_incompletos: list[str]
+    productos_incompletos: list[str]
 
 
 @dataclass(frozen=True)
@@ -75,6 +79,8 @@ class ResultadoPlanEntrega:
     total_pasos: int
     ciclos: list[CicloDetectado]
     elementos_bloqueados: list[str]
+    elementos_incompletos: list[str]
+    productos_incompletos: list[str]
 
 
 class Catalogo:
@@ -181,12 +187,110 @@ class Catalogo:
         self._quitar_arista(origen, destino)
         return Dependencia(origen=origen, destino=destino)
 
-    def eliminar_elemento(self, identificador: str) -> Elemento:
-        """Elimina un elemento y todas las relaciones que lo tocan.
+    def eliminar_elemento(
+        self, identificador: str, eliminar_cadena: bool = False
+    ) -> Elemento:
+        """Elimina un elemento respetando la integridad de la cadena.
 
-        La operación deja el grafo íntegro: no quedan aristas colgantes.
+        Por defecto, si la ausencia del elemento dejaría suministros sin origen,
+        procesos sin insumos o productos sin proceso, la operación se rechaza
+        con ``CadenaIncompleta`` y no modifica el catálogo.
+
+        Con ``eliminar_cadena=True`` se elimina el elemento y todos sus
+        descendientes alcanzables (la cadena que depende de él), de modo que no
+        queden elementos huérfanos por esta operación.
         """
         elemento = self.obtener_elemento(identificador)
+        if eliminar_cadena:
+            a_eliminar = self._alcanzables_hacia_adelante(identificador)
+        else:
+            incompletos_antes = self._calcular_incompletos()
+            elementos, entrada, salida = self._mapas_sin({identificador})
+            incompletos_despues = _calcular_incompletos(elementos, entrada, salida)
+            nuevos_incompletos = sorted(
+                incompletos_despues - incompletos_antes - {identificador}
+            )
+            if nuevos_incompletos:
+                raise CadenaIncompleta(
+                    "No se puede eliminar el elemento porque dejaría incompleta "
+                    "la cadena de dependencias.",
+                    [
+                        DetalleError(
+                            "elementosAfectados", ", ".join(nuevos_incompletos)
+                        ),
+                        DetalleError(
+                            "alternativas",
+                            "Puedes cambiar el abastecimiento de los elementos "
+                            "afectados o eliminar la cadena completa.",
+                        ),
+                    ],
+                )
+            a_eliminar = {identificador}
+
+        for id_borrar in sorted(a_eliminar):
+            self._eliminar_elemento_sin_validar(id_borrar)
+        return elemento
+
+    def elementos_incompletos(self) -> list[Elemento]:
+        """Elementos cuya cadena de abastecimiento está incompleta.
+
+        Un suministro está incompleto si no tiene proveedor ni proceso de
+        origen; un proceso, si no tiene insumos de entrada; un producto, si no
+        tiene proceso que lo genere. La incompletitud se propaga hacia adelante:
+        todo descendiente de un elemento incompleto también lo está.
+        """
+        return [
+            self._elementos[id_elem]
+            for id_elem in sorted(self._calcular_incompletos())
+        ]
+
+    def ids_elementos_incompletos(self) -> list[str]:
+        """Identificadores de los elementos con cadena incompleta."""
+        return sorted(self._calcular_incompletos())
+
+    def _calcular_incompletos(self) -> set[str]:
+        """Calcula la incompletitud sobre el estado actual del catálogo."""
+        return _calcular_incompletos(
+            self._elementos, self._adyacencia_entrada, self._adyacencia_salida
+        )
+
+    def _mapas_sin(
+        self, ids_a_quitar: set[str]
+    ) -> tuple[
+        dict[str, Elemento], dict[str, set[str]], dict[str, set[str]]
+    ]:
+        """Copia los mapas del grafo sin los elementos indicados."""
+        elementos = {
+            id_elem: elemento
+            for id_elem, elemento in self._elementos.items()
+            if id_elem not in ids_a_quitar
+        }
+        entrada = {
+            id_elem: {pred for pred in preds if pred not in ids_a_quitar}
+            for id_elem, preds in self._adyacencia_entrada.items()
+            if id_elem not in ids_a_quitar
+        }
+        salida = {
+            id_elem: {sucesor for sucesor in sucesores if sucesor not in ids_a_quitar}
+            for id_elem, sucesores in self._adyacencia_salida.items()
+            if id_elem not in ids_a_quitar
+        }
+        return elementos, entrada, salida
+
+    def _alcanzables_hacia_adelante(self, identificador: str) -> set[str]:
+        """Elemento indicado más todos sus descendientes alcanzables."""
+        alcanzables = {identificador}
+        pila = [identificador]
+        while pila:
+            actual = pila.pop()
+            for destino in self._adyacencia_salida[actual]:
+                if destino not in alcanzables:
+                    alcanzables.add(destino)
+                    pila.append(destino)
+        return alcanzables
+
+    def _eliminar_elemento_sin_validar(self, identificador: str) -> None:
+        """Quita el elemento y sus aristas, sin comprobar la cadena."""
         for origen in sorted(self._adyacencia_entrada[identificador]):
             self._quitar_arista(origen, identificador)
         for destino in sorted(self._adyacencia_salida[identificador]):
@@ -194,7 +298,6 @@ class Catalogo:
         del self._adyacencia_salida[identificador]
         del self._adyacencia_entrada[identificador]
         del self._elementos[identificador]
-        return elemento
 
     def obtener_elemento(self, identificador: str) -> Elemento:
         """Devuelve el elemento o lanza ``ElementoNoEncontrado`` (ERR-02)."""
@@ -361,18 +464,25 @@ class Catalogo:
         """Diagnóstico global de planta (F3).
 
         Evalúa la red completa como DAG:
-        - Si es acíclico, devuelve el orden completo (Kahn) desempatado por id,
-          con es_dag=True, total_pasos=|V|, ciclos=[], elementos_bloqueados=[],
-          productos_bloqueados=[] y todos los productos en productos_planificables.
+        - Si es acíclico, devuelve el orden (Kahn) desempatado por id de los
+          elementos con cadena completa, con es_dag=True, total_pasos=len(orden),
+          ciclos=[], elementos_bloqueados=[] y productos_bloqueados=[].
+        - Los elementos con cadena incompleta se reportan aparte en
+          ``elementos_incompletos`` y se excluyen del orden, de
+          ``productos_planificables`` y de ``productos_incompletos``.
         - Si contiene ciclos, devuelve es_dag=False, orden=[], total_pasos=0,
           ciclos con un ciclo representativo por SCC cíclica ordenados por el
           menor id de cada SCC, elementos_bloqueados (elementos de regiones
           cíclicas y sus alcanzables hacia adelante), productos_bloqueados y
-          productos_planificables (productos no bloqueados).
+          productos_planificables (productos ni bloqueados ni incompletos).
         """
         ids = sorted(self._elementos)
         todos_los_productos = sorted(
             [e.id for e in self._elementos.values() if e.tipo is TipoElemento.PRODUCTO]
+        )
+        incompletos = self._calcular_incompletos()
+        productos_incompletos = sorted(
+            pid for pid in todos_los_productos if pid in incompletos
         )
         if not ids:
             return ResultadoOrdenProduccion(
@@ -383,6 +493,8 @@ class Catalogo:
                 elementos_bloqueados=[],
                 productos_bloqueados=[],
                 productos_planificables=[],
+                elementos_incompletos=[],
+                productos_incompletos=[],
             )
 
         # Kahn sobre el grafo completo
@@ -398,14 +510,19 @@ class Catalogo:
                     _insertar_ordenado(listos, destino)
 
         if len(orden) == len(ids):
+            orden_completo = [elemento for elemento in orden if elemento.id not in incompletos]
             return ResultadoOrdenProduccion(
                 es_dag=True,
-                orden=orden,
-                total_pasos=len(orden),
+                orden=orden_completo,
+                total_pasos=len(orden_completo),
                 ciclos=[],
                 elementos_bloqueados=[],
                 productos_bloqueados=[],
-                productos_planificables=todos_los_productos,
+                productos_planificables=[
+                    pid for pid in todos_los_productos if pid not in incompletos
+                ],
+                elementos_incompletos=sorted(incompletos),
+                productos_incompletos=productos_incompletos,
             )
 
         # Hay ciclo en el grafo completo
@@ -443,7 +560,7 @@ class Catalogo:
         ])
         productos_planificables = sorted([
             pid for pid in todos_los_productos
-            if pid not in bloqueados_set
+            if pid not in bloqueados_set and pid not in incompletos
         ])
 
         return ResultadoOrdenProduccion(
@@ -454,6 +571,8 @@ class Catalogo:
             elementos_bloqueados=elementos_bloqueados,
             productos_bloqueados=productos_bloqueados,
             productos_planificables=productos_planificables,
+            elementos_incompletos=sorted(incompletos),
+            productos_incompletos=productos_incompletos,
         )
 
     def plan_entrega(self, productos_ids: list[str]) -> ResultadoPlanEntrega:
@@ -461,15 +580,18 @@ class Catalogo:
 
         - Calcula los ancestros de los productos solicitados (requisitos hacia atrás).
         - Si los requisitos de un producto tocan una SCC cíclica, queda BLOQUEADO.
-        - Si no tocan ningún ciclo, queda PLANIFICABLE.
+        - Si su cadena está incompleta, queda INCOMPLETO.
+        - Si no tocan ningún ciclo y la cadena está completa, queda PLANIFICABLE.
         - Los pasos contienen el orden topológico (Kahn) de la unión de requisitos
           de los productos PLANIFICABLES.
         - ciclos y elementos_bloqueados reportan únicamente los ciclos y bloqueos
-          dentro del subgrafo de los productos solicitados.
+          dentro del subgrafo de los productos solicitados. Los elementos con
+          cadena incompleta se reportan en ``elementos_incompletos``.
         """
         # Deduplicar preservando tipo producto
         p_ids = sorted(set(productos_ids))
         info_productos: list[ProductoEntrega] = []
+        incompletos = self._calcular_incompletos()
 
         # Determinar ancestros de cada producto
         ancestros_por_prod: dict[str, set[str]] = {}
@@ -507,12 +629,16 @@ class Catalogo:
 
         # Determinar estado de cada producto solicitado
         productos_planificables_ids: list[str] = []
+        productos_incompletos_ids: list[str] = []
         for pid in p_ids:
             elem = self._elementos[pid]
-            # Si el producto o alguno de sus ancestros está en una región cíclica
+            # Un ciclo tiene prioridad sobre una cadena incompleta.
             ancestros_prod = ancestros_por_prod[pid]
             if any(anc in nodos_scc_ciclicas_sub for anc in ancestros_prod):
                 estado = "BLOQUEADO"
+            elif pid in incompletos:
+                estado = "INCOMPLETO"
+                productos_incompletos_ids.append(pid)
             else:
                 estado = "PLANIFICABLE"
                 productos_planificables_ids.append(pid)
@@ -522,6 +648,7 @@ class Catalogo:
                     id=elem.id,
                     tipo=elem.tipo.value,
                     nombre=elem.nombre,
+                    descripcion=elem.descripcion,
                     estado=estado,
                 )
             )
@@ -545,6 +672,8 @@ class Catalogo:
             total_pasos=len(pasos),
             ciclos=ciclos_sub,
             elementos_bloqueados=sorted(bloqueados_en_subgrafo),
+            elementos_incompletos=sorted(subgrafo_total & incompletos),
+            productos_incompletos=productos_incompletos_ids,
         )
 
     def _obtener_ancestros(self, id_elemento: str) -> set[str]:
@@ -654,6 +783,56 @@ class Catalogo:
             return None
 
         return dfs(nodo_inicio)
+
+
+def _calcular_incompletos(
+    elementos: dict[str, Elemento],
+    adyacencia_entrada: dict[str, set[str]],
+    adyacencia_salida: dict[str, set[str]],
+) -> set[str]:
+    """Identifica los elementos con cadena incompleta y propaga hacia adelante.
+
+    La incompletitud local se define por tipo:
+    - ``INSUMO`` sin predecesor ``PROVEEDOR`` o ``PROCESO``.
+    - ``PROCESO`` sin predecesor ``INSUMO``.
+    - ``PRODUCTO`` sin predecesor ``PROCESO``.
+
+    Después se propaga: todo descendiente de un elemento incompleto también
+    queda incompleto, porque no puede prepararse sin su requisito.
+    """
+    incompletos: set[str] = set()
+    for id_elem, elemento in elementos.items():
+        predecesores = adyacencia_entrada[id_elem]
+        if elemento.tipo is TipoElemento.INSUMO:
+            tiene_origen = any(
+                elementos[pred].tipo in TIPOS_QUE_ASOCIAN_SUMINISTRO
+                for pred in predecesores
+            )
+            if not tiene_origen:
+                incompletos.add(id_elem)
+        elif elemento.tipo is TipoElemento.PROCESO:
+            tiene_insumo = any(
+                elementos[pred].tipo is TipoElemento.INSUMO
+                for pred in predecesores
+            )
+            if not tiene_insumo:
+                incompletos.add(id_elem)
+        elif elemento.tipo is TipoElemento.PRODUCTO:
+            tiene_proceso = any(
+                elementos[pred].tipo is TipoElemento.PROCESO
+                for pred in predecesores
+            )
+            if not tiene_proceso:
+                incompletos.add(id_elem)
+
+    pila = list(incompletos)
+    while pila:
+        actual = pila.pop()
+        for destino in adyacencia_salida[actual]:
+            if destino not in incompletos:
+                incompletos.add(destino)
+                pila.append(destino)
+    return incompletos
 
 
 def _insertar_ordenado(lista: list[str], valor: str) -> None:

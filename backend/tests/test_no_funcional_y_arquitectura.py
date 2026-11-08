@@ -92,25 +92,44 @@ def test_ac_f1_19_los_datos_de_prueba_son_sinteticos_y_del_dominio() -> None:
     """AC-F1-19 / RNF-F1-07: sin datos de personas ni empresas reales."""
     from app.infraestructura.datos_demostracion import _DEPENDENCIAS, _ELEMENTOS
 
-    elementos = {id_valor for id_valor, _, _, _, _ in _ELEMENTOS}
+    elementos = {id_valor for id_valor, _, _, _, _, _ in _ELEMENTOS}
     assert elementos == {
-        "PROV-ACERO",
-        "INS-BARRA",
-        "INS-TORNILLO",
-        "PROC-CORTE",
-        "PROD-PANEL",
-        "PROD-BANCO",
         "PROV-MADERA",
+        "PROV-FERRETERIA",
+        "PROV-ACABADOS",
+        "PROV-ACERO",
         "INS-TABLERO",
+        "INS-LISTON",
+        "INS-LIJA",
         "INS-BARNIZ",
-        "PROC-ENSAMBLE",
+        "INS-COLA",
+        "INS-TORNILLO",
+        "INS-TUERCA",
+        "INS-ARANDELA",
+        "INS-BISAGRA",
+        "INS-CORREDERA",
+        "INS-TIRADOR",
+        "INS-PANEL-METAL",
+        "INS-TUBO",
+        "INS-PIEZA-CORTADA",
+        "INS-PIEZA-ACABADA",
+        "PROC-CORTE-MADERA",
+        "PROC-ACABADO",
+        "PROC-ENSAMBLE-ESCRITORIO",
+        "PROC-ENSAMBLE-REPISA",
+        "PROC-ENSAMBLE-MESA",
         "PROD-ESCRITORIO",
+        "PROD-REPISA",
+        "PROD-MESA-TRABAJO",
     }
+    assert len(elementos) == 27
+    assert len(_DEPENDENCIAS) == 37
     for origen, destino in _DEPENDENCIAS:
         assert origen in elementos
         assert destino in elementos
-    tipos = {tipo for _, tipo, _, _, _ in _ELEMENTOS}
+    tipos = {tipo for _, tipo, _, _, _, _ in _ELEMENTOS}
     assert tipos <= {"PROVEEDOR", "INSUMO", "PRODUCTO", "PROCESO"}
+    assert all(descripcion for _, _, _, descripcion, _, _ in _ELEMENTOS)
 
 
 def test_ac_f1_20_las_operaciones_responden_en_tiempo_lineal(cliente_vacio: TestClient) -> None:

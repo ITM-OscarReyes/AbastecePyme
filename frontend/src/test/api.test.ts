@@ -18,9 +18,9 @@ const elementoNuevo = {
 };
 
 const elementoDestino = {
-  id: `${marca}-PRODUCTO`,
-  tipo: 'PRODUCTO' as const,
-  nombre: 'Producto de prueba de interfaz'
+  id: `${marca}-PROCESO`,
+  tipo: 'PROCESO' as const,
+  nombre: 'Proceso de prueba de interfaz'
 };
 
 const proveedorNuevo = {

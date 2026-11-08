@@ -104,15 +104,24 @@ class ActualizarElemento:
 
 
 class EliminarElemento:
-    """Elimina un elemento y, en cascada, sus relaciones."""
+    """Elimina un elemento y, en cascada, sus relaciones.
+
+    Por defecto la operación se rechaza si dejaría una cadena incompleta. Con
+    ``eliminar_cadena=True`` se elimina también la cadena que depende del
+    elemento.
+    """
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
 
-    def ejecutar(self, identificador: object) -> Elemento:
+    def ejecutar(
+        self, identificador: object, eliminar_cadena: bool = False
+    ) -> Elemento:
         id_normalizado = validar_identificador_consulta(identificador, "id")
         catalogo = self._repositorio.obtener()
-        elemento = catalogo.eliminar_elemento(id_normalizado)
+        elemento = catalogo.eliminar_elemento(
+            id_normalizado, eliminar_cadena=eliminar_cadena
+        )
         self._repositorio.guardar(catalogo)
         return elemento
 

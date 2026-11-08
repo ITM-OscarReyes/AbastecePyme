@@ -110,7 +110,8 @@ def test_ac_f3_01b_diagnostico_global_grafo_vacio() -> None:
     assert cuerpo["productosPlanificables"] == []
 
 
-def test_ac_f3_01c_elementos_aislados() -> None:
+def test_ac_f3_01c_elementos_aislados_quedan_incompletos() -> None:
+    """Un producto sin proceso no puede planificarse y se reporta aparte."""
     catalogo = Catalogo()
     for id_valor in ("PROD-A", "PROD-B", "PROD-C"):
         catalogo.registrar_elemento(Elemento.crear(id_valor, "PRODUCTO", f"Prod {id_valor}"))
@@ -120,9 +121,11 @@ def test_ac_f3_01c_elementos_aislados() -> None:
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
     assert cuerpo["esDag"] is True
-    assert cuerpo["totalPasos"] == 3
-    assert [p["id"] for p in cuerpo["orden"]] == ["PROD-A", "PROD-B", "PROD-C"]
-    assert cuerpo["productosPlanificables"] == ["PROD-A", "PROD-B", "PROD-C"]
+    assert cuerpo["totalPasos"] == 0
+    assert cuerpo["orden"] == []
+    assert cuerpo["productosPlanificables"] == []
+    assert cuerpo["elementosIncompletos"] == ["PROD-A", "PROD-B", "PROD-C"]
+    assert cuerpo["productosIncompletos"] == ["PROD-A", "PROD-B", "PROD-C"]
 
 
 def test_ac_f3_02_determinismo_estricto_diez_llamadas() -> None:
@@ -192,7 +195,13 @@ def test_ac_f3_05_plan_entrega_producto_planificable() -> None:
     cuerpo = respuesta.json()
     assert cuerpo["esPlanificable"] is True
     assert cuerpo["productos"] == [
-        {"id": "PROD-PANEL", "tipo": "PRODUCTO", "nombre": "Panel de montaje", "estado": "PLANIFICABLE"}
+        {
+            "id": "PROD-PANEL",
+            "tipo": "PRODUCTO",
+            "nombre": "Panel de montaje",
+            "descripcion": None,
+            "estado": "PLANIFICABLE",
+        }
     ]
     assert [p["id"] for p in cuerpo["pasos"]] == [
         "PROV-ACERO",
@@ -206,7 +215,7 @@ def test_ac_f3_05_plan_entrega_producto_planificable() -> None:
     assert cuerpo["elementosBloqueados"] == []
 
 
-def test_ac_f3_05b_plan_entrega_producto_aislado() -> None:
+def test_ac_f3_05b_plan_entrega_producto_aislado_queda_incompleto() -> None:
     catalogo = Catalogo()
     catalogo.registrar_elemento(Elemento.crear("PROD-SOLO", "PRODUCTO", "Producto Solo"))
     cliente = TestClient(crear_aplicacion(catalogo))
@@ -214,9 +223,12 @@ def test_ac_f3_05b_plan_entrega_producto_aislado() -> None:
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["esPlanificable"] is True
-    assert cuerpo["totalPasos"] == 1
-    assert cuerpo["pasos"][0]["id"] == "PROD-SOLO"
+    assert cuerpo["esPlanificable"] is False
+    assert cuerpo["totalPasos"] == 0
+    assert cuerpo["pasos"] == []
+    assert cuerpo["productos"][0]["estado"] == "INCOMPLETO"
+    assert cuerpo["productosIncompletos"] == ["PROD-SOLO"]
+    assert cuerpo["elementosIncompletos"] == ["PROD-SOLO"]
 
 
 def test_ac_f3_05c_plan_entrega_multiples_productos() -> None:
@@ -246,7 +258,13 @@ def test_ac_f3_06_plan_entrega_producto_bloqueado() -> None:
     cuerpo = respuesta.json()
     assert cuerpo["esPlanificable"] is False
     assert cuerpo["productos"] == [
-        {"id": "PROD-PANEL", "tipo": "PRODUCTO", "nombre": "Panel de montaje", "estado": "BLOQUEADO"}
+        {
+            "id": "PROD-PANEL",
+            "tipo": "PRODUCTO",
+            "nombre": "Panel de montaje",
+            "descripcion": None,
+            "estado": "BLOQUEADO",
+        }
     ]
     assert cuerpo["pasos"] == []
     assert cuerpo["totalPasos"] == 0

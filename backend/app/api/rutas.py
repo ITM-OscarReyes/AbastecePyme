@@ -158,10 +158,16 @@ def crear_enrutador() -> APIRouter:
         return _elemento_a_respuesta(elemento)
 
     @enrutador.delete("/elementos/{id}", status_code=status.HTTP_204_NO_CONTENT)
-    def eliminar_elemento(id: str, peticion: Request) -> Response:
-        """Elimina el elemento y sus relaciones, sin dejar aristas colgantes."""
+    def eliminar_elemento(
+        id: str, peticion: Request, eliminar_cadena: bool = False
+    ) -> Response:
+        """Elimina el elemento y sus relaciones, sin dejar aristas colgantes.
+
+        Si la ausencia del elemento dejaría una cadena incompleta responde 409.
+        Con ``eliminarCadena=true`` elimina también la cadena dependiente.
+        """
         caso_de_uso = EliminarElemento(obtener_repositorio(peticion))
-        caso_de_uso.ejecutar(id)
+        caso_de_uso.ejecutar(id, eliminar_cadena=eliminar_cadena)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @enrutador.post(
@@ -291,6 +297,7 @@ def crear_enrutador() -> APIRouter:
                 id=elemento.id,
                 tipo=elemento.tipo.value,
                 nombre=elemento.nombre,
+                descripcion=elemento.descripcion,
             )
             for indice, elemento in enumerate(resultado.orden)
         ]
@@ -306,6 +313,8 @@ def crear_enrutador() -> APIRouter:
             elementos_bloqueados=resultado.elementos_bloqueados,
             productos_bloqueados=resultado.productos_bloqueados,
             productos_planificables=resultado.productos_planificables,
+            elementos_incompletos=resultado.elementos_incompletos,
+            productos_incompletos=resultado.productos_incompletos,
         )
 
     @enrutador.get("/plan-entrega", response_model=PlanEntregaRespuesta)
@@ -325,6 +334,7 @@ def crear_enrutador() -> APIRouter:
                 id=prod.id,
                 tipo=prod.tipo,
                 nombre=prod.nombre,
+                descripcion=prod.descripcion,
                 estado=prod.estado,
             )
             for prod in resultado.productos
@@ -335,6 +345,7 @@ def crear_enrutador() -> APIRouter:
                 id=elemento.id,
                 tipo=elemento.tipo.value,
                 nombre=elemento.nombre,
+                descripcion=elemento.descripcion,
             )
             for indice, elemento in enumerate(resultado.pasos)
         ]
@@ -349,6 +360,8 @@ def crear_enrutador() -> APIRouter:
             total_pasos=resultado.total_pasos,
             ciclos=ciclos_respuesta,
             elementos_bloqueados=resultado.elementos_bloqueados,
+            elementos_incompletos=resultado.elementos_incompletos,
+            productos_incompletos=resultado.productos_incompletos,
         )
 
     return enrutador

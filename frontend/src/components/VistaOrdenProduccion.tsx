@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   ListOrdered,
   AlertTriangle,
@@ -10,7 +10,12 @@ import {
   ShieldAlert,
   Sparkles,
   PackageCheck,
-  Truck
+  Truck,
+  Search,
+  History,
+  X,
+  Layers,
+  Network
 } from 'lucide-react';
 import { apiService, extraerMensajeError, extraerReporteCiclo } from '../services/api';
 import type {
@@ -24,12 +29,12 @@ import { obtenerCodigoSku } from '../utils/sku';
 
 interface VistaOrdenProduccionProps {
   onIrACatalogo?: () => void;
-  onIrARed?: () => void;
+  onIrARed?: (nodoId?: string) => void;
 }
 
 export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
   onIrACatalogo: _onIrACatalogo,
-  onIrARed: _onIrARed
+  onIrARed
 }) => {
   // Pestaña activa dentro de la vista: Plan de Entrega o Diagnóstico Global
   const [subVista, setSubVista] = useState<'plan' | 'diagnostico'>('plan');
@@ -51,6 +56,48 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
   const [cargandoPlan, setCargandoPlan] = useState<boolean>(false);
   const [planData, setPlanData] = useState<PlanEntregaRespuesta | null>(null);
   const [errorPlan, setErrorPlan] = useState<string | null>(null);
+
+  // Buscador y sugerencias interactivas para productos
+  const [terminoBusqueda, setTerminoBusqueda] = useState<string>('');
+  const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState<boolean>(false);
+  const contenedorBusquedaRef = useRef<HTMLDivElement>(null);
+
+  // Historial de los últimos 10 pedidos/entregas consultados (persiste en localStorage)
+  const CLAVE_HISTORIAL_PLAN = 'abastecepyme.historialPlanEntrega';
+  const [historialPlan, setHistorialPlan] = useState<Array<{ id: string; fecha: string; productos: Array<{ id: string; nombre: string }> }>>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const data = window.localStorage.getItem(CLAVE_HISTORIAL_PLAN);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const registrarEnHistorial = useCallback((prodsIds: string[], listaProds: Elemento[]) => {
+    if (prodsIds.length === 0) return;
+    const prodsInfo = prodsIds.map((pid) => {
+      const p = listaProds.find((el) => el.id === pid);
+      return { id: pid, nombre: p ? p.nombre : pid };
+    });
+
+    const entrada = {
+      id: prodsIds.slice().sort().join('+'),
+      fecha: new Date().toISOString(),
+      productos: prodsInfo
+    };
+
+    setHistorialPlan((prev) => {
+      const filtrado = prev.filter((item) => item.id !== entrada.id);
+      const actualizado = [entrada, ...filtrado].slice(0, 10);
+      try {
+        window.localStorage.setItem(CLAVE_HISTORIAL_PLAN, JSON.stringify(actualizado));
+      } catch {
+        // Ignorar si falla storage
+      }
+      return actualizado;
+    });
+  }, []);
 
   // 1. Cargar Diagnóstico Global de Planta
   const cargarDiagnostico = useCallback(async () => {
@@ -91,12 +138,13 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
     try {
       const res = await apiService.obtenerPlanEntrega(ids);
       setPlanData(res);
+      registrarEnHistorial(ids, productosDisponibles);
     } catch (err: unknown) {
       setErrorPlan(extraerMensajeError(err));
     } finally {
       setCargandoPlan(false);
     }
-  }, []);
+  }, [productosDisponibles, registrarEnHistorial]);
 
   useEffect(() => {
     cargarDiagnostico();
@@ -109,6 +157,20 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
     }
   }, [productosSeleccionados, consultarPlanEntrega]);
 
+  // Click fuera para cerrar el menú de sugerencias
+  useEffect(() => {
+    const clickAfuera = (event: MouseEvent) => {
+      if (
+        contenedorBusquedaRef.current &&
+        !contenedorBusquedaRef.current.contains(event.target as Node)
+      ) {
+        setSugerenciasAbiertas(false);
+      }
+    };
+    document.addEventListener('mousedown', clickAfuera);
+    return () => document.removeEventListener('mousedown', clickAfuera);
+  }, []);
+
   const toggleSeleccionProducto = (id: string) => {
     setProductosSeleccionados((prev) => {
       if (prev.includes(id)) {
@@ -117,6 +179,23 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
       return [...prev, id];
     });
   };
+
+  const seleccionarSoloProducto = (id: string) => {
+    setProductosSeleccionados([id]);
+    setSugerenciasAbiertas(false);
+    setTerminoBusqueda('');
+  };
+
+  // Sugerencias filtradas en tiempo real para el buscador de productos
+  const sugerenciasProductos = useMemo(() => {
+    const q = terminoBusqueda.trim().toLowerCase();
+    if (!q) return productosDisponibles;
+    return productosDisponibles.filter((p) => {
+      const coincideId = p.id.toLowerCase().includes(q) || obtenerCodigoSku(p.id).toLowerCase().includes(q);
+      const coincideNombre = p.nombre.toLowerCase().includes(q);
+      return coincideId || coincideNombre;
+    });
+  }, [productosDisponibles, terminoBusqueda]);
 
   const pasosFiltradosDiagnostico = useMemo(() => {
     if (!diagnosticoData?.orden) return [];
@@ -200,38 +279,167 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
       {/* SUBVISTA 1: PLAN DE ENTREGA */}
       {subVista === 'plan' && (
         <div className="space-y-6">
-          {/* Selector de productos */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Truck size={16} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Seleccionar productos para entrega</span>
-              </h3>
-              <span className="text-[11px] text-slate-500">
-                {productosSeleccionados.length} seleccionados
-              </span>
+          {/* Buscador de productos, Selección y Acceso rápido a Historial */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Truck size={16} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Configurar pedido / entrega</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Busca o selecciona uno o más productos terminados para calcular su secuencia integral de abastecimiento.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  {productosSeleccionados.length} producto(s) en pedido
+                </span>
+                {productosSeleccionados.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setProductosSeleccionados([])}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md cursor-pointer transition-colors"
+                    title="Limpiar selección"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1">
-              {productosDisponibles.map((prod) => {
-                const seleccionada = productosSeleccionados.includes(prod.id);
-                return (
+            {/* Input con Buscador Inteligente similar a Análisis de Impacto */}
+            <div ref={contenedorBusquedaRef} className="relative">
+              <div className="relative flex items-center">
+                <Search size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={terminoBusqueda}
+                  onChange={(e) => {
+                    setTerminoBusqueda(e.target.value);
+                    setSugerenciasAbiertas(true);
+                  }}
+                  onFocus={() => setSugerenciasAbiertas(true)}
+                  placeholder="Buscar producto por nombre o SKU (ej. Mesa, Escritorio, Repisa)..."
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                />
+                {terminoBusqueda && (
                   <button
-                    key={prod.id}
                     type="button"
-                    onClick={() => toggleSeleccionProducto(prod.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                      seleccionada
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                        : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                    }`}
+                    onClick={() => {
+                      setTerminoBusqueda('');
+                      setSugerenciasAbiertas(false);
+                    }}
+                    className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   >
-                    <span>{prod.nombre}</span>
-                    <span className="text-[10px] opacity-75 font-mono">({prod.id})</span>
+                    <X size={14} />
                   </button>
-                );
-              })}
+                )}
+              </div>
+
+              {/* Menú flotante de sugerencias */}
+              {sugerenciasAbiertas && sugerenciasProductos.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden py-1">
+                  {sugerenciasProductos.map((prod) => {
+                    const yaEstaSeleccionado = productosSeleccionados.includes(prod.id);
+                    return (
+                      <div
+                        key={prod.id}
+                        className="px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-between text-xs transition-colors"
+                      >
+                        <div className="min-w-0 pr-3">
+                          <p className="font-bold text-slate-900 dark:text-white truncate">{prod.nombre}</p>
+                          <p className="text-[10px] text-slate-500 font-mono">
+                            {prod.id} {obtenerCodigoSku(prod.id) ? `• ${obtenerCodigoSku(prod.id)}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleSeleccionProducto(prod.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border cursor-pointer transition-all ${
+                              yaEstaSeleccionado
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-500'
+                            }`}
+                          >
+                            {yaEstaSeleccionado ? 'Quitar del pedido' : '+ Agregar al pedido'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => seleccionarSoloProducto(prod.id)}
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[11px] font-medium cursor-pointer"
+                            title="Evaluar únicamente este producto"
+                          >
+                            Solo este
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* Chips de productos con botón de selección rápida */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Catálogo de productos disponibles:</span>
+              <div className="flex flex-wrap gap-2">
+                {productosDisponibles.map((prod) => {
+                  const seleccionada = productosSeleccionados.includes(prod.id);
+                  return (
+                    <button
+                      key={prod.id}
+                      type="button"
+                      onClick={() => toggleSeleccionProducto(prod.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        seleccionada
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>{prod.nombre}</span>
+                      <span className="text-[10px] opacity-75 font-mono">({prod.id})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Historial de los últimos 10 pedidos consultados */}
+            {historialPlan.length > 0 && (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
+                  <History size={13} className="text-slate-400" />
+                  <span>Historial de pedidos recientes (últimos 10):</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {historialPlan.map((h, idx) => {
+                    const idsCombinados = h.productos.map((p) => p.id);
+                    const esLaActual =
+                      idsCombinados.length === productosSeleccionados.length &&
+                      idsCombinados.every((pid) => productosSeleccionados.includes(pid));
+
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setProductosSeleccionados(idsCombinados)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border flex items-center gap-1 cursor-pointer transition-all ${
+                          esLaActual
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                            : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                        title={idsCombinados.join(', ')}
+                      >
+                        <Layers size={11} className="opacity-70" />
+                        <span>{h.productos.map((p) => p.nombre).join(' + ')}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {cargandoPlan && (
@@ -260,25 +468,46 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                 {planData.productos.map((prod) => (
                   <div
                     key={prod.id}
-                    className={`p-4 rounded-xl border flex items-center justify-between ${
+                    className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
                       prod.estado === 'PLANIFICABLE'
                         ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
                         : 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/60'
                     }`}
                   >
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{prod.nombre}</h4>
-                      <span className="text-[10px] text-slate-500 font-mono">{prod.id}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">{prod.nombre}</h4>
+                        <span className="text-[10px] text-slate-500 font-mono">{prod.id}</span>
+                      </div>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase shrink-0 ${
+                          prod.estado === 'PLANIFICABLE'
+                            ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300'
+                            : 'bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300'
+                        }`}
+                      >
+                        {prod.estado === 'PLANIFICABLE' ? 'Planificable' : 'Bloqueado'}
+                      </span>
                     </div>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                        prod.estado === 'PLANIFICABLE'
-                          ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300'
-                      }`}
-                    >
-                      {prod.estado === 'PLANIFICABLE' ? 'Planificable' : 'Bloqueado'}
-                    </span>
+
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => onIrARed?.(prod.id)}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 cursor-pointer transition-colors"
+                      >
+                        <Network size={13} />
+                        <span>Ver en el mapa</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleSeleccionProducto(prod.id)}
+                        className="text-[10px] text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                        title="Quitar este producto del cálculo"
+                      >
+                        Quitar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

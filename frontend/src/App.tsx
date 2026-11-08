@@ -504,56 +504,60 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 min-h-0 overflow-y-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Proveedores</span>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{proveedoresCount}</p>
-              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Suministro externo</span>
+      <main
+        className={`flex-1 min-h-0 w-full p-4 sm:p-6 lg:p-8 overflow-y-auto ${
+          tabActiva === 'red' ? 'flex flex-col gap-4 sm:gap-6' : 'space-y-6'
+        }`}
+      >
+        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Proveedores</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{proveedoresCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-tight mt-0.5">Suministro externo</span>
             </div>
-            <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
-              <Box size={22} />
-            </div>
-          </div>
-
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Materias & Suministros</span>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{insumosCount}</p>
-              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Materiales base</span>
-            </div>
-            <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
-              <Layers size={22} />
+            <div className="shrink-0 p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
+              <Box className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
 
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Procesos de Planta</span>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{procesosCount}</p>
-              <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Estaciones de trabajo</span>
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Materias & Suministros</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{insumosCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-medium leading-tight mt-0.5">Materiales base</span>
             </div>
-            <div className="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-500/20">
-              <GitCommitHorizontal size={22} />
+            <div className="shrink-0 p-2 sm:p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
 
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Productos Finales</span>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{productosCount}</p>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Despacho a cliente</span>
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Procesos de Planta</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{procesosCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-purple-600 dark:text-purple-400 font-medium leading-tight mt-0.5">Estaciones de trabajo</span>
             </div>
-            <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
-              <Sparkles size={22} />
+            <div className="shrink-0 p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-500/20">
+              <GitCommitHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+          </div>
+
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Productos Finales</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{productosCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight mt-0.5">Despacho a cliente</span>
+            </div>
+            <div className="shrink-0 p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
         </div>
 
         {tabActiva === 'red' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[440px] lg:min-h-0 h-full">
-            <div className="lg:col-span-2 relative h-full min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:flex-1 lg:min-h-0">
+            <div className="lg:col-span-2 relative h-[360px] sm:h-[440px] lg:h-full lg:min-h-0 min-w-0">
               <GraphCanvas
                 elementos={grafo.elementos}
                 dependencias={grafo.dependencias}
@@ -564,7 +568,7 @@ export const App: React.FC = () => {
               />
             </div>
 
-            <div className="h-full min-h-0 space-y-4 overflow-y-auto pr-1">
+            <div className="min-w-0 max-h-[440px] lg:max-h-none lg:h-full lg:min-h-0 space-y-4 overflow-y-auto pr-1">
               {suministrosEnAlerta.length > 0 && (
                 <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3.5 text-xs text-red-900 dark:text-red-200 flex items-start gap-2.5 shadow-sm">
                   <AlertOctagon size={16} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
@@ -630,7 +634,12 @@ export const App: React.FC = () => {
         {tabActiva === 'produccion' && (
           <VistaOrdenProduccion
             onIrACatalogo={() => setTabActiva('catalogo')}
-            onIrARed={() => setTabActiva('red')}
+            onIrARed={(nodoId) => {
+              setTabActiva('red');
+              if (nodoId) {
+                void handleSelectNode(nodoId);
+              }
+            }}
           />
         )}
       </main>

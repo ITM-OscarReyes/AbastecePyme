@@ -53,12 +53,51 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [esPantallaCompleta, setEsPantallaCompleta] = useState<boolean>(false);
+  const [filtroProductoId, setFiltroProductoId] = useState<string>('TODOS');
+
+  // Obtener productos disponibles para el filtro interactivo
+  const productosDisponibles = elementos.filter((e) => e.tipo === 'PRODUCTO');
 
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Calcular qué nodos pertenecen a la línea del producto seleccionado si hay filtro activo
+    let nodosLineaFiltro: Set<string> | null = null;
+    if (filtroProductoId !== 'TODOS') {
+      nodosLineaFiltro = new Set([filtroProductoId]);
+      let huboCambios = true;
+      while (huboCambios) {
+        huboCambios = false;
+        for (const dep of dependencias) {
+          if (nodosLineaFiltro.has(dep.destino) && !nodosLineaFiltro.has(dep.origen)) {
+            nodosLineaFiltro.add(dep.origen);
+            huboCambios = true;
+          }
+        }
+      }
+    }
+
+    // Clasificación de prioridad de carril (Línea Metal arriba, Ferretería común centro, Línea Madera abajo)
+    const obtenerPrioridadFamilia = (id: string): number => {
+      // Prioridad 1 (arriba): Línea Acero / Metalmecánica
+      if (id.includes('ACERO') || id.includes('METAL') || id.includes('TUBO') || id.includes('MESA')) return 1;
+      // Prioridad 2 (centro): Ferretería común transversal
+      if (id.includes('FERRETERIA') || id.includes('TORNILLO') || id.includes('TUERCA') || id.includes('ARANDELA')) return 2;
+      // Prioridad 3 (abajo): Línea Madera y Carpintería
+      if (id.includes('MADERA') || id.includes('TABLERO') || id.includes('LISTON') || id.includes('ACABADO') || id.includes('LIJA') || id.includes('BARNIZ') || id.includes('PIEZA') || id.includes('ESCRITORIO') || id.includes('REPISA') || id.includes('COLA') || id.includes('BISAGRA') || id.includes('CORREDERA') || id.includes('TIRADOR')) return 3;
+      return 4;
+    };
+
+    // Ordenar elementos respetando familias afines para que Dagre no mezcle las ramas
+    const elementosOrdenados = [...elementos].sort((a, b) => {
+      const famA = obtenerPrioridadFamilia(a.id);
+      const famB = obtenerPrioridadFamilia(b.id);
+      if (famA !== famB) return famA - famB;
+      return a.id.localeCompare(b.id);
+    });
+
     // Paleta visual empresarial de alto contraste calibrada para Modo Claro y Modo Oscuro
-    const cyNodes = elementos.map(e => {
+    const cyNodes = elementosOrdenados.map((e) => {
       let colorFondo: string;
       let colorBorde: string;
       let colorTexto: string;
@@ -104,6 +143,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
       const esSeleccionado = nodoSeleccionadoId === e.id;
       const esAfectado = nodosAfectadosIds.includes(e.id);
+      const perteneceAlFiltro = !nodosLineaFiltro || nodosLineaFiltro.has(e.id);
+      const opacidad = perteneceAlFiltro ? 1 : (esModoOscuro ? 0.2 : 0.25);
 
       if (esSeleccionado) {
         colorBorde = esModoOscuro ? '#38bdf8' : '#0284c7';
@@ -128,16 +169,25 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           colorFondo,
           colorBorde,
           colorTexto,
-          borderWidth
+          borderWidth,
+          opacidad
         }
       };
     });
 
-    // Modelado de aristas dirigidas de abastecimiento
+    // Modelado de aristas dirigidas de abastecimiento con pesos calibrados
     const cyEdges = dependencias.map((d, index) => {
       const aristaEnCadenaImpacto =
         (nodoSeleccionadoId === d.origen && nodosAfectadosIds.includes(d.destino)) ||
         (nodosAfectadosIds.includes(d.origen) && nodosAfectadosIds.includes(d.destino));
+
+      const perteneceAlFiltro =
+        !nodosLineaFiltro || (nodosLineaFiltro.has(d.origen) && nodosLineaFiltro.has(d.destino));
+      const opacidad = perteneceAlFiltro ? 1 : (esModoOscuro ? 0.15 : 0.2);
+
+      // Asignar menor peso a aristas de ferretería común para que no jalen nodos principales al medio
+      const esFerreteriaComun = d.origen.includes('FERRETERIA') || d.origen.includes('TORNILLO');
+      const pesoArista = esFerreteriaComun ? 1 : 10;
 
       return {
         data: {
@@ -145,6 +195,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           source: d.origen,
           target: d.destino,
           label: 'habilita',
+          weight: pesoArista,
+          opacidad,
           lineColor: aristaEnCadenaImpacto
             ? '#ef4444'
             : esModoOscuro
@@ -264,7 +316,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode, esModoOscuro]);
+  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode, esModoOscuro, filtroProductoId]);
 
   const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
@@ -366,28 +418,48 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       {/* Fondo Blueprint */}
       <div ref={containerRef} className="w-full h-full absolute inset-0 graph-canvas-bg" />
 
-      {/* Leyenda y Estado Superior */}
-      <div className="absolute top-3 left-3 z-10 bg-white/95 dark:bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex flex-wrap items-center gap-3 shadow-md dark:shadow-xl">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-blue-100 dark:bg-blue-600 border border-blue-600 dark:border-blue-400 inline-block shadow-sm"></span>
-          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proveedor</span>
+      {/* Leyenda y Selector de Línea de Producto */}
+      <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-2">
+        <div className="bg-white/95 dark:bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex flex-wrap items-center gap-3 shadow-md dark:shadow-xl">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-blue-100 dark:bg-blue-600 border border-blue-600 dark:border-blue-400 inline-block shadow-sm"></span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proveedor</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-amber-100 dark:bg-amber-600 border border-amber-600 dark:border-amber-400 inline-block shadow-sm"></span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Suministro</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-purple-100 dark:bg-purple-600 border border-purple-600 dark:border-purple-400 inline-block shadow-sm"></span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proceso</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-emerald-100 dark:bg-emerald-600 border border-emerald-600 dark:border-emerald-400 inline-block shadow-sm"></span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Producto</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-white dark:bg-slate-800 border-2 border-orange-500 inline-block shadow-sm"></span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Stock bajo</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-amber-100 dark:bg-amber-600 border border-amber-600 dark:border-amber-400 inline-block shadow-sm"></span>
-          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Suministro</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-purple-100 dark:bg-purple-600 border border-purple-600 dark:border-purple-400 inline-block shadow-sm"></span>
-          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proceso</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-emerald-100 dark:bg-emerald-600 border border-emerald-600 dark:border-emerald-400 inline-block shadow-sm"></span>
-          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Producto</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-md bg-white dark:bg-slate-800 border-2 border-orange-500 inline-block shadow-sm"></span>
-          <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Stock bajo</span>
-        </div>
+
+        {productosDisponibles.length > 0 && (
+          <div className="bg-white/95 dark:bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex items-center gap-2 shadow-md dark:shadow-xl">
+            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">Ver línea:</span>
+            <select
+              value={filtroProductoId}
+              onChange={(e) => setFiltroProductoId(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+            >
+              <option value="TODOS">Todos los productos</option>
+              {productosDisponibles.map((prod) => (
+                <option key={prod.id} value={prod.id}>
+                  {prod.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Controles de Vista y Pantalla Completa */}

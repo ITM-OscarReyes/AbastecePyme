@@ -34,8 +34,8 @@ def test_ac_f1_10_grafo_refleja_elementos_y_dependencias_del_catalogo(cliente: T
 
     assert cuerpo["elementos"] == elementos["elementos"]
     assert cuerpo["dependencias"] == dependencias["dependencias"]
-    assert cuerpo["resumen"]["totalElementos"] == len(cuerpo["elementos"]) == 11
-    assert cuerpo["resumen"]["totalDependencias"] == len(cuerpo["dependencias"]) == 11
+    assert cuerpo["resumen"]["totalElementos"] == len(cuerpo["elementos"]) == 6
+    assert cuerpo["resumen"]["totalDependencias"] == len(cuerpo["dependencias"]) == 6
 
 
 def test_ac_f1_10_grafo_refleja_el_catalogo_tras_cada_alta(cliente_vacio: TestClient) -> None:
