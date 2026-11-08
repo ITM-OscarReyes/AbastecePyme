@@ -6,7 +6,8 @@ import {
   ArrowUpRight,
   Layers,
   Pencil,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import { TarjetaStock } from './TarjetaStock';
 import { claseBadgeTipo, etiquetaTipo } from '../utils/etiquetas';
@@ -22,6 +23,7 @@ interface PanelDetalleNodoProps {
   onEliminar: (elemento: Elemento) => void;
   onEditarRelacion: (origen: string, destino: string) => void;
   onEliminarRelacion: (origen: string, destino: string) => void;
+  onCerrar?: () => void;
 }
 
 export const PanelDetalleNodo: React.FC<PanelDetalleNodoProps> = ({
@@ -33,7 +35,8 @@ export const PanelDetalleNodo: React.FC<PanelDetalleNodoProps> = ({
   onEditar,
   onEliminar,
   onEditarRelacion,
-  onEliminarRelacion
+  onEliminarRelacion,
+  onCerrar
 }) => {
   const entrantes = dependencias.filter((dependencia) => dependencia.destino === elemento.id);
   const salientes = dependencias.filter((dependencia) => dependencia.origen === elemento.id);
@@ -44,12 +47,24 @@ export const PanelDetalleNodo: React.FC<PanelDetalleNodoProps> = ({
   return (
     <div className="glass-card p-5 rounded-2xl shadow-xl space-y-4 animate-in fade-in border border-slate-200 dark:border-slate-800">
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-        <span className="font-mono text-xs font-bold text-sky-600 dark:text-sky-400">
-          {obtenerCodigoSku(elemento.id)}
-        </span>
-        <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${claseBadgeTipo(elemento.tipo)}`}>
-          {etiquetaTipo(elemento.tipo)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs font-bold text-sky-600 dark:text-sky-400">
+            {obtenerCodigoSku(elemento.id)}
+          </span>
+          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${claseBadgeTipo(elemento.tipo)}`}>
+            {etiquetaTipo(elemento.tipo)}
+          </span>
+        </div>
+        {onCerrar && (
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+            title="Deseleccionar y mostrar todas las líneas"
+          >
+            <X size={15} />
+          </button>
+        )}
       </div>
 
       <div>

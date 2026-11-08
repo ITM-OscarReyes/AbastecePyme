@@ -13,7 +13,7 @@ def test_ac_f1_04_listado_devuelve_todos_con_total_coincidente(cliente: TestClie
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["total"] == len(cuerpo["elementos"]) == 11
+    assert cuerpo["total"] == len(cuerpo["elementos"]) == 6
     assert {e["id"] for e in cuerpo["elementos"]} == {
         "PROV-ACERO",
         "INS-BARRA",
@@ -21,11 +21,6 @@ def test_ac_f1_04_listado_devuelve_todos_con_total_coincidente(cliente: TestClie
         "PROC-CORTE",
         "PROD-PANEL",
         "PROD-BANCO",
-        "PROV-MADERA",
-        "INS-TABLERO",
-        "INS-BARNIZ",
-        "PROC-ENSAMBLE",
-        "PROD-ESCRITORIO",
     }
 
 
@@ -56,12 +51,10 @@ def test_ac_f1_04c_filtro_por_tipo_devuelve_solo_ese_tipo(cliente: TestClient) -
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["total"] == 4 == len(cuerpo["elementos"])
+    assert cuerpo["total"] == 2 == len(cuerpo["elementos"])
     assert {e["id"] for e in cuerpo["elementos"]} == {
         "INS-BARRA",
         "INS-TORNILLO",
-        "INS-TABLERO",
-        "INS-BARNIZ",
     }
     assert {e["tipo"] for e in cuerpo["elementos"]} == {"INSUMO"}
 
@@ -70,7 +63,7 @@ def test_ac_f1_04c_filtro_por_tipo_se_normaliza_a_mayusculas(cliente: TestClient
     respuesta = cliente.get("/api/v1/elementos?tipo=insumo")
 
     assert respuesta.status_code == 200
-    assert respuesta.json()["total"] == 4
+    assert respuesta.json()["total"] == 2
 
 
 def test_ac_f1_04d_tipo_desconocido_en_filtro_responde_422_err04(cliente: TestClient) -> None:
@@ -81,15 +74,15 @@ def test_ac_f1_04d_tipo_desconocido_en_filtro_responde_422_err04(cliente: TestCl
     assert [d["campo"] for d in respuesta.json()["error"]["detalles"]] == ["tipo"]
 
 
-def test_ac_f1_05_consulta_de_elemento_existente(cliente: TestClient) -> None:
-    respuesta = cliente.get("/api/v1/elementos/INS-TORNILLO")
+def test_ac_f1_05_consulta_de_elemento_existente(cliente_demo: TestClient) -> None:
+    respuesta = cliente_demo.get("/api/v1/elementos/INS-TORNILLO")
 
     assert respuesta.status_code == 200
     assert respuesta.json() == {
         "id": "INS-TORNILLO",
         "tipo": "INSUMO",
         "nombre": "Tornillo hexagonal M6",
-        "descripcion": None,
+        "descripcion": "Tornillo de fijación para ensamblar escritorios y mesas.",
         "stockDisponible": 30,
         "stockMinimo": 100,
         "estadoStock": "BAJO",

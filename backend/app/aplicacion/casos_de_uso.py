@@ -8,12 +8,21 @@ contiene decisiones de transporte ni de persistencia.
 from collections.abc import Mapping
 
 from app.aplicacion.puertos import RepositorioCatalogo
-from app.dominio.catalogo import Catalogo, ResultadoOrdenProduccion
+from app.dominio.catalogo import Catalogo, ResultadoOrdenProduccion, ResultadoPlanEntrega
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
-from app.dominio.errores import CampoNoPermitido, ConfiguracionCiclica, DetalleError
+from app.dominio.errores import (
+    CampoNoPermitido,
+    ConfiguracionCiclica,
+    DetalleError,
+    ElementoNoEncontrado,
+    IdentificadorInvalido,
+    ValidacionFallida,
+)
 from app.dominio.reglas_dependencia import ReglaDependencia, reglas_por_tipo
+from app.dominio.tipo_elemento import TipoElemento
 from app.dominio.validacion import (
+    es_identificador_valido,
     normalizar_identificador,
     normalizar_tipo,
     validar_identificador_consulta,
@@ -95,15 +104,24 @@ class ActualizarElemento:
 
 
 class EliminarElemento:
-    """Elimina un elemento y, en cascada, sus relaciones."""
+    """Elimina un elemento y, en cascada, sus relaciones.
+
+    Por defecto la operación se rechaza si dejaría una cadena incompleta. Con
+    ``eliminar_cadena=True`` se elimina también la cadena que depende del
+    elemento.
+    """
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
         self._repositorio = repositorio
 
-    def ejecutar(self, identificador: object) -> Elemento:
+    def ejecutar(
+        self, identificador: object, eliminar_cadena: bool = False
+    ) -> Elemento:
         id_normalizado = validar_identificador_consulta(identificador, "id")
         catalogo = self._repositorio.obtener()
-        elemento = catalogo.eliminar_elemento(id_normalizado)
+        elemento = catalogo.eliminar_elemento(
+            id_normalizado, eliminar_cadena=eliminar_cadena
+        )
         self._repositorio.guardar(catalogo)
         return elemento
 
@@ -221,8 +239,8 @@ class ObtenerGrafo:
 class ObtenerReglasDependencia:
     """Expone las combinaciones de tipos permitidas y su explicación."""
 
-    def ejecutar(self) -> list[ReglaDependencia]:
-        return reglas_por_tipo()
+    def ejecutar(self) -> tuple[list[str], list[ReglaDependencia]]:
+        return TipoElemento.valores_admitidos(), reglas_por_tipo()
 
 
 class ConsultarImpacto:
@@ -240,13 +258,12 @@ class ConsultarImpacto:
 
 
 class ObtenerOrdenProduccion:
-    """Calcula el orden de preparación válido o reporta ciclos (F3).
+    """Diagnóstico global de planta (F3).
 
     Orquesta la consulta al agregado ``Catalogo`` y devuelve el
-    ``ResultadoOrdenProduccion`` del dominio: un orden topológico completo
-    cuando el grafo es un DAG, o la señal de ciclo con el lazo cerrado y los
-    elementos bloqueados cuando existe una contradicción. Nunca devuelve un
-    orden parcial ni simulado (RF-F3-05).
+    ``ResultadoOrdenProduccion`` con es_dag, orden, total_pasos, ciclos,
+    elementos_bloqueados, productos_bloqueados y productos_planificables.
+    Siempre devuelve 200 con el resultado estructurado.
     """
 
     def __init__(self, repositorio: RepositorioCatalogo) -> None:
@@ -254,21 +271,63 @@ class ObtenerOrdenProduccion:
 
     def ejecutar(self) -> ResultadoOrdenProduccion:
         catalogo = self._repositorio.obtener()
-        resultado = catalogo.orden_produccion()
-        if not resultado.es_dag:
-            # RF-F3-03, RF-F3-04, RF-F3-05: no se emite orden parcial ni falso;
-            # se lanza el error de dominio y la capa HTTP lo traduce a 409.
-            raise ConfiguracionCiclica(
-                "No se puede generar un orden de producción porque existen dependencias circulares.",
-                detalles=[
-                    DetalleError("ciclo", " -> ".join(resultado.ciclo)),
-                    DetalleError(
-                        "elementosBloqueados",
-                        ", ".join(resultado.elementos_bloqueados),
-                    ),
-                ],
+        return catalogo.orden_produccion()
+
+
+class ObtenerPlanEntrega:
+    """Calcula el plan de entrega por producto (F3).
+
+    Valida la lista de productos:
+    - Obligatoria y no vacía (ERR-04 si falta o vacía).
+    - Formato de identificador válido (ERR-05 si no cumple).
+    - Elementos existentes (ERR-02 si no existen).
+    - Elementos de tipo PRODUCTO (ERR-04 si no son PRODUCTO).
+    """
+
+    def __init__(self, repositorio: RepositorioCatalogo) -> None:
+        self._repositorio = repositorio
+
+    def ejecutar(self, productos_param: object) -> ResultadoPlanEntrega:
+        if not productos_param or not isinstance(productos_param, str) or not productos_param.strip():
+            raise ValidacionFallida(
+                "La lista de productos es obligatoria y no puede estar vacía.",
+                [DetalleError("productos", "Debe proporcionar al menos un identificador de producto.")],
             )
-        return resultado
+
+        items_crudos = [item.strip() for item in productos_param.split(",") if item.strip()]
+        if not items_crudos:
+            raise ValidacionFallida(
+                "La lista de productos es obligatoria y no puede estar vacía.",
+                [DetalleError("productos", "Debe proporcionar al menos un identificador de producto.")],
+            )
+
+        # Validar formato de cada identificador (ERR-05)
+        for item in items_crudos:
+            validar_identificador_consulta(item, "productos")
+
+        # Normalizar y deduplicar en orden alfabético
+        productos_normalizados = sorted(set(item.strip().upper() for item in items_crudos))
+
+        catalogo = self._repositorio.obtener()
+
+        # Validar existencia de todos los elementos (ERR-02)
+        for pid in productos_normalizados:
+            if not catalogo.existe_elemento(pid):
+                raise ElementoNoEncontrado(
+                    f"No existe un elemento con el identificador {pid}.",
+                    [DetalleError("productos", f"El elemento '{pid}' no existe en el catálogo.")],
+                )
+
+        # Validar que todos los elementos sean de tipo PRODUCTO (ERR-04)
+        for pid in productos_normalizados:
+            elemento = catalogo.obtener_elemento(pid)
+            if elemento.tipo is not TipoElemento.PRODUCTO:
+                raise ValidacionFallida(
+                    f"El elemento '{pid}' no es de tipo PRODUCTO.",
+                    [DetalleError("productos", f"El elemento '{pid}' tiene tipo {elemento.tipo.value}, se requiere PRODUCTO.")],
+                )
+
+        return catalogo.plan_entrega(productos_normalizados)
 
 
 __all__ = [
@@ -283,6 +342,7 @@ __all__ = [
     "ObtenerElemento",
     "ObtenerGrafo",
     "ObtenerOrdenProduccion",
+    "ObtenerPlanEntrega",
     "ObtenerReglasDependencia",
     "RegistrarDependencia",
 ]

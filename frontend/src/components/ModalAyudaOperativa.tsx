@@ -90,7 +90,7 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
               <div>
                 <span className="text-xs font-bold text-blue-700 dark:text-blue-300">Proveedor</span>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Fuente externa. Puede abastecer suministros, procesos o productos.
+                  Fuente externa de materiales. Únicamente puede abastecer insumos o materias primas.
                 </p>
               </div>
             </div>
@@ -100,8 +100,8 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
               <div>
                 <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Suministro</span>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Material o componente con inventario. Debe estar asociado a un proveedor o a un
-                  proceso y puede alimentar procesos y productos.
+                  Material o componente con inventario. Debe provenir de un proveedor o de un
+                  proceso y alimenta procesos de planta.
                 </p>
               </div>
             </div>
@@ -111,8 +111,8 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
               <div>
                 <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Proceso</span>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Estación interna que transforma suministros. Puede generar suministros o
-                  productos y también recibir suministros de un proveedor.
+                  Estación interna que transforma insumos. Recibe suministros y puede generar
+                  productos finales o insumos intermedios.
                 </p>
               </div>
             </div>
@@ -122,8 +122,8 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
               <div>
                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Producto</span>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Artículo final listo para despacho. Es el final de la cadena y no habilita a
-                  otros elementos.
+                  Artículo final listo para despacho al cliente. Es el final de la cadena y no
+                  abastece a otros elementos.
                 </p>
               </div>
             </div>
@@ -131,10 +131,9 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-sky-500/25">
             <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-              Al crear una relación, primero eliges el tipo de elemento de origen y de destino.
-              La pantalla te muestra de inmediato si esa combinación está permitida. Un suministro
-              debe estar asociado a un proveedor o proceso antes de enlazarse con un proceso o
-              producto.
+              Las 4 combinaciones permitidas son: Proveedor → Suministro, Suministro → Proceso,
+              Proceso → Suministro (para subproductos) y Proceso → Producto. Los procesos no se
+              enlazan directamente entre sí, y los productos nunca abastecen a nadie.
             </p>
           </div>
         </section>
@@ -222,6 +221,30 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
                 resultado en el mapa y abrir la ficha de cada afectado. La pestaña conserva los
                 10 análisis más recientes. Desde la ficha de un afectado puedes iniciar un nuevo
                 análisis.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+            Plan de entrega y orden de producción
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 p-3">
+              <CheckSquare size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                <strong className="text-slate-900 dark:text-white">Plan de entrega por producto:</strong> permite
+                seleccionar uno o más productos terminados para calcular la secuencia ordenada y los insumos
+                necesarios. El sistema confirma si la entrega es viable o si está bloqueada por problemas en la cadena.
+              </p>
+            </div>
+            <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 p-3">
+              <AlertOctagon size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                <strong className="text-slate-900 dark:text-white">Control general de planta:</strong> evalúa toda
+                la planta de producción. Si no existen dependencias circulares, genera el orden determinista global
+                de operaciones; si detecta ciclos, indica exactamente qué elementos impiden operar para corregirlos.
               </p>
             </div>
           </div>

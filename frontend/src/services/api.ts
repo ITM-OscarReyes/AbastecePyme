@@ -8,6 +8,7 @@ import type {
   ErrorApiResponse,
   ImpactoRespuesta,
   OrdenProduccionRespuesta,
+  PlanEntregaRespuesta,
   ReglasDependenciaRespuesta,
   ReporteCicloError,
   RespuestaColeccionDependencias,
@@ -144,6 +145,12 @@ export const apiService = {
 
   async obtenerOrdenProduccion(): Promise<OrdenProduccionRespuesta> {
     const { data } = await apiClient.get<OrdenProduccionRespuesta>('/orden-produccion');
+    return data;
+  },
+
+  async obtenerPlanEntrega(productos: string[]): Promise<PlanEntregaRespuesta> {
+    const params = { productos: productos.join(',') };
+    const { data } = await apiClient.get<PlanEntregaRespuesta>('/plan-entrega', { params });
     return data;
   }
 };

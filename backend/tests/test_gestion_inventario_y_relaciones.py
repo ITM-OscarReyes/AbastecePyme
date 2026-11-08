@@ -146,23 +146,23 @@ def test_eliminar_relacion_existente_y_repetir_da_404(cliente_vacio: TestClient)
 
 def test_actualizar_relacion_cambia_extremos(cliente_vacio: TestClient) -> None:
     registrar_elemento(cliente_vacio, "PROC-T", "PROCESO", "Proceso de prueba")
-    registrar_elemento(cliente_vacio, "PROD-T", "PRODUCTO", "Producto de prueba")
+    registrar_elemento(cliente_vacio, "PROC-U", "PROCESO", "Proceso de destino")
     _crear_suministro(cliente_vacio)
     assert registrar_dependencia(cliente_vacio, "PROC-T", "INS-STOCK").status_code == 201
     assert registrar_dependencia(cliente_vacio, "INS-STOCK", "PROC-T").status_code == 201
 
     respuesta = cliente_vacio.put(
         "/api/v1/dependencias/INS-STOCK/PROC-T",
-        json={"origen": "INS-STOCK", "destino": "PROD-T"},
+        json={"origen": "INS-STOCK", "destino": "PROC-U"},
     )
 
     assert respuesta.status_code == 200
-    assert respuesta.json()["destino"] == "PROD-T"
+    assert respuesta.json()["destino"] == "PROC-U"
     pares = {
         (d["origen"], d["destino"])
         for d in cliente_vacio.get("/api/v1/dependencias").json()["dependencias"]
     }
-    assert pares == {("PROC-T", "INS-STOCK"), ("INS-STOCK", "PROD-T")}
+    assert pares == {("PROC-T", "INS-STOCK"), ("INS-STOCK", "PROC-U")}
 
 
 def test_reglas_de_dependencia_expuestas_por_la_api(cliente_vacio: TestClient) -> None:
@@ -180,10 +180,7 @@ def test_reglas_de_dependencia_expuestas_por_la_api(cliente_vacio: TestClient) -
     }
     assert permitidas == {
         ("PROVEEDOR", "INSUMO"),
-        ("PROVEEDOR", "PROCESO"),
-        ("PROVEEDOR", "PRODUCTO"),
         ("INSUMO", "PROCESO"),
-        ("INSUMO", "PRODUCTO"),
         ("PROCESO", "INSUMO"),
         ("PROCESO", "PRODUCTO"),
     }

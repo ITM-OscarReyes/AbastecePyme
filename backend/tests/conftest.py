@@ -80,6 +80,17 @@ def cliente_vacio() -> Iterator[TestClient]:
 
 @pytest.fixture
 def cliente() -> Iterator[TestClient]:
+    """Aplicación F1 con el catálogo del conjunto de prueba.
+
+    Se mantiene el conjunto reducido de ``acceptance-criteria.md`` para las
+    suites de F1/F2, que verifican reglas del grafo y no el contenido de la
+    demostración.
+    """
+    yield from _cliente_de(construir_catalogo_prueba())
+
+
+@pytest.fixture
+def cliente_demo() -> Iterator[TestClient]:
     """Aplicación F1 con el catálogo sintético de demostración."""
     yield from _cliente_de(poblar_catalogo_demostracion(Catalogo()))
 

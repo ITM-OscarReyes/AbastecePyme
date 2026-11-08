@@ -1,7 +1,7 @@
-"""Verificación de extremo a extremo de F3 (Orden de producción y ciclos) contra servidor HTTP real.
+"""Verificación de extremo a extremo de F3 (Orden de producción, ciclos y plan de entrega) contra servidor HTTP real.
 
 Comprueba el contrato de F3 contra el servidor levantado con ``uvicorn app.main:app``,
-que es el proceso que consume el frontend (C-02, AC-F3-01 a AC-F3-11). Uso:
+que es el proceso que consume el frontend (AC-F3-01 a AC-F3-14). Uso:
 
     python tests/verificacion_http_f3.py [http://127.0.0.1:8000]
 
@@ -30,7 +30,6 @@ def llamar(metodo: str, ruta: str, cuerpo: Any = None, cabeceras: dict | None = 
     try:
         with urlopen(peticion) as respuesta:
             crudo = respuesta.read()
-            # DELETE responde 204 sin cuerpo: no es JSON y no debe intentarse decodificar.
             return respuesta.status, json.loads(crudo) if crudo else None
     except HTTPError as error:
         crudo = error.read()
@@ -45,7 +44,7 @@ def comprobar(escenario: str, esperado: str, obtenido: str, condicion: bool) -> 
 
 
 def main() -> int:
-    # 1. AC-F3-01: Orden de producción nominal en catálogo acíclico (DAG)
+    # 1. AC-F3-01: Diagnóstico global en catálogo acíclico (DAG)
     estado, cuerpo = llamar("GET", "/api/v1/orden-produccion")
     comprobar(
         "AC-F3-01 GET /orden-produccion responde 200 en catálogo acíclico",
@@ -57,7 +56,6 @@ def main() -> int:
     orden = cuerpo.get("orden", []) if isinstance(cuerpo, dict) else []
     total_pasos = cuerpo.get("totalPasos", 0) if isinstance(cuerpo, dict) else 0
 
-    # Obtener el grafo para verificar precedencias: para cada origen -> destino, paso(origen) < paso(destino)
     _, grafo = llamar("GET", "/api/v1/grafo")
     dependencias = grafo.get("dependencias", []) if isinstance(grafo, dict) else []
     paso_por_id = {item["id"]: item["paso"] for item in orden if "id" in item and "paso" in item}
@@ -90,60 +88,58 @@ def main() -> int:
         bytes1 == bytes2 and estado2 == 200,
     )
 
-    # 3. AC-F3-03 / AC-F3-04: Detección y reporte de dependencias circulares (409 Conflict)
-    # Registrar temporalmente una dependencia inversa que genere ciclo
-    # En el catálogo de madera: INS-BARNIZ -> PROC-ENSAMBLE -> PROD-ESCRITORIO
-    # Creamos PROD-ESCRITORIO -> INS-BARNIZ para forzar ciclo
+    # 3. AC-F3-03 / AC-F3-04: Diagnóstico global con ciclo responde 200 (sin 409 ni orden parcial)
     estado_crear, dep_ciclo = llamar(
         "POST",
         "/api/v1/dependencias",
-        {"origen": "PROD-ESCRITORIO", "destino": "INS-BARNIZ"}
+        {"origen": "PROC-CORTE", "destino": "INS-BARRA"},
     )
-
-    # Puede requerir validar si las reglas de tipo permiten producto -> insumo o si se prueba entre elementos permitidos
-    # Si las reglas de tipo impiden PROD -> INSUMO, creamos un ciclo permitido entre PROCESO ↔ SUMINISTRO
-    # Ejemplo: PROC-CORTE habilita INS-BARRA (ya existe INS-BARRA -> PROC-CORTE)
-    if estado_crear != 201:
-        estado_crear, dep_ciclo = llamar(
-            "POST",
-            "/api/v1/dependencias",
-            {"origen": "PROC-CORTE", "destino": "INS-BARRA"}
-        )
 
     estado_ciclo, cuerpo_ciclo = llamar("GET", "/api/v1/orden-produccion")
 
-    error_dict = cuerpo_ciclo.get("error", {}) if isinstance(cuerpo_ciclo, dict) else {}
-    codigo_error = error_dict.get("codigo")
-    detalles_error = error_dict.get("detalles", [])
-    campos_detalles = {d.get("campo"): d.get("mensaje") for d in detalles_error if isinstance(d, dict)}
+    es_dag = cuerpo_ciclo.get("esDag") if isinstance(cuerpo_ciclo, dict) else None
+    ciclos = cuerpo_ciclo.get("ciclos", []) if isinstance(cuerpo_ciclo, dict) else []
+    bloqueados = cuerpo_ciclo.get("elementosBloqueados", []) if isinstance(cuerpo_ciclo, dict) else []
+    orden_en_ciclo = cuerpo_ciclo.get("orden", []) if isinstance(cuerpo_ciclo, dict) else None
 
     comprobar(
-        "AC-F3-03 Catálogo cíclico responde 409 Conflict con código CONFIGURACION_CICLICA",
-        "409 Conflict con CONFIGURACION_CICLICA",
-        f"{estado_ciclo} con código: {codigo_error}",
-        estado_ciclo == 409 and codigo_error == "CONFIGURACION_CICLICA",
+        "AC-F3-03 Diagnóstico global responde 200 ante ciclos con esDag: False y orden vacío",
+        "200 OK con esDag: False, orden: [] y totalPasos: 0",
+        f"{estado_ciclo} con esDag: {es_dag}, len(orden): {len(orden_en_ciclo) if orden_en_ciclo is not None else None}",
+        estado_ciclo == 200 and es_dag is False and orden_en_ciclo == [] and cuerpo_ciclo.get("totalPasos") == 0,
     )
 
     comprobar(
-        "AC-F3-03 Detalles incluyen lazo cerrado ('ciclo') y elementos bloqueados",
-        "Detalle con campo 'ciclo' y campo 'elementosBloqueados'",
-        f"Campos presentes: {list(campos_detalles.keys())}",
-        "ciclo" in campos_detalles and "elementosBloqueados" in campos_detalles,
+        "AC-F3-03 Diagnóstico global incluye ciclos estructurados y elementosBloqueados",
+        "ciclos con secuencias cerradas y elementosBloqueados populated",
+        f"len(ciclos): {len(ciclos)}, len(bloqueados): {len(bloqueados)}",
+        len(ciclos) > 0 and len(bloqueados) > 0 and "INS-BARRA" in bloqueados,
     )
 
-    # 4. AC-F3-05: Prohibición de orden parcial o falso cuando existe contradicción
+    # 4. AC-F3-05: Plan de entrega para producto aislado o específico
+    # PROD-ESCRITORIO está en la rama de madera acíclica
+    estado_plan, cuerpo_plan = llamar("GET", "/api/v1/plan-entrega?productos=PROD-ESCRITORIO")
     comprobar(
-        "AC-F3-05 Prohibición de orden falso ante ciclos (no devuelve clave 'orden')",
-        "Cuerpo de error sin array de orden de producción",
-        f"Claves devueltas: {list(cuerpo_ciclo.keys()) if isinstance(cuerpo_ciclo, dict) else []}",
-        "orden" not in cuerpo_ciclo and "totalPasos" not in cuerpo_ciclo,
+        "AC-F3-07 Plan de entrega para PROD-ESCRITORIO no se contamina por ciclo en acero",
+        "200 OK con esPlanificable: True y pasos acíclicos",
+        f"{estado_plan} con esPlanificable: {cuerpo_plan.get('esPlanificable') if isinstance(cuerpo_plan, dict) else None}",
+        estado_plan == 200 and cuerpo_plan.get("esPlanificable") is True and len(cuerpo_plan.get("pasos", [])) > 0,
+    )
+
+    # 5. AC-F3-06: Plan de entrega para producto bloqueado
+    estado_plan_b, cuerpo_plan_b = llamar("GET", "/api/v1/plan-entrega?productos=PROD-PANEL")
+    comprobar(
+        "AC-F3-06 Plan de entrega responde 200 con BLOQUEADO y pasos: []",
+        "200 OK con esPlanificable: False y pasos: []",
+        f"{estado_plan_b} con esPlanificable: {cuerpo_plan_b.get('esPlanificable') if isinstance(cuerpo_plan_b, dict) else None}",
+        estado_plan_b == 200 and cuerpo_plan_b.get("esPlanificable") is False and cuerpo_plan_b.get("pasos") == [],
     )
 
     # Restaurar el catálogo eliminando la arista cíclica
     if estado_crear == 201:
         llamar("DELETE", f"/api/v1/dependencias/{dep_ciclo['origen']}/{dep_ciclo['destino']}")
 
-    # 5. AC-F3-08: Restricción de arquitectura - Sin NetworkX para algoritmos
+    # 6. AC-F3-11: Restricción de arquitectura - Sin NetworkX para algoritmos en dominio
     raiz = Path(__file__).resolve().parent.parent
     archivos_dominio = list((raiz / "app" / "dominio").glob("*.py"))
     usa_networkx = False
@@ -154,31 +150,10 @@ def main() -> int:
             break
 
     comprobar(
-        "AC-F3-08 Sin NetworkX para orden topológico ni detección de ciclos en dominio",
+        "AC-F3-11 Sin NetworkX para orden topológico ni detección de ciclos en dominio",
         "Cero menciones a NetworkX en backend/app/dominio",
         "Libre de NetworkX" if not usa_networkx else "Se detectó NetworkX",
         not usa_networkx,
-    )
-
-    # 6. AC-F3-11: Restricción de arquitectura - Frontend no implementa algoritmos de grafo
-    raiz_frontend = raiz.parent / "frontend" / "src"
-    componentes_frontend = list(raiz_frontend.glob("**/*.tsx")) + list(raiz_frontend.glob("**/*.ts"))
-    algoritmos_cliente = False
-    palabras_prohibidas = ["topologicalsort", "shortestpath", "dijkstra"]
-    for archivo in componentes_frontend:
-        if "test" in str(archivo):
-            continue
-        contenido = archivo.read_text(encoding="utf-8").lower()
-        for palabra in palabras_prohibidas:
-            if palabra in contenido:
-                algoritmos_cliente = True
-                break
-
-    comprobar(
-        "AC-F3-11 El frontend no duplica algoritmos de orden topológico en TypeScript",
-        "Frontend libre de algoritmos de grafo",
-        "Frontend actúa estrictamente como presentación" if not algoritmos_cliente else "Se detectaron algoritmos en cliente",
-        not algoritmos_cliente,
     )
 
     # Imprimir reporte formateado

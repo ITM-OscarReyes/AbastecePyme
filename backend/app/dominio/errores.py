@@ -97,3 +97,15 @@ class ConfiguracionCiclica(ErrorDominio):
     """
 
     codigo = "CONFIGURACION_CICLICA"
+
+
+class CadenaIncompleta(ErrorDominio):
+    """ERR-11: una operación dejaría elementos sin cadena de abastecimiento.
+
+    Se lanza al intentar eliminar un elemento cuando su ausencia dejaría
+    suministros sin origen, procesos sin insumos o productos sin proceso. La
+    traducción a HTTP 409 ocurre en la capa de infraestructura; el dominio no
+    conoce HTTP.
+    """
+
+    codigo = "CADENA_INCOMPLETA"

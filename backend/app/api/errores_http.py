@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.dominio.errores import (
+    CadenaIncompleta,
     CampoNoPermitido,
     ConfiguracionCiclica,
     DependenciaDuplicada,
@@ -39,6 +40,7 @@ _HTTP_POR_CODIGO: dict[str, int] = {
     DependenciaDuplicada.codigo: status.HTTP_409_CONFLICT,
     DependenciaNoEncontrada.codigo: status.HTTP_404_NOT_FOUND,
     ConfiguracionCiclica.codigo: status.HTTP_409_CONFLICT,
+    CadenaIncompleta.codigo: status.HTTP_409_CONFLICT,
     "TIPO_NO_ENCONTRADO": status.HTTP_404_NOT_FOUND,
 }
 

@@ -79,8 +79,8 @@ def test_ac_f1_02_id_repetido_responde_409_err01_sin_alterar_original(cliente: T
     assert respuesta.status_code == 409
     assert respuesta.json()["error"]["codigo"] == "ELEMENTO_DUPLICADO"
     assert cliente.get("/api/v1/elementos/INS-TORNILLO").json() == original
-    assert cliente.get("/api/v1/elementos?tipo=PRODUCTO").json()["total"] == 3
-    assert cliente.get("/api/v1/elementos").json()["total"] == 11
+    assert cliente.get("/api/v1/elementos?tipo=PRODUCTO").json()["total"] == 2
+    assert cliente.get("/api/v1/elementos").json()["total"] == 6
 
 
 def test_ac_f1_02_unicidad_es_de_todo_el_catalogo_no_por_tipo(cliente_vacio: TestClient) -> None:

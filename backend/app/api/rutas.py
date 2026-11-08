@@ -8,6 +8,7 @@ dominio y los casos de uso.
 from fastapi import APIRouter, Request, Response, status
 
 from app.api.esquemas import (
+    CicloDetectadoRespuesta,
     DependenciaRespuesta,
     ElementoImpactoRespuesta,
     ElementoRespuesta,
@@ -20,6 +21,8 @@ from app.api.esquemas import (
     ListaElementosRespuesta,
     OrdenProduccionRespuesta,
     PasoProduccionRespuesta,
+    PlanEntregaRespuesta,
+    ProductoEntregaRespuesta,
     ReglaDependenciaRespuesta,
     ReglasDependenciaRespuesta,
     ResumenGrafo,
@@ -37,6 +40,7 @@ from app.aplicacion.casos_de_uso import (
     ObtenerElemento,
     ObtenerGrafo,
     ObtenerOrdenProduccion,
+    ObtenerPlanEntrega,
     ObtenerReglasDependencia,
     RegistrarDependencia,
 )
@@ -154,10 +158,16 @@ def crear_enrutador() -> APIRouter:
         return _elemento_a_respuesta(elemento)
 
     @enrutador.delete("/elementos/{id}", status_code=status.HTTP_204_NO_CONTENT)
-    def eliminar_elemento(id: str, peticion: Request) -> Response:
-        """Elimina el elemento y sus relaciones, sin dejar aristas colgantes."""
+    def eliminar_elemento(
+        id: str, peticion: Request, eliminar_cadena: bool = False
+    ) -> Response:
+        """Elimina el elemento y sus relaciones, sin dejar aristas colgantes.
+
+        Si la ausencia del elemento dejaría una cadena incompleta responde 409.
+        Con ``eliminarCadena=true`` elimina también la cadena dependiente.
+        """
         caso_de_uso = EliminarElemento(obtener_repositorio(peticion))
-        caso_de_uso.ejecutar(id)
+        caso_de_uso.ejecutar(id, eliminar_cadena=eliminar_cadena)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @enrutador.post(
@@ -242,9 +252,9 @@ def crear_enrutador() -> APIRouter:
     )
     def obtener_reglas_dependencia() -> ReglasDependenciaRespuesta:
         """Expone las combinaciones de tipos permitidas antes de crear relaciones."""
-        reglas = ObtenerReglasDependencia().ejecutar()
+        tipos, reglas = ObtenerReglasDependencia().ejecutar()
         return ReglasDependenciaRespuesta(
-            tipos=TipoElemento.valores_admitidos(),
+            tipos=tipos,
             reglas=[
                 ReglaDependenciaRespuesta(
                     tipo_origen=regla.tipo_origen.value,
@@ -274,16 +284,11 @@ def crear_enrutador() -> APIRouter:
 
     @enrutador.get("/orden-produccion", response_model=OrdenProduccionRespuesta)
     def obtener_orden_produccion(peticion: Request) -> OrdenProduccionRespuesta:
-        """Devuelve el orden de preparación válido o reporta ciclos (F3).
+        """Diagnóstico global de planta (F3).
 
-        Cuando el catálogo es un DAG, responde 200 con la secuencia completa de
-        pasos de producción respetando todas las precedencias
-        (``origen habilita destino``). Cuando hay al menos un ciclo, el caso de
-        uso lanza ``ConfiguracionCiclica`` (dominio), que la capa de
-        infraestructura traduce a 409 con el sobre de error
-        ``CONFIGURACION_CICLICA``, el ciclo cerrado y los elementos
-        bloqueados (RF-F3-03, RF-F3-04, RF-F3-05). Nunca se emite un orden
-        parcial ni falso.
+        Evalúa la red completa como DAG. Responde siempre 200 con el diagnóstico
+        estructurado: orden topológico determinista cuando es DAG, o el reporte de
+        ciclos, elementos bloqueados, productos bloqueados y productos planificables.
         """
         resultado = ObtenerOrdenProduccion(obtener_repositorio(peticion)).ejecutar()
         orden_respuesta = [
@@ -292,13 +297,71 @@ def crear_enrutador() -> APIRouter:
                 id=elemento.id,
                 tipo=elemento.tipo.value,
                 nombre=elemento.nombre,
+                descripcion=elemento.descripcion,
             )
             for indice, elemento in enumerate(resultado.orden)
         ]
+        ciclos_respuesta = [
+            CicloDetectadoRespuesta(secuencia=ciclo.secuencia)
+            for ciclo in resultado.ciclos
+        ]
         return OrdenProduccionRespuesta(
-            es_dag=True,
+            es_dag=resultado.es_dag,
             orden=orden_respuesta,
-            total_pasos=len(orden_respuesta),
+            total_pasos=resultado.total_pasos,
+            ciclos=ciclos_respuesta,
+            elementos_bloqueados=resultado.elementos_bloqueados,
+            productos_bloqueados=resultado.productos_bloqueados,
+            productos_planificables=resultado.productos_planificables,
+            elementos_incompletos=resultado.elementos_incompletos,
+            productos_incompletos=resultado.productos_incompletos,
+        )
+
+    @enrutador.get("/plan-entrega", response_model=PlanEntregaRespuesta)
+    def obtener_plan_entrega(
+        productos: str | None = None, peticion: Request = None
+    ) -> PlanEntregaRespuesta:
+        """Plan de preparación por producto (F3).
+
+        Devuelve el orden de preparación de la unión de requisitos de los
+        productos solicitados. Si hay ciclos en sus requisitos, reporta su
+        estado BLOQUEADO y los ciclos detectados.
+        """
+        caso_de_uso = ObtenerPlanEntrega(obtener_repositorio(peticion))
+        resultado = caso_de_uso.ejecutar(productos)
+        productos_respuesta = [
+            ProductoEntregaRespuesta(
+                id=prod.id,
+                tipo=prod.tipo,
+                nombre=prod.nombre,
+                descripcion=prod.descripcion,
+                estado=prod.estado,
+            )
+            for prod in resultado.productos
+        ]
+        pasos_respuesta = [
+            PasoProduccionRespuesta(
+                paso=indice + 1,
+                id=elemento.id,
+                tipo=elemento.tipo.value,
+                nombre=elemento.nombre,
+                descripcion=elemento.descripcion,
+            )
+            for indice, elemento in enumerate(resultado.pasos)
+        ]
+        ciclos_respuesta = [
+            CicloDetectadoRespuesta(secuencia=ciclo.secuencia)
+            for ciclo in resultado.ciclos
+        ]
+        return PlanEntregaRespuesta(
+            productos=productos_respuesta,
+            es_planificable=resultado.es_planificable,
+            pasos=pasos_respuesta,
+            total_pasos=resultado.total_pasos,
+            ciclos=ciclos_respuesta,
+            elementos_bloqueados=resultado.elementos_bloqueados,
+            elementos_incompletos=resultado.elementos_incompletos,
+            productos_incompletos=resultado.productos_incompletos,
         )
 
     return enrutador

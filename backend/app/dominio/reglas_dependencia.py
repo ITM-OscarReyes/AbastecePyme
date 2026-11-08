@@ -20,12 +20,10 @@ from dataclasses import dataclass
 
 from app.dominio.tipo_elemento import TipoElemento
 
-#: Relaciones permitidas por tipo de origen.
+#: Relaciones permitidas por tipo de origen (4 combinaciones permitidas).
 RELACIONES_PERMITIDAS: dict[TipoElemento, frozenset[TipoElemento]] = {
-    TipoElemento.PROVEEDOR: frozenset(
-        {TipoElemento.INSUMO, TipoElemento.PROCESO, TipoElemento.PRODUCTO}
-    ),
-    TipoElemento.INSUMO: frozenset({TipoElemento.PROCESO, TipoElemento.PRODUCTO}),
+    TipoElemento.PROVEEDOR: frozenset({TipoElemento.INSUMO}),
+    TipoElemento.INSUMO: frozenset({TipoElemento.PROCESO}),
     TipoElemento.PROCESO: frozenset({TipoElemento.INSUMO, TipoElemento.PRODUCTO}),
     TipoElemento.PRODUCTO: frozenset(),
 }
@@ -39,17 +37,26 @@ _MOTIVOS_NO_PERMITIDOS: dict[tuple[TipoElemento, TipoElemento], str] = {
     (TipoElemento.PROVEEDOR, TipoElemento.PROVEEDOR): (
         "Un proveedor no depende de otro elemento; es el origen externo de la cadena."
     ),
+    (TipoElemento.PROVEEDOR, TipoElemento.PROCESO): (
+        "Un proveedor no puede abastecer directamente a un proceso; debe hacerlo a través de un insumo."
+    ),
+    (TipoElemento.PROVEEDOR, TipoElemento.PRODUCTO): (
+        "Un proveedor no puede abastecer directamente a un producto; debe hacerlo a través de un proceso o insumo."
+    ),
     (TipoElemento.INSUMO, TipoElemento.PROVEEDOR): (
         "Un proveedor es una fuente externa y no puede ser generado por un suministro."
     ),
     (TipoElemento.INSUMO, TipoElemento.INSUMO): (
         "Un suministro no puede habilitar directamente a otro suministro; debe hacerlo a través de un proceso."
     ),
+    (TipoElemento.INSUMO, TipoElemento.PRODUCTO): (
+        "Un suministro no puede habilitar directamente a un producto; debe ser transformado mediante un proceso."
+    ),
     (TipoElemento.PROCESO, TipoElemento.PROVEEDOR): (
         "Un proveedor es una fuente externa y no puede ser generado por un proceso."
     ),
     (TipoElemento.PROCESO, TipoElemento.PROCESO): (
-        "Un proceso no puede habilitar directamente a otro proceso; debe hacerlo a través de un suministro."
+        "Un proceso no puede habilitar directamente a otro proceso; debe hacerlo a través de un suministro intermedio."
     ),
     (TipoElemento.PRODUCTO, TipoElemento.PROVEEDOR): (
         "Un producto es terminal y no puede habilitar a otros elementos."
