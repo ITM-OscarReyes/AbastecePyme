@@ -88,6 +88,7 @@ export const App: React.FC = () => {
   const [tabActiva, setTabActiva] = useState<TabActiva>('red');
   const [nodoSeleccionadoId, setNodoSeleccionadoId] = useState<string | null>(null);
   const [nodosAfectadosIds, setNodosAfectadosIds] = useState<string[]>([]);
+  const [filtroProductoGrafoId, setFiltroProductoGrafoId] = useState<string>('TODOS');
   const [cargandoImpactoNodo, setCargandoImpactoNodo] = useState<boolean>(false);
   const [impactoNodoSeleccionado, setImpactoNodoSeleccionado] =
     useState<ImpactoRespuesta | null>(null);
@@ -453,6 +454,10 @@ export const App: React.FC = () => {
   const verEnMapa = (id: string) => {
     setElementoDetalleId(null);
     setTabActiva('red');
+    const elemento = grafo.elementos.find((e) => e.id === id);
+    if (elemento?.tipo === 'PRODUCTO') {
+      setFiltroProductoGrafoId(id);
+    }
     void handleSelectNode(id);
   };
 
@@ -565,10 +570,19 @@ export const App: React.FC = () => {
                 nodosAfectadosIds={nodosAfectadosIds}
                 onSelectNode={handleSelectNode}
                 esModoOscuro={esModoOscuro}
+                filtroProductoId={filtroProductoGrafoId}
+                onCambiarFiltroProducto={setFiltroProductoGrafoId}
               />
             </div>
 
-            <div className="min-w-0 max-h-[440px] lg:max-h-none lg:h-full lg:min-h-0 space-y-4 overflow-y-auto pr-1">
+            <div
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  void handleSelectNode(null);
+                }
+              }}
+              className="min-w-0 max-h-[440px] lg:max-h-none lg:h-full lg:min-h-0 space-y-4 overflow-y-auto pr-1"
+            >
               {suministrosEnAlerta.length > 0 && (
                 <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3.5 text-xs text-red-900 dark:text-red-200 flex items-start gap-2.5 shadow-sm">
                   <AlertOctagon size={16} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
@@ -598,6 +612,7 @@ export const App: React.FC = () => {
                   onEliminar={solicitarEliminarElemento}
                   onEditarRelacion={abrirEdicionRelacion}
                   onEliminarRelacion={solicitarEliminarDependencia}
+                  onCerrar={() => handleSelectNode(null)}
                 />
               ) : (
                 <MensajeSinSeleccion />
@@ -625,6 +640,10 @@ export const App: React.FC = () => {
             onAnalisisRegistrado={registrarAnalisis}
             onSeleccionarElementoEnGrafo={(id) => {
               setTabActiva('red');
+              const elemento = grafo.elementos.find((e) => e.id === id);
+              if (elemento?.tipo === 'PRODUCTO') {
+                setFiltroProductoGrafoId(id);
+              }
               void handleSelectNode(id);
             }}
             onConsultarAfectado={(id) => abrirDetalle(id, 'afectado')}
@@ -637,6 +656,10 @@ export const App: React.FC = () => {
             onIrARed={(nodoId) => {
               setTabActiva('red');
               if (nodoId) {
+                const elemento = grafo.elementos.find((e) => e.id === nodoId);
+                if (elemento?.tipo === 'PRODUCTO') {
+                  setFiltroProductoGrafoId(nodoId);
+                }
                 void handleSelectNode(nodoId);
               }
             }}

@@ -381,30 +381,42 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
               )}
             </div>
 
-            {/* Chips de productos con botón de selección rápida */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Catálogo de productos disponibles:</span>
-              <div className="flex flex-wrap gap-2">
-                {productosDisponibles.map((prod) => {
-                  const seleccionada = productosSeleccionados.includes(prod.id);
-                  return (
-                    <button
-                      key={prod.id}
-                      type="button"
-                      onClick={() => toggleSeleccionProducto(prod.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                        seleccionada
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                          : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                      }`}
-                    >
-                      <span>{prod.nombre}</span>
-                      <span className="text-[10px] opacity-75 font-mono">({prod.id})</span>
-                    </button>
-                  );
-                })}
+            {/* Productos incluidos actualmente en el pedido */}
+            {productosSeleccionados.length > 0 ? (
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Productos incluidos en este pedido:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {productosSeleccionados.map((id) => {
+                    const prod = productosDisponibles.find((p) => p.id === id);
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-xs"
+                      >
+                        <span>{prod ? prod.nombre : id}</span>
+                        <span className="text-[10px] opacity-75 font-mono">
+                          ({obtenerCodigoSku(id) || id})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleSeleccionProducto(id)}
+                          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-950 dark:hover:text-white p-0.5 rounded cursor-pointer transition-colors"
+                          title="Quitar este producto del pedido"
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="pt-1 text-xs text-slate-500 italic">
+                No hay productos en el pedido. Usa el buscador superior para agregar productos o selecciona una combinación del historial.
+              </div>
+            )}
 
             {/* Historial de los últimos 10 pedidos consultados */}
             {historialPlan.length > 0 && (
@@ -570,9 +582,21 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                             <span className="text-[10px] text-slate-500 font-mono ml-2">({paso.id})</span>
                           </div>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${claseBadgeTipo(paso.tipo)}`}>
-                          {etiquetaTipo(paso.tipo)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {onIrARed && (
+                            <button
+                              type="button"
+                              onClick={() => onIrARed(paso.id)}
+                              className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                              title={`Ver ${paso.nombre} en el mapa`}
+                            >
+                              <Network size={14} />
+                            </button>
+                          )}
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${claseBadgeTipo(paso.tipo)}`}>
+                            {etiquetaTipo(paso.tipo)}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -759,9 +783,21 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                             <span className="text-[10px] text-slate-500 font-mono ml-2">({paso.id})</span>
                           </div>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${claseBadgeTipo(paso.tipo)}`}>
-                          {etiquetaTipo(paso.tipo)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {onIrARed && (
+                            <button
+                              type="button"
+                              onClick={() => onIrARed(paso.id)}
+                              className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                              title={`Ver ${paso.nombre} en el mapa`}
+                            >
+                              <Network size={14} />
+                            </button>
+                          )}
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${claseBadgeTipo(paso.tipo)}`}>
+                            {etiquetaTipo(paso.tipo)}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

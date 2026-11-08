@@ -50,4 +50,9 @@ describe('F3 · Contrato e integración del frontend con orden de producción', 
     expect(extraerReporteCiclo(error404)).toBeNull();
     expect(extraerReporteCiclo(new Error('Fallo de red'))).toBeNull();
   });
+
+  it('apiService expone el método obtenerPlanEntrega', () => {
+    expect(apiService.obtenerPlanEntrega).toBeDefined();
+    expect(typeof apiService.obtenerPlanEntrega).toBe('function');
+  });
 });
