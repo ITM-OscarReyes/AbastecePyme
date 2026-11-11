@@ -1,0 +1,73 @@
+======================================================================
+VERIFICACIÓN DE CRITERIOS DE ACEPTACIÓN — F3 (ORDEN Y CICLOS)
+======================================================================
+[PASÓ] AC-F3-01 GET /orden-produccion responde 200 en catálogo acíclico
+        esperado: 200 OK con esDag: true
+        obtenido: 200 con esDag: True
+[PASÓ] AC-F3-01 el orden contiene todos los elementos del catálogo
+        esperado: totalPasos = totalElementos = 27
+        obtenido: totalPasos: 27, orden: 27
+[PASÓ] AC-F3-01 sin ciclos, bloqueados ni productos bloqueados
+        esperado: ciclos, elementosBloqueados y productosBloqueados vacíos
+        obtenido: ciclos: 0, bloqueados: 0, productosBloqueados: 0
+[PASÓ] AC-F3-01 respeto estricto de precedencias origen habilita destino
+        esperado: Toda arista origen -> destino cumple paso(origen) < paso(destino)
+        obtenido: 0 incumplidas de 37
+[PASÓ] AC-F3-02 determinismo en diez llamadas consecutivas
+        esperado: Las diez respuestas son idénticas
+        obtenido: idénticas
+[PASÓ] AC-F3-05 plan de entrega de un producto planificable
+        esperado: 200, esPlanificable true y el producto aparece en el plan
+        obtenido: 200, esPlanificable: True, pasos: 7
+[PASÓ] AC-F3-05 el plan respeta todas las precedencias del subgrafo
+        esperado: Toda arista entre pasos del plan cumple origen antes que destino
+        obtenido: sin incumplimientos
+[PASÓ] AC-F3-05e el orden de la selección no altera el plan
+        esperado: Misma respuesta con la selección invertida
+        obtenido: idénticas
+[PASÓ] AC-F3-08e normaliza mayúsculas y deduplica la selección
+        esperado: Un único producto y el mismo plan que PROD-MESA-TRABAJO
+        obtenido: 200, productos: ['PROD-MESA-TRABAJO']
+[PASÓ] AC-F3-08 producto inexistente
+        esperado: 404 ELEMENTO_NO_ENCONTRADO sin plan parcial
+        obtenido: 404 ELEMENTO_NO_ENCONTRADO
+[PASÓ] AC-F3-08b elemento que no es producto
+        esperado: 422 VALIDACION_FALLIDA sin plan parcial
+        obtenido: 422 VALIDACION_FALLIDA
+[PASÓ] AC-F3-08c lista vacía
+        esperado: 422 VALIDACION_FALLIDA sin plan parcial
+        obtenido: 422 VALIDACION_FALLIDA
+[PASÓ] AC-F3-08c parámetro ausente
+        esperado: 422 VALIDACION_FALLIDA sin plan parcial
+        obtenido: 422 VALIDACION_FALLIDA
+[PASÓ] AC-F3-08d identificador mal formado
+        esperado: 422 IDENTIFICADOR_INVALIDO sin plan parcial
+        obtenido: 422 IDENTIFICADOR_INVALIDO
+[PASÓ] AC-F3-08f mezcla válida e inválida falla completa
+        esperado: 422 VALIDACION_FALLIDA sin plan parcial
+        obtenido: 422 VALIDACION_FALLIDA
+[PASÓ] AC-F3-03 con ciclo responde 200, esDag false y sin orden parcial
+        esperado: 200, esDag false, orden [] y totalPasos 0
+        obtenido: 200, esDag: False, orden: 0, totalPasos: 0
+[PASÓ] AC-F3-03 el ciclo se reporta como secuencia cerrada
+        esperado: Secuencia INS-PIEZA-CORTADA -> PROC-ACABADO -> INS-PIEZA-CORTADA
+        obtenido: [['INS-PIEZA-CORTADA', 'PROC-ACABADO', 'INS-PIEZA-CORTADA']]
+[PASÓ] AC-F3-03b los requisitos previos del ciclo no quedan bloqueados
+        esperado: PROC-CORTE-MADERA e INS-TABLERO fuera de elementosBloqueados
+        obtenido: ['INS-PIEZA-ACABADA', 'INS-PIEZA-CORTADA', 'PROC-ACABADO', 'PROC-ENSAMBLE-ESCRITORIO', 'PROC-ENSAMBLE-REPISA', 'PROD-ESCRITORIO', 'PROD-REPISA']
+[PASÓ] AC-F3-04 la rama de madera queda bloqueada y la de acero planificable
+        esperado: PROD-ESCRITORIO y PROD-REPISA bloqueados; PROD-MESA-TRABAJO planificable
+        obtenido: bloqueados: ['PROD-ESCRITORIO', 'PROD-REPISA'], planificables: ['PROD-MESA-TRABAJO']
+[PASÓ] AC-F3-06 producto bloqueado responde 200 sin pasos
+        esperado: 200, esPlanificable false, estado BLOQUEADO y pasos []
+        obtenido: 200, esPlanificable: False, estado: BLOQUEADO, pasos: 0
+[PASÓ] AC-F3-07 un ciclo en otra rama no bloquea el plan solicitado
+        esperado: 200, esPlanificable true, sin ciclos ni bloqueados
+        obtenido: 200, esPlanificable: True, ciclos: 0, bloqueados: 0
+[PASÓ] AC-F3-12 diagnóstico y plan responden en menos de 100 ms
+        esperado: Máximo de 5 llamadas < 100 ms
+        obtenido: diagnóstico: 1.5 ms, plan: 2.2 ms
+
+======================================================================
+RESUMEN: 22/22 escenarios PASARON
+======================================================================

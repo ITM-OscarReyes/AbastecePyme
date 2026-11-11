@@ -14,6 +14,7 @@ import type { TabActiva } from './components/HeaderNavbar';
 import { GraphCanvas } from './components/GraphCanvas';
 import { CatalogTable } from './components/CatalogTable';
 import { VistaImpacto } from './components/VistaImpacto';
+import { VistaOrdenProduccion } from './components/VistaOrdenProduccion';
 import { ModalCrearElemento } from './components/ModalCrearElemento';
 import { ModalCrearDependencia } from './components/ModalCrearDependencia';
 import { ModalAyudaOperativa } from './components/ModalAyudaOperativa';
@@ -87,6 +88,7 @@ export const App: React.FC = () => {
   const [tabActiva, setTabActiva] = useState<TabActiva>('red');
   const [nodoSeleccionadoId, setNodoSeleccionadoId] = useState<string | null>(null);
   const [nodosAfectadosIds, setNodosAfectadosIds] = useState<string[]>([]);
+  const [filtroProductoGrafoId, setFiltroProductoGrafoId] = useState<string>('TODOS');
   const [cargandoImpactoNodo, setCargandoImpactoNodo] = useState<boolean>(false);
   const [impactoNodoSeleccionado, setImpactoNodoSeleccionado] =
     useState<ImpactoRespuesta | null>(null);
@@ -104,6 +106,27 @@ export const App: React.FC = () => {
   const [confirmacion, setConfirmacion] = useState<EstadoConfirmacion | null>(null);
   const [solicitudImpacto, setSolicitudImpacto] = useState<SolicitudImpacto | null>(null);
   const [claveVistaImpacto, setClaveVistaImpacto] = useState<number>(0);
+
+  const [esModoOscuro, setEsModoOscuro] = useState<boolean>(() => {
+    const guardado = localStorage.getItem('abastecepyme-theme');
+    if (guardado) return guardado === 'dark';
+    return true;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (esModoOscuro) {
+      root.classList.add('dark');
+      localStorage.setItem('abastecepyme-theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('abastecepyme-theme', 'light');
+    }
+  }, [esModoOscuro]);
+
+  const toggleModoOscuro = () => {
+    setEsModoOscuro((prev) => !prev);
+  };
 
   const { historial, registrarAnalisis } = useHistorialImpactos();
 
@@ -183,6 +206,8 @@ export const App: React.FC = () => {
         handleTabChange('catalogo');
       } else if (e.key === '3') {
         handleTabChange('impacto');
+      } else if (e.key === '4') {
+        handleTabChange('produccion');
       } else if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         e.preventDefault();
         setModalAyudaAbierto(true);
@@ -429,6 +454,10 @@ export const App: React.FC = () => {
   const verEnMapa = (id: string) => {
     setElementoDetalleId(null);
     setTabActiva('red');
+    const elemento = grafo.elementos.find((e) => e.id === id);
+    if (elemento?.tipo === 'PRODUCTO') {
+      setFiltroProductoGrafoId(id);
+    }
     void handleSelectNode(id);
   };
 
@@ -453,7 +482,7 @@ export const App: React.FC = () => {
   const suministrosEnAlerta = grafo.elementos.filter((elemento) => elemento.alertaStock);
 
   return (
-    <div className="h-dvh overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white">
+    <div className={`h-dvh overflow-hidden flex flex-col font-sans transition-colors duration-200 ${esModoOscuro ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-sky-500 selection:text-white`}>
       <HeaderNavbar
         tabActiva={tabActiva}
         onTabChange={handleTabChange}
@@ -461,91 +490,109 @@ export const App: React.FC = () => {
         onAbrirModalDependencia={abrirNuevaDependencia}
         onAbrirAyuda={() => setModalAyudaAbierto(true)}
         apiConectada={apiConectada}
+        esModoOscuro={esModoOscuro}
+        onToggleModoOscuro={toggleModoOscuro}
       />
 
       {errorGlobal && (
-        <div className="shrink-0 bg-red-500/10 border-b border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-400 max-w-7xl mx-auto w-full">
+        <div className="shrink-0 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-800 dark:text-red-400 w-full">
           <div className="flex items-center gap-2 min-w-0">
-            <AlertTriangle size={16} className="shrink-0 text-red-400" />
+            <AlertTriangle size={16} className="shrink-0 text-red-600 dark:text-red-400" />
             <span className="truncate">{errorGlobal}</span>
           </div>
           <button
             onClick={cargarGrafo}
-            className="shrink-0 flex items-center gap-1 font-semibold hover:underline text-red-300"
+            className="shrink-0 flex items-center gap-1 font-semibold hover:underline text-red-700 dark:text-red-300"
           >
             <RefreshCw size={12} /> Reintentar
           </button>
         </div>
       )}
 
-      <main className="flex-1 min-h-0 overflow-y-auto max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg border border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Proveedores</span>
-              <p className="text-2xl font-black text-white mt-1">{proveedoresCount}</p>
-              <span className="text-[10px] text-blue-400 font-medium">Suministro externo</span>
+      <main
+        className={`flex-1 min-h-0 w-full p-4 sm:p-6 lg:p-8 overflow-y-auto ${
+          tabActiva === 'red' ? 'flex flex-col gap-4 sm:gap-6' : 'space-y-6'
+        }`}
+      >
+        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Proveedores</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{proveedoresCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-tight mt-0.5">Suministro externo</span>
             </div>
-            <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
-              <Box size={22} />
-            </div>
-          </div>
-
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg border border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Materias & Suministros</span>
-              <p className="text-2xl font-black text-white mt-1">{insumosCount}</p>
-              <span className="text-[10px] text-amber-400 font-medium">Materiales base</span>
-            </div>
-            <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
-              <Layers size={22} />
+            <div className="shrink-0 p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
+              <Box className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
 
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg border border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Procesos de Planta</span>
-              <p className="text-2xl font-black text-white mt-1">{procesosCount}</p>
-              <span className="text-[10px] text-purple-400 font-medium">Estaciones de trabajo</span>
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Materias & Suministros</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{insumosCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-medium leading-tight mt-0.5">Materiales base</span>
             </div>
-            <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
-              <GitCommitHorizontal size={22} />
+            <div className="shrink-0 p-2 sm:p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
 
-          <div className="glass-card p-4 rounded-2xl flex items-center justify-between shadow-lg border border-slate-800">
-            <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Productos Finales</span>
-              <p className="text-2xl font-black text-white mt-1">{productosCount}</p>
-              <span className="text-[10px] text-emerald-400 font-medium">Despacho a cliente</span>
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Procesos de Planta</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{procesosCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-purple-600 dark:text-purple-400 font-medium leading-tight mt-0.5">Estaciones de trabajo</span>
             </div>
-            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-              <Sparkles size={22} />
+            <div className="shrink-0 p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-500/20">
+              <GitCommitHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+          </div>
+
+          <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Productos Finales</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{productosCount}</p>
+              <span className="block text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight mt-0.5">Despacho a cliente</span>
+            </div>
+            <div className="shrink-0 p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
         </div>
 
         {tabActiva === 'red' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[560px] lg:h-[620px]">
-            <div className="lg:col-span-2 relative h-full min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:flex-1 lg:min-h-0">
+            <div className="lg:col-span-2 relative h-[360px] sm:h-[440px] lg:h-full lg:min-h-0 min-w-0">
               <GraphCanvas
                 elementos={grafo.elementos}
                 dependencias={grafo.dependencias}
                 nodoSeleccionadoId={nodoSeleccionadoId}
                 nodosAfectadosIds={nodosAfectadosIds}
                 onSelectNode={handleSelectNode}
+                esModoOscuro={esModoOscuro}
+                filtroProductoId={filtroProductoGrafoId}
+                onCambiarFiltroProducto={setFiltroProductoGrafoId}
               />
             </div>
 
-            <div className="h-full min-h-0 space-y-4 overflow-y-auto pr-1">
+            <div
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  void handleSelectNode(null);
+                }
+              }}
+              className="min-w-0 max-h-[440px] lg:max-h-none lg:h-full lg:min-h-0 space-y-4 overflow-y-auto pr-1"
+            >
               {suministrosEnAlerta.length > 0 && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-[11px] text-red-200 flex items-start gap-2">
-                  <AlertOctagon size={15} className="mt-0.5 shrink-0 text-red-400" />
+                <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3.5 text-xs text-red-900 dark:text-red-200 flex items-start gap-2.5 shadow-sm">
+                  <AlertOctagon size={16} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
                   <div>
-                    <p className="font-bold">Alerta de stock</p>
-                    <p className="mt-0.5 leading-relaxed">
+                    <p className="font-bold text-red-900 dark:text-red-200">Alerta de stock</p>
+                    <p className="mt-0.5 leading-relaxed text-red-700 dark:text-red-300 text-[11px]">
                       {suministrosEnAlerta.length} suministro(s) por debajo del mínimo aceptable:{' '}
-                      {suministrosEnAlerta.map((elemento) => elemento.nombre).join(', ')}.
+                      <span className="font-semibold text-red-900 dark:text-red-100">
+                        {suministrosEnAlerta.map((elemento) => elemento.nombre).join(', ')}
+                      </span>.
                     </p>
                   </div>
                 </div>
@@ -565,6 +612,7 @@ export const App: React.FC = () => {
                   onEliminar={solicitarEliminarElemento}
                   onEditarRelacion={abrirEdicionRelacion}
                   onEliminarRelacion={solicitarEliminarDependencia}
+                  onCerrar={() => handleSelectNode(null)}
                 />
               ) : (
                 <MensajeSinSeleccion />
@@ -592,9 +640,29 @@ export const App: React.FC = () => {
             onAnalisisRegistrado={registrarAnalisis}
             onSeleccionarElementoEnGrafo={(id) => {
               setTabActiva('red');
+              const elemento = grafo.elementos.find((e) => e.id === id);
+              if (elemento?.tipo === 'PRODUCTO') {
+                setFiltroProductoGrafoId(id);
+              }
               void handleSelectNode(id);
             }}
             onConsultarAfectado={(id) => abrirDetalle(id, 'afectado')}
+          />
+        )}
+
+        {tabActiva === 'produccion' && (
+          <VistaOrdenProduccion
+            onIrACatalogo={() => setTabActiva('catalogo')}
+            onIrARed={(nodoId) => {
+              setTabActiva('red');
+              if (nodoId) {
+                const elemento = grafo.elementos.find((e) => e.id === nodoId);
+                if (elemento?.tipo === 'PRODUCTO') {
+                  setFiltroProductoGrafoId(nodoId);
+                }
+                void handleSelectNode(nodoId);
+              }
+            }}
           />
         )}
       </main>

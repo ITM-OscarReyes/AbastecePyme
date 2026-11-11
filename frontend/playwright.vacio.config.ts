@@ -21,7 +21,7 @@ export default defineConfig({
   reporter: [['list']],
   webServer: [
     {
-      command: '.venv\\Scripts\\python.exe -m uvicorn tests.servidor_vacio:app --port 8001',
+      command: 'python -m uvicorn tests.servidor_vacio:app --port 8001',
       cwd: '../backend',
       url: 'http://127.0.0.1:8001/api/v1/grafo',
       reuseExistingServer: false,

@@ -86,3 +86,26 @@ class RutaNoEncontrada(ErrorDominio):
     """ERR-09: la ruta solicitada no existe en la API."""
 
     codigo = "TIPO_NO_ENCONTRADO"
+
+
+class ConfiguracionCiclica(ErrorDominio):
+    """ERR-10: el catálogo contiene ciclos que impiden un orden de producción válido.
+
+    Se lanza cuando el grafo no es un DAG y, por tanto, no existe un orden de
+    preparación realizable. La traducción a HTTP 409 ocurre en la capa de
+    infraestructura; el dominio no conoce HTTP.
+    """
+
+    codigo = "CONFIGURACION_CICLICA"
+
+
+class CadenaIncompleta(ErrorDominio):
+    """ERR-11: una operación dejaría elementos sin cadena de abastecimiento.
+
+    Se lanza al intentar eliminar un elemento cuando su ausencia dejaría
+    suministros sin origen, procesos sin insumos o productos sin proceso. La
+    traducción a HTTP 409 ocurre en la capa de infraestructura; el dominio no
+    conoce HTTP.
+    """
+
+    codigo = "CADENA_INCOMPLETA"

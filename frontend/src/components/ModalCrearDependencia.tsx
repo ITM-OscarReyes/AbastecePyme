@@ -118,31 +118,31 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
   const puedeEnviar = Boolean(origen && destino && reglaSeleccionada?.permitida);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4">
+      <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200 text-slate-900 dark:text-white">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
 
         <div className="flex items-center gap-3 mb-5">
-          <div className="p-2.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl">
+          <div className="p-2.5 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 rounded-xl">
             <GitCommitHorizontal size={22} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">
-              {esEdicion ? 'Editar Relación de Suministro' : 'Enlazar Suministro'}
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {esEdicion ? 'Editar relación' : 'Crear relación'}
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Elige primero el tipo de elemento y luego el elemento concreto.
             </p>
           </div>
         </div>
 
         {errorLocal && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-2.5 text-red-400 text-xs">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-start gap-2.5 text-red-700 dark:text-red-400 text-xs">
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{errorLocal}</span>
           </div>
@@ -150,12 +150,12 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400">
+            <div className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
                 Origen · habilita a
               </span>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Tipo de elemento
                 </label>
                 <select
@@ -165,7 +165,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                     setOrigen('');
                   }}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-white transition-all"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white transition-all"
                 >
                   <option value="">Selecciona el tipo...</option>
                   {TIPOS.map((tipo) => (
@@ -176,7 +176,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Elemento de origen
                 </label>
                 <select
@@ -184,7 +184,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                   onChange={(e) => setOrigen(e.target.value)}
                   required
                   disabled={!tipoOrigen}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-white transition-all disabled:opacity-50"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white transition-all disabled:opacity-50"
                 >
                   <option value="">
                     {tipoOrigen ? 'Selecciona el elemento...' : 'Primero elige el tipo'}
@@ -196,19 +196,19 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                   ))}
                 </select>
                 {tipoOrigen && elementosOrigen.length === 0 && (
-                  <p className="mt-1 text-[10px] text-amber-300">
+                  <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-300">
                     No hay elementos de este tipo registrados.
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+            <div className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 Destino · es habilitado por
               </span>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Tipo de elemento
                 </label>
                 <select
@@ -218,7 +218,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                     setDestino('');
                   }}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-white transition-all"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white transition-all"
                 >
                   <option value="">Selecciona el tipo...</option>
                   {TIPOS.map((tipo) => (
@@ -229,7 +229,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Elemento de destino
                 </label>
                 <select
@@ -237,7 +237,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                   onChange={(e) => setDestino(e.target.value)}
                   required
                   disabled={!tipoDestino}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-white transition-all disabled:opacity-50"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white transition-all disabled:opacity-50"
                 >
                   <option value="">
                     {tipoDestino ? 'Selecciona el elemento...' : 'Primero elige el tipo'}
@@ -249,7 +249,7 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                   ))}
                 </select>
                 {tipoDestino && elementosDestino.length === 0 && (
-                  <p className="mt-1 text-[10px] text-amber-300">
+                  <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-300">
                     No hay elementos de este tipo registrados.
                   </p>
                 )}
@@ -258,13 +258,13 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
           </div>
 
           {elementoOrigen && elementoDestino && (
-            <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300">
-              <span className="font-semibold text-sky-400">{elementoOrigen.nombre}</span>
-              <div className="flex shrink-0 items-center gap-1 text-slate-500">
-                <span className="text-[10px] font-bold uppercase text-slate-400">habilita</span>
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 text-xs text-slate-700 dark:text-slate-300">
+              <span className="font-semibold text-sky-600 dark:text-sky-400">{elementoOrigen.nombre}</span>
+              <div className="flex shrink-0 items-center gap-1 text-slate-400 dark:text-slate-500">
+                <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">habilita</span>
                 <ArrowRight size={14} />
               </div>
-              <span className="font-semibold text-emerald-400">{elementoDestino.nombre}</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{elementoDestino.nombre}</span>
             </div>
           )}
 
@@ -272,14 +272,14 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
             <div
               className={`flex items-start gap-2 rounded-xl border p-3 text-xs ${
                 reglaSeleccionada.permitida
-                  ? 'border-emerald-500/25 bg-emerald-500/5 text-emerald-200'
-                  : 'border-red-500/25 bg-red-500/5 text-red-200'
+                  ? 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/5 text-emerald-800 dark:text-emerald-200'
+                  : 'border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/5 text-red-800 dark:text-red-200'
               }`}
             >
               {reglaSeleccionada.permitida ? (
-                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               ) : (
-                <ShieldAlert size={16} className="mt-0.5 shrink-0 text-red-400" />
+                <ShieldAlert size={16} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
               )}
               <div>
                 <p className="font-bold">
@@ -292,10 +292,10 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Info size={15} className="text-sky-400" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+              <Info size={15} className="text-sky-600 dark:text-sky-400" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Reglas generales de dependencia
               </span>
             </div>
@@ -308,10 +308,10 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
                 reglasPorOrigen.map(({ tipo, permitidas }) => (
                   <div
                     key={tipo}
-                    className="flex flex-col gap-1 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <span className="text-xs font-semibold text-slate-200">{etiquetaTipo(tipo)}</span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{etiquetaTipo(tipo)}</span>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400">
                       {permitidas.length === 0
                         ? 'No habilita a ningún otro elemento: es el final de la cadena.'
                         : `Puede habilitar a: ${permitidas
@@ -334,18 +334,18 @@ const FormularioDependencia: React.FC<ModalCrearDependenciaProps> = ({
             </p>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={cargando || !puedeEnviar}
-              className="px-5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {cargando
                 ? 'Conectando...'

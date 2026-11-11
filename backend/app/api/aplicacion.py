@@ -14,7 +14,7 @@ def crear_aplicacion(catalogo: Catalogo | None = None) -> FastAPI:
     aplicacion = FastAPI(
         title="AbastecePyme API",
         version="1.0.0",
-        description="API REST de F1 — Catálogo de dependencias.",
+        description="API REST de F1, F2 y F3 — Catálogo de dependencias, análisis de impacto y orden de producción.",
     )
     aplicacion.state.repositorio_catalogo = RepositorioCatalogoMemoria(catalogo)
     aplicacion.add_middleware(

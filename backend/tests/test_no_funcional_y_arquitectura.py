@@ -92,25 +92,44 @@ def test_ac_f1_19_los_datos_de_prueba_son_sinteticos_y_del_dominio() -> None:
     """AC-F1-19 / RNF-F1-07: sin datos de personas ni empresas reales."""
     from app.infraestructura.datos_demostracion import _DEPENDENCIAS, _ELEMENTOS
 
-    elementos = {id_valor for id_valor, _, _, _, _ in _ELEMENTOS}
+    elementos = {id_valor for id_valor, _, _, _, _, _ in _ELEMENTOS}
     assert elementos == {
-        "PROV-ACERO",
-        "INS-BARRA",
-        "INS-TORNILLO",
-        "PROC-CORTE",
-        "PROD-PANEL",
-        "PROD-BANCO",
         "PROV-MADERA",
+        "PROV-FERRETERIA",
+        "PROV-ACABADOS",
+        "PROV-ACERO",
         "INS-TABLERO",
+        "INS-LISTON",
+        "INS-LIJA",
         "INS-BARNIZ",
-        "PROC-ENSAMBLE",
+        "INS-COLA",
+        "INS-TORNILLO",
+        "INS-TUERCA",
+        "INS-ARANDELA",
+        "INS-BISAGRA",
+        "INS-CORREDERA",
+        "INS-TIRADOR",
+        "INS-PANEL-METAL",
+        "INS-TUBO",
+        "INS-PIEZA-CORTADA",
+        "INS-PIEZA-ACABADA",
+        "PROC-CORTE-MADERA",
+        "PROC-ACABADO",
+        "PROC-ENSAMBLE-ESCRITORIO",
+        "PROC-ENSAMBLE-REPISA",
+        "PROC-ENSAMBLE-MESA",
         "PROD-ESCRITORIO",
+        "PROD-REPISA",
+        "PROD-MESA-TRABAJO",
     }
+    assert len(elementos) == 27
+    assert len(_DEPENDENCIAS) == 37
     for origen, destino in _DEPENDENCIAS:
         assert origen in elementos
         assert destino in elementos
-    tipos = {tipo for _, tipo, _, _, _ in _ELEMENTOS}
+    tipos = {tipo for _, tipo, _, _, _, _ in _ELEMENTOS}
     assert tipos <= {"PROVEEDOR", "INSUMO", "PRODUCTO", "PROCESO"}
+    assert all(descripcion for _, _, _, descripcion, _, _ in _ELEMENTOS)
 
 
 def test_ac_f1_20_las_operaciones_responden_en_tiempo_lineal(cliente_vacio: TestClient) -> None:
@@ -339,13 +358,14 @@ def test_ac_f1_23_la_composicion_de_dependencias_es_un_unico_punto() -> None:
 
     La composición puede referenciar todas las piezas: por eso no se cuenta
     como una operación con varias responsabilidades.
-    F1 tenía 2 POST y 4 GET; F2 añade 1 GET (/impacto/{id}) en la misma función.
+    F1 tenía 2 POST y 4 GET; F2 añade 1 GET (/impacto/{id}) y F3 añade
+    2 GET (/orden-produccion y /plan-entrega) en la misma función.
     """
     contenido = (RAIZ_BACKEND / "app" / "api" / "rutas.py").read_text(encoding="utf-8")
 
     assert contenido.count("def crear_enrutador") == 1
     assert contenido.count("enrutador.post(") == 2
-    assert contenido.count("enrutador.get(") == 6  # elementos, elemento, dependencias, grafo, reglas e impacto
+    assert contenido.count("enrutador.get(") == 8  # elementos, elemento, dependencias, grafo, reglas, impacto, orden-produccion, plan-entrega
     assert contenido.count("enrutador.put(") == 2
     assert contenido.count("enrutador.delete(") == 2
 

@@ -7,11 +7,20 @@ misma operación de registro.
 Además del catálogo, el agregado aplica las reglas de dependencia permitidas
 entre tipos de elemento y mantiene la integridad de la red cuando se edita o
 elimina un elemento o una relación. El catálogo vacío es un estado válido.
+
+F3 añade sobre esta representación el cálculo del orden de preparación
+(ordenamiento topológico determinista de Kahn) y la detección y reporte
+estructurado de ciclos (búsqueda en profundidad con colores), todo propio del
+proyecto y sin bibliotecas de terceros (RNF-F3-01, AC-F3-08).
 """
+
+import bisect
+from dataclasses import dataclass
 
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
 from app.dominio.errores import (
+    CadenaIncompleta,
     DependenciaDuplicada,
     DependenciaInvalida,
     DependenciaNoEncontrada,
@@ -25,6 +34,53 @@ from app.dominio.reglas_dependencia import (
     motivo_no_permitida,
 )
 from app.dominio.tipo_elemento import TipoElemento
+
+
+@dataclass(frozen=True)
+class CicloDetectado:
+    """Secuencia cerrada de identificadores que forman un ciclo dirigido."""
+
+    secuencia: list[str]
+
+
+@dataclass(frozen=True)
+class ProductoEntrega:
+    """Estado de planificación de un producto solicitado."""
+
+    id: str
+    tipo: str
+    nombre: str
+    descripcion: str | None
+    estado: str  # "PLANIFICABLE" | "BLOQUEADO" | "INCOMPLETO"
+
+
+@dataclass(frozen=True)
+class ResultadoOrdenProduccion:
+    """Resultado del diagnóstico global de planta (F3)."""
+
+    es_dag: bool
+    orden: list[Elemento]
+    total_pasos: int
+    ciclos: list[CicloDetectado]
+    elementos_bloqueados: list[str]
+    productos_bloqueados: list[str]
+    productos_planificables: list[str]
+    elementos_incompletos: list[str]
+    productos_incompletos: list[str]
+
+
+@dataclass(frozen=True)
+class ResultadoPlanEntrega:
+    """Resultado del plan de entrega por producto (F3)."""
+
+    productos: list[ProductoEntrega]
+    es_planificable: bool
+    pasos: list[Elemento]
+    total_pasos: int
+    ciclos: list[CicloDetectado]
+    elementos_bloqueados: list[str]
+    elementos_incompletos: list[str]
+    productos_incompletos: list[str]
 
 
 class Catalogo:
@@ -131,12 +187,110 @@ class Catalogo:
         self._quitar_arista(origen, destino)
         return Dependencia(origen=origen, destino=destino)
 
-    def eliminar_elemento(self, identificador: str) -> Elemento:
-        """Elimina un elemento y todas las relaciones que lo tocan.
+    def eliminar_elemento(
+        self, identificador: str, eliminar_cadena: bool = False
+    ) -> Elemento:
+        """Elimina un elemento respetando la integridad de la cadena.
 
-        La operación deja el grafo íntegro: no quedan aristas colgantes.
+        Por defecto, si la ausencia del elemento dejaría suministros sin origen,
+        procesos sin insumos o productos sin proceso, la operación se rechaza
+        con ``CadenaIncompleta`` y no modifica el catálogo.
+
+        Con ``eliminar_cadena=True`` se elimina el elemento y todos sus
+        descendientes alcanzables (la cadena que depende de él), de modo que no
+        queden elementos huérfanos por esta operación.
         """
         elemento = self.obtener_elemento(identificador)
+        if eliminar_cadena:
+            a_eliminar = self._alcanzables_hacia_adelante(identificador)
+        else:
+            incompletos_antes = self._calcular_incompletos()
+            elementos, entrada, salida = self._mapas_sin({identificador})
+            incompletos_despues = _calcular_incompletos(elementos, entrada, salida)
+            nuevos_incompletos = sorted(
+                incompletos_despues - incompletos_antes - {identificador}
+            )
+            if nuevos_incompletos:
+                raise CadenaIncompleta(
+                    "No se puede eliminar el elemento porque dejaría incompleta "
+                    "la cadena de dependencias.",
+                    [
+                        DetalleError(
+                            "elementosAfectados", ", ".join(nuevos_incompletos)
+                        ),
+                        DetalleError(
+                            "alternativas",
+                            "Puedes cambiar el abastecimiento de los elementos "
+                            "afectados o eliminar la cadena completa.",
+                        ),
+                    ],
+                )
+            a_eliminar = {identificador}
+
+        for id_borrar in sorted(a_eliminar):
+            self._eliminar_elemento_sin_validar(id_borrar)
+        return elemento
+
+    def elementos_incompletos(self) -> list[Elemento]:
+        """Elementos cuya cadena de abastecimiento está incompleta.
+
+        Un suministro está incompleto si no tiene proveedor ni proceso de
+        origen; un proceso, si no tiene insumos de entrada; un producto, si no
+        tiene proceso que lo genere. La incompletitud se propaga hacia adelante:
+        todo descendiente de un elemento incompleto también lo está.
+        """
+        return [
+            self._elementos[id_elem]
+            for id_elem in sorted(self._calcular_incompletos())
+        ]
+
+    def ids_elementos_incompletos(self) -> list[str]:
+        """Identificadores de los elementos con cadena incompleta."""
+        return sorted(self._calcular_incompletos())
+
+    def _calcular_incompletos(self) -> set[str]:
+        """Calcula la incompletitud sobre el estado actual del catálogo."""
+        return _calcular_incompletos(
+            self._elementos, self._adyacencia_entrada, self._adyacencia_salida
+        )
+
+    def _mapas_sin(
+        self, ids_a_quitar: set[str]
+    ) -> tuple[
+        dict[str, Elemento], dict[str, set[str]], dict[str, set[str]]
+    ]:
+        """Copia los mapas del grafo sin los elementos indicados."""
+        elementos = {
+            id_elem: elemento
+            for id_elem, elemento in self._elementos.items()
+            if id_elem not in ids_a_quitar
+        }
+        entrada = {
+            id_elem: {pred for pred in preds if pred not in ids_a_quitar}
+            for id_elem, preds in self._adyacencia_entrada.items()
+            if id_elem not in ids_a_quitar
+        }
+        salida = {
+            id_elem: {sucesor for sucesor in sucesores if sucesor not in ids_a_quitar}
+            for id_elem, sucesores in self._adyacencia_salida.items()
+            if id_elem not in ids_a_quitar
+        }
+        return elementos, entrada, salida
+
+    def _alcanzables_hacia_adelante(self, identificador: str) -> set[str]:
+        """Elemento indicado más todos sus descendientes alcanzables."""
+        alcanzables = {identificador}
+        pila = [identificador]
+        while pila:
+            actual = pila.pop()
+            for destino in self._adyacencia_salida[actual]:
+                if destino not in alcanzables:
+                    alcanzables.add(destino)
+                    pila.append(destino)
+        return alcanzables
+
+    def _eliminar_elemento_sin_validar(self, identificador: str) -> None:
+        """Quita el elemento y sus aristas, sin comprobar la cadena."""
         for origen in sorted(self._adyacencia_entrada[identificador]):
             self._quitar_arista(origen, identificador)
         for destino in sorted(self._adyacencia_salida[identificador]):
@@ -144,7 +298,6 @@ class Catalogo:
         del self._adyacencia_salida[identificador]
         del self._adyacencia_entrada[identificador]
         del self._elementos[identificador]
-        return elemento
 
     def obtener_elemento(self, identificador: str) -> Elemento:
         """Devuelve el elemento o lanza ``ElementoNoEncontrado`` (ERR-02)."""
@@ -302,3 +455,386 @@ class Catalogo:
     def _quitar_arista(self, origen: str, destino: str) -> None:
         self._adyacencia_salida[origen].discard(destino)
         self._adyacencia_entrada[destino].discard(origen)
+
+    # ------------------------------------------------------------------
+    # F3 — Orden de producción, diagnóstico global y plan de entrega
+    # ------------------------------------------------------------------
+
+    def orden_produccion(self) -> ResultadoOrdenProduccion:
+        """Diagnóstico global de planta (F3).
+
+        Evalúa la red completa como DAG:
+        - Si es acíclico, devuelve el orden (Kahn) desempatado por id de los
+          elementos con cadena completa, con es_dag=True, total_pasos=len(orden),
+          ciclos=[], elementos_bloqueados=[] y productos_bloqueados=[].
+        - Los elementos con cadena incompleta se reportan aparte en
+          ``elementos_incompletos`` y se excluyen del orden, de
+          ``productos_planificables`` y de ``productos_incompletos``.
+        - Si contiene ciclos, devuelve es_dag=False, orden=[], total_pasos=0,
+          ciclos con un ciclo representativo por SCC cíclica ordenados por el
+          menor id de cada SCC, elementos_bloqueados (elementos de regiones
+          cíclicas y sus alcanzables hacia adelante), productos_bloqueados y
+          productos_planificables (productos ni bloqueados ni incompletos).
+        """
+        ids = sorted(self._elementos)
+        todos_los_productos = sorted(
+            [e.id for e in self._elementos.values() if e.tipo is TipoElemento.PRODUCTO]
+        )
+        incompletos = self._calcular_incompletos()
+        productos_incompletos = sorted(
+            pid for pid in todos_los_productos if pid in incompletos
+        )
+        if not ids:
+            return ResultadoOrdenProduccion(
+                es_dag=True,
+                orden=[],
+                total_pasos=0,
+                ciclos=[],
+                elementos_bloqueados=[],
+                productos_bloqueados=[],
+                productos_planificables=[],
+                elementos_incompletos=[],
+                productos_incompletos=[],
+            )
+
+        # Kahn sobre el grafo completo
+        in_grado = {id_elem: len(self._adyacencia_entrada[id_elem]) for id_elem in ids}
+        listos: list[str] = sorted(id_elem for id_elem in ids if in_grado[id_elem] == 0)
+        orden: list[Elemento] = []
+        while listos:
+            id_actual = listos.pop(0)
+            orden.append(self._elementos[id_actual])
+            for destino in self._adyacencia_salida[id_actual]:
+                in_grado[destino] -= 1
+                if in_grado[destino] == 0:
+                    _insertar_ordenado(listos, destino)
+
+        if len(orden) == len(ids):
+            orden_completo = [elemento for elemento in orden if elemento.id not in incompletos]
+            return ResultadoOrdenProduccion(
+                es_dag=True,
+                orden=orden_completo,
+                total_pasos=len(orden_completo),
+                ciclos=[],
+                elementos_bloqueados=[],
+                productos_bloqueados=[],
+                productos_planificables=[
+                    pid for pid in todos_los_productos if pid not in incompletos
+                ],
+                elementos_incompletos=sorted(incompletos),
+                productos_incompletos=productos_incompletos,
+            )
+
+        # Hay ciclo en el grafo completo
+        # Obtener SCCs cíclicas y ciclos representativos
+        sccs = self._tarjan_scc(ids)
+        sccs_ciclicas = [
+            scc for scc in sccs
+            if len(scc) > 1 or (len(scc) == 1 and scc[0] in self._adyacencia_salida[scc[0]])
+        ]
+        # Ordenar SCCs cíclicas por su menor id
+        sccs_ciclicas.sort(key=lambda scc: min(scc))
+
+        ciclos: list[CicloDetectado] = []
+        nodos_en_sccs_ciclicas: set[str] = set()
+        for scc in sccs_ciclicas:
+            nodos_en_sccs_ciclicas.update(scc)
+            ciclo_seq = self._encontrar_ciclo_en_scc(scc)
+            if ciclo_seq:
+                ciclos.append(CicloDetectado(secuencia=ciclo_seq))
+
+        # elementos_bloqueados: los nodos de las SCCs cíclicas + todos los alcanzables desde ellos hacia adelante
+        bloqueados_set: set[str] = set(nodos_en_sccs_ciclicas)
+        pila = list(nodos_en_sccs_ciclicas)
+        while pila:
+            curr = pila.pop()
+            for nxt in self._adyacencia_salida[curr]:
+                if nxt not in bloqueados_set:
+                    bloqueados_set.add(nxt)
+                    pila.append(nxt)
+
+        elementos_bloqueados = sorted(bloqueados_set)
+        productos_bloqueados = sorted([
+            pid for pid in elementos_bloqueados
+            if self._elementos[pid].tipo is TipoElemento.PRODUCTO
+        ])
+        productos_planificables = sorted([
+            pid for pid in todos_los_productos
+            if pid not in bloqueados_set and pid not in incompletos
+        ])
+
+        return ResultadoOrdenProduccion(
+            es_dag=False,
+            orden=[],
+            total_pasos=0,
+            ciclos=ciclos,
+            elementos_bloqueados=elementos_bloqueados,
+            productos_bloqueados=productos_bloqueados,
+            productos_planificables=productos_planificables,
+            elementos_incompletos=sorted(incompletos),
+            productos_incompletos=productos_incompletos,
+        )
+
+    def plan_entrega(self, productos_ids: list[str]) -> ResultadoPlanEntrega:
+        """Calcula el plan de preparación para uno o varios productos (F3).
+
+        - Calcula los ancestros de los productos solicitados (requisitos hacia atrás).
+        - Si los requisitos de un producto tocan una SCC cíclica, queda BLOQUEADO.
+        - Si su cadena está incompleta, queda INCOMPLETO.
+        - Si no tocan ningún ciclo y la cadena está completa, queda PLANIFICABLE.
+        - Los pasos contienen el orden topológico (Kahn) de la unión de requisitos
+          de los productos PLANIFICABLES.
+        - ciclos y elementos_bloqueados reportan únicamente los ciclos y bloqueos
+          dentro del subgrafo de los productos solicitados. Los elementos con
+          cadena incompleta se reportan en ``elementos_incompletos``.
+        """
+        # Deduplicar preservando tipo producto
+        p_ids = sorted(set(productos_ids))
+        info_productos: list[ProductoEntrega] = []
+        incompletos = self._calcular_incompletos()
+
+        # Determinar ancestros de cada producto
+        ancestros_por_prod: dict[str, set[str]] = {}
+        for pid in p_ids:
+            ancestros = self._obtener_ancestros(pid)
+            ancestros_por_prod[pid] = ancestros
+
+        subgrafo_total = set().union(*ancestros_por_prod.values()) if ancestros_por_prod else set()
+
+        # Encontrar ciclos dentro de subgrafo_total
+        sccs_sub = self._tarjan_scc(sorted(subgrafo_total))
+        sccs_ciclicas_sub = [
+            scc for scc in sccs_sub
+            if len(scc) > 1 or (len(scc) == 1 and scc[0] in self._adyacencia_salida[scc[0]])
+        ]
+        sccs_ciclicas_sub.sort(key=lambda scc: min(scc))
+
+        ciclos_sub: list[CicloDetectado] = []
+        nodos_scc_ciclicas_sub: set[str] = set()
+        for scc in sccs_ciclicas_sub:
+            nodos_scc_ciclicas_sub.update(scc)
+            c_seq = self._encontrar_ciclo_en_scc(scc)
+            if c_seq:
+                ciclos_sub.append(CicloDetectado(secuencia=c_seq))
+
+        # Calcular elementos bloqueados dentro del subgrafo_total
+        bloqueados_en_subgrafo: set[str] = set(nodos_scc_ciclicas_sub)
+        pila_b = list(nodos_scc_ciclicas_sub)
+        while pila_b:
+            curr = pila_b.pop()
+            for nxt in self._adyacencia_salida[curr]:
+                if nxt in subgrafo_total and nxt not in bloqueados_en_subgrafo:
+                    bloqueados_en_subgrafo.add(nxt)
+                    pila_b.append(nxt)
+
+        # Determinar estado de cada producto solicitado
+        productos_planificables_ids: list[str] = []
+        productos_incompletos_ids: list[str] = []
+        for pid in p_ids:
+            elem = self._elementos[pid]
+            # Un ciclo tiene prioridad sobre una cadena incompleta.
+            ancestros_prod = ancestros_por_prod[pid]
+            if any(anc in nodos_scc_ciclicas_sub for anc in ancestros_prod):
+                estado = "BLOQUEADO"
+            elif pid in incompletos:
+                estado = "INCOMPLETO"
+                productos_incompletos_ids.append(pid)
+            else:
+                estado = "PLANIFICABLE"
+                productos_planificables_ids.append(pid)
+
+            info_productos.append(
+                ProductoEntrega(
+                    id=elem.id,
+                    tipo=elem.tipo.value,
+                    nombre=elem.nombre,
+                    descripcion=elem.descripcion,
+                    estado=estado,
+                )
+            )
+
+        es_planificable = (len(productos_planificables_ids) == len(p_ids)) and len(p_ids) > 0
+
+        # Subgrafo para los pasos: unión de ancestros de productos PLANIFICABLES
+        if productos_planificables_ids:
+            subgrafo_plan = set().union(
+                *(ancestros_por_prod[pid] for pid in productos_planificables_ids)
+            )
+            # Aplicar Kahn sobre subgrafo_plan
+            pasos = self._ordenar_subgrafo_kahn(subgrafo_plan)
+        else:
+            pasos = []
+
+        return ResultadoPlanEntrega(
+            productos=info_productos,
+            es_planificable=es_planificable,
+            pasos=pasos,
+            total_pasos=len(pasos),
+            ciclos=ciclos_sub,
+            elementos_bloqueados=sorted(bloqueados_en_subgrafo),
+            elementos_incompletos=sorted(subgrafo_total & incompletos),
+            productos_incompletos=productos_incompletos_ids,
+        )
+
+    def _obtener_ancestros(self, id_elemento: str) -> set[str]:
+        """Obtiene el conjunto de ancestros (hacia atrás por adyacencia_entrada) incluyendo id_elemento."""
+        ancestros: set[str] = {id_elemento}
+        pila = [id_elemento]
+        while pila:
+            actual = pila.pop()
+            for predecesor in self._adyacencia_entrada[actual]:
+                if predecesor not in ancestros:
+                    ancestros.add(predecesor)
+                    pila.append(predecesor)
+        return ancestros
+
+    def _ordenar_subgrafo_kahn(self, nodos_subgrafo: set[str]) -> list[Elemento]:
+        """Aplica Kahn determinista sobre el subgrafo inducido por nodos_subgrafo."""
+        nodos_ordenados = sorted(nodos_subgrafo)
+        in_grado = {
+            n: sum(1 for p in self._adyacencia_entrada[n] if p in nodos_subgrafo)
+            for n in nodos_ordenados
+        }
+        listos: list[str] = sorted(n for n in nodos_ordenados if in_grado[n] == 0)
+        resultado: list[Elemento] = []
+
+        while listos:
+            actual = listos.pop(0)
+            resultado.append(self._elementos[actual])
+            for sucesor in sorted(self._adyacencia_salida[actual]):
+                if sucesor in nodos_subgrafo:
+                    in_grado[sucesor] -= 1
+                    if in_grado[sucesor] == 0:
+                        _insertar_ordenado(listos, sucesor)
+
+        return resultado
+
+    def _tarjan_scc(self, nodos_considerados: list[str]) -> list[list[str]]:
+        """Algoritmo de Tarjan para encontrar componentes fuertemente conexas (SCCs)."""
+        idx = 0
+        indices: dict[str, int] = {}
+        lowlinks: dict[str, int] = {}
+        en_pila: dict[str, bool] = {n: False for n in nodos_considerados}
+        pila: list[str] = []
+        sccs: list[list[str]] = []
+        nodos_set = set(nodos_considerados)
+
+        def strongconnect(v: str) -> None:
+            nonlocal idx
+            indices[v] = idx
+            lowlinks[v] = idx
+            idx += 1
+            pila.append(v)
+            en_pila[v] = True
+
+            for w in sorted(self._adyacencia_salida[v]):
+                if w not in nodos_set:
+                    continue
+                if w not in indices:
+                    strongconnect(w)
+                    lowlinks[v] = min(lowlinks[v], lowlinks[w])
+                elif en_pila[w]:
+                    lowlinks[v] = min(lowlinks[v], indices[w])
+
+            if lowlinks[v] == indices[v]:
+                scc: list[str] = []
+                while True:
+                    w = pila.pop()
+                    en_pila[w] = False
+                    scc.append(w)
+                    if w == v:
+                        break
+                sccs.append(sorted(scc))
+
+        for n in sorted(nodos_considerados):
+            if n not in indices:
+                strongconnect(n)
+
+        return sccs
+
+    def _encontrar_ciclo_en_scc(self, scc: list[str]) -> list[str] | None:
+        """Encuentra un ciclo cerrado elemental representativo en la SCC."""
+        scc_set = set(scc)
+        if len(scc) == 1:
+            nodo = scc[0]
+            if nodo in self._adyacencia_salida[nodo]:
+                return [nodo, nodo]
+            return None
+
+        # DFS buscando arista de retroceso dentro de la SCC comenzando por el menor id
+        nodo_inicio = min(scc)
+        camino: list[str] = []
+        visitados_en_camino: set[str] = set()
+
+        def dfs(u: str) -> list[str] | None:
+            camino.append(u)
+            visitados_en_camino.add(u)
+            for v in sorted(self._adyacencia_salida[u]):
+                if v not in scc_set:
+                    continue
+                if v in visitados_en_camino:
+                    idx = camino.index(v)
+                    return camino[idx:] + [v]
+                res = dfs(v)
+                if res is not None:
+                    return res
+            visitados_en_camino.remove(u)
+            camino.pop()
+            return None
+
+        return dfs(nodo_inicio)
+
+
+def _calcular_incompletos(
+    elementos: dict[str, Elemento],
+    adyacencia_entrada: dict[str, set[str]],
+    adyacencia_salida: dict[str, set[str]],
+) -> set[str]:
+    """Identifica los elementos con cadena incompleta y propaga hacia adelante.
+
+    La incompletitud local se define por tipo:
+    - ``INSUMO`` sin predecesor ``PROVEEDOR`` o ``PROCESO``.
+    - ``PROCESO`` sin predecesor ``INSUMO``.
+    - ``PRODUCTO`` sin predecesor ``PROCESO``.
+
+    Después se propaga: todo descendiente de un elemento incompleto también
+    queda incompleto, porque no puede prepararse sin su requisito.
+    """
+    incompletos: set[str] = set()
+    for id_elem, elemento in elementos.items():
+        predecesores = adyacencia_entrada[id_elem]
+        if elemento.tipo is TipoElemento.INSUMO:
+            tiene_origen = any(
+                elementos[pred].tipo in TIPOS_QUE_ASOCIAN_SUMINISTRO
+                for pred in predecesores
+            )
+            if not tiene_origen:
+                incompletos.add(id_elem)
+        elif elemento.tipo is TipoElemento.PROCESO:
+            tiene_insumo = any(
+                elementos[pred].tipo is TipoElemento.INSUMO
+                for pred in predecesores
+            )
+            if not tiene_insumo:
+                incompletos.add(id_elem)
+        elif elemento.tipo is TipoElemento.PRODUCTO:
+            tiene_proceso = any(
+                elementos[pred].tipo is TipoElemento.PROCESO
+                for pred in predecesores
+            )
+            if not tiene_proceso:
+                incompletos.add(id_elem)
+
+    pila = list(incompletos)
+    while pila:
+        actual = pila.pop()
+        for destino in adyacencia_salida[actual]:
+            if destino not in incompletos:
+                incompletos.add(destino)
+                pila.append(destino)
+    return incompletos
+
+
+def _insertar_ordenado(lista: list[str], valor: str) -> None:
+    """Inserta ``valor`` en ``lista`` manteniéndola ordenada ascendentemente."""
+    bisect.insort(lista, valor)

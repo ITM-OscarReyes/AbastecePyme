@@ -419,3 +419,133 @@ En particular, se debe garantizar que:
 - La información de inventario y las alertas de stock se reflejen tanto en las tarjetas de información como en los análisis de impacto cuando corresponda.
 - Los análisis de impacto puedan iniciarse desde la pestaña correspondiente y desde los elementos de Materiales y procesos.
 - La guía de usuario, los botones, los títulos y los mensajes reflejen los cambios funcionales y utilicen una terminología uniforme.
+
+## 10 — Backend de F3 con el agente backend-builder
+
+Hola, por favor con el agente backend-builder continua con el desarrollo del backend necesario **únicamente para el feature 3 (F3 — Orden de producción y ciclos)** de AbastecePyme, aprovechando el backend ya existente del Feature 2 (Análisis de impacto), empleando Python y FastAPI, todo dentro del branch `f3-backend`. Así mismo almacena la documentación del prompt en el archivo `prompts.md` y trata de que el propio código quede con una documentación clara.
+
+**Contexto del proyecto:**
+- F1 y F2 ya están implementados y verificados (Catálogo de dependencias y Análisis de impacto).
+- F3 es "Orden de producción y ciclos": obtener un orden de preparación válido cuando no hay ciclos; detectar y reportar los ciclos de manera útil; no devolver un orden falso cuando existe contradicción. Usa conceptos como DAG y ordenamiento topológico.
+- Debes trabajar en la rama `f3-backend`.
+- Usar Python 3.12+ y FastAPI.
+- No usar NetworkX para cálculos principales (solo visualización).
+- Almacena la documentación del prompt en `prompts.md`.
+- Código con documentación clara.
+
+**Pasos a seguir:**
+1. Primero, explora el código existente del backend (F1 y F2) para entender la estructura, modelos, API y algoritmos del grafo.
+2. Crea/cambia a la rama `f3-backend`.
+3. Documenta este prompt en `prompts.md`.
+4. Implementa los endpoints y lógica para F3:
+   - Endpoint `GET /api/v1/orden-produccion` que devuelva el orden de preparación válido (DAG) o un reporte de ciclo si hay contradicción.
+   - Algoritmo de ordenamiento topológico determinista (Kahn) en el dominio, con desempate alfabético por `id`.
+   - Detección y reporte estructurado de ciclos (DFS con colores) en el dominio.
+   - Manejo de casos: grafo vacío, elementos sin dependencias, ciclos simples y complejos, grafos disconexos.
+   - Respuesta `409 Conflict` con `CONFIGURACION_CICLICA` cuando hay ciclos; nunca un orden parcial ni falso.
+5. Asegura que la implementación respete SOLID, Clean Architecture, y las convenciones del proyecto.
+6. Escribe pruebas básicas para validar la funcionalidad (AC-F3-01 a AC-F3-06).
+
+**REQUISITOS ESTRICTOS DE ALCANCE:**
+1. **Solo F3.** No implementes F4 (dashboard integrado).
+2. No crees endpoints, algoritmos, modelos, casos de uso ni datos de demostración de F4.
+3. `GET /api/v1/orden-produccion` expone el cálculo de orden y detección de ciclos. No le agregues funcionalidades de F4.
+4. Los endpoints del backend deben coincidir exactamente con `docs/api-contract.md` (§3.7 y §5).
+5. La verificación de F3 la realiza `tester`. Tú no declares PASS/FAIL.
+
+
+## 11 — Frontend de F3 con el equipo de Frontend y Diseño (ArchitectUX & frontend-builder)
+
+Desarrolla la interfaz necesaria **únicamente para el Feature 3 (F3 — Orden de producción y ciclos)** de AbastecePyme con React + TypeScript, consumiendo la API real del backend (`GET /api/v1/orden-produccion`), dentro de la rama `f3-order-and-cycles`. Asimismo, incorpora selector de modo oscuro / modo claro (Dark / Light mode) con persistencia en `localStorage` y documenta este prompt en `prompts.md`.
+
+**Contexto del proyecto:**
+- F1 y F2 están implementados y verificados.
+- El backend de F3 ya está implementado en FastAPI con `GET /api/v1/orden-produccion`.
+- Cuando el grafo es acíclico (DAG), el backend devuelve `200 OK` con `esDag: true` y la lista de etapas `orden[]` calculada mediante Kahn determinista.
+- Cuando existen dependencias circulares, el backend devuelve `409 Conflict` con código `CONFIGURACION_CICLICA`, la secuencia del ciclo cerrado y los elementos bloqueados.
+- El frontend jamás debe inventar ni mostrar un orden falso o parcial cuando hay contradicción.
+- Cero cálculos de grafos en el cliente (no NetworkX, no Kahn en JS, no detección de ciclos en el cliente).
+
+**Requisitos implementados:**
+1. Tipos en `frontend/src/types/index.ts`: `PasoProduccion`, `OrdenProduccionRespuesta`, `ReporteCicloError`.
+2. Servicio en `frontend/src/services/api.ts`: método `apiService.obtenerOrdenProduccion()` y extractor `extraerReporteCiclo()`.
+3. Componente `VistaOrdenProduccion.tsx`:
+   - Visualización de secuencia de fabricación (stepper / timeline lineal ordenado paso a paso).
+   - Manejo de estados: DAG válido (200), catálogo vacío (totalPasos: 0), y bloqueo crítico por dependencias circulares (409 Conflict).
+   - Desglose del lazo cíclico detectado con flechas direccionales y lista de componentes bloqueados.
+   - Herramienta de copiado de plan de trabajo para el personal de planta.
+4. Soporte Dark Mode / Light Mode en `HeaderNavbar.tsx` y `App.tsx` con clase `dark` y almacenamiento local.
+5. Pestaña "Orden de producción" en `HeaderNavbar.tsx` con atajo de teclado accesible `[4]`.
+6. Pruebas y verificación: 14 pruebas de arquitectura en verde (`arquitectura.test.ts`), pruebas unitarias de contrato (`ordenProduccion.test.ts`), y compilación `tsc -b && vite build` exitosa.
+
+
+## 12 — Refactorización del Sistema de Diseño Dual (Light & Dark) y Contraste WCAG AAA (Orquestador Supremo & frontend-builder)
+
+Ajusta la arquitectura de estilos de la interfaz de AbastecePyme para garantizar una experiencia visual en Modo Claro (Light Mode) impecable, eliminando artefactos oscuros y asegurando contraste de legibilidad en todos los componentes y en el lienzo gráfico interactivo (Cytoscape), cumpliendo las directrices WCAG AAA.
+
+**Problemas resueltos:**
+1. **Alertas de stock desvanecidas:** En modo claro, `text-red-200` sobre `bg-red-500/10` generaba contraste casi nulo (texto rosa pálido sobre fondo rosa pálido). Corregido a `bg-red-50 text-red-900 border-red-200` en modo claro y `dark:bg-red-500/10 dark:text-red-200 dark:border-red-500/30` en modo oscuro.
+2. **Cajas negras en etiquetas de aristas de Cytoscape:** La arista "habilita" tenía fondo rígido `#030712`. Ahora conmuta dinámicamente: fondo blanco `#ffffff` con borde gris suave `#cbd5e1` en modo claro y `#090d16` con `#1e293b` en modo oscuro.
+3. **Nodos de Cytoscape opacos/lodosos en fondo blanco:** Se parametrizó `GraphCanvas.tsx` con la prop `esModoOscuro`, implementando una paleta SaaS enterprise de alto contraste: fondos pasteles tintados (azul `#eff6ff`, ámbar `#fffbeb`, púrpura `#faf5ff`, esmeralda `#ecfdf5`), bordes vibrantes (`#2563eb`, `#d97706`, `#9333ea`, `#059669`) y tipografía oscura de alta fidelidad (`colorTexto` data binding).
+4. **Textos oscurecidos en botones primarios:** Se eliminó la regla destructiva `html:not(.dark) .text-white { color: #0f172a !important; }` de `index.css` que convertía en texto negro los botones primarios azules/índigo.
+5. **Pestañas y paneles de detalle:** Se adaptaron `HeaderNavbar.tsx`, `PanelDetalleNodo.tsx`, `TarjetaStock.tsx`, `CatalogTable.tsx` y `VistaOrdenProduccion.tsx` con clases duales de Tailwind v4.
+6. **Verificación:** `npm run build` en 2.44s sin errores, 14 pruebas de arquitectura en verde y 3 pruebas unitarias de contrato.
+
+## 13 — Estandarización Integral de Modales, Formularios y Vistas con el Estándar Corporativo de Badges (Orquestador Supremo & frontend-builder)
+
+Estandariza todos los diálogos modales, formularios, controles de entrada y vistas de análisis de impacto de AbastecePyme para erradicar cualquier bloque oscuro persistente en Modo Claro y asegurar una experiencia visual unificada con la guía de diseño del proyecto.
+
+**Problemas detectados y resueltos:**
+1. **Modales con monolito negro en Modo Claro:** `ModalAyudaOperativa.tsx`, `ModalCrearElemento.tsx`, `ModalCrearDependencia.tsx`, `ModalDetalleElemento.tsx` y `ModalConfirmarRiesgo.tsx` utilizaban clases rígidas `bg-slate-900`, `bg-slate-950` y `border-slate-800`. Se refactorizaron a contenedores duales: `bg-white dark:bg-slate-900`, `border-slate-200 dark:border-slate-800`, con tipografía de alto contraste `text-slate-900 dark:text-white` y subtítulos en `text-slate-600 dark:text-slate-400`.
+2. **Campos de formulario e inputs ilegibles:** Todos los `input`, `select` y `textarea` fueron actualizados a `bg-slate-50 dark:bg-slate-950`, con borde `border-slate-200 dark:border-slate-800`, foco claro `focus:bg-white dark:focus:bg-slate-950`, texto `text-slate-900 dark:text-white` y placeholders accesibles.
+3. **Pestaña de Análisis de Impacto (`VistaImpacto.tsx`):** Se eliminó el fondo negro del contenedor principal, buscador, historial de los 10 análisis recientes, tarjetas de métricas por tipo y lista de afectados, adoptando fondos limpios en modo claro con bordes nítidos y números de impacto de gran visibilidad.
+4. **Adopción del estándar corporativo de badges de categoría:** Se integró la función utilitaria `claseBadgeTipo()` en todas las vistas y modales para coincidir exactamente con el estándar de diseño:
+   - **Proveedor:** Fondo azul pastel `bg-blue-50 dark:bg-blue-500/10`, borde `border-blue-200 dark:border-blue-500/30`, texto cobalto `text-blue-700 dark:text-blue-400`.
+   - **Suministro:** Fondo ámbar pastel `bg-amber-50 dark:bg-amber-500/10`, borde `border-amber-200 dark:border-amber-500/30`, texto industrial profundo `text-amber-800 dark:text-amber-400`.
+   - **Proceso:** Fondo violeta pastel `bg-purple-50 dark:bg-purple-500/10`, borde `border-purple-200 dark:border-purple-500/30`, texto púrpura vivo `text-purple-700 dark:text-purple-400`.
+   - **Producto:** Fondo esmeralda pastel `bg-emerald-50 dark:bg-emerald-500/10`, borde `border-emerald-200 dark:border-emerald-500/30`, texto esmeralda profundo `text-emerald-700 dark:text-emerald-400`.
+5. **Verificación:** `npm run build` completado exitosamente sin errores, 14 pruebas de arquitectura en verde y 3 pruebas unitarias de F3 aprobadas.
+
+## 14 — Verificación de F3 (tester)
+
+Actúa como `tester` de AbastecePyme y verifica de forma objetiva la Feature 3 (F3 — Orden de producción y ciclos). No implementes ni corrijas código de producción; tu tarea es crear/completar las pruebas necesarias, ejecutarlas realmente y emitir un informe con veredicto PASS/FAIL/BLOCKED.
+
+**Contexto:**
+- `docs/brief.md` es la fuente de verdad. La especificación derivada está en `docs/requirements.md`, `docs/acceptance-criteria.md`, `docs/api-contract.md`, `docs/architecture.md` y `docs/graph-model.md`.
+- F1 y F2 ya están implementadas y verificadas. F3 está implementada (backend y frontend) y es la única feature en alcance.
+- La rama de trabajo es `f3-order-and-cycles`.
+- No se puede usar NetworkX ni otra librería para reemplazar los algoritmos propios del proyecto.
+
+**Alcance de la verificación:**
+- Verificar F3 y la integración F1/F2/API/frontend estrictamente necesaria.
+- No verificar ni implementar F4.
+- No modificar código de producción ni refactorizar para hacer pasar las pruebas.
+
+**Casos mínimos a cubrir:**
+1. Detección de ciclos en grafo dirigido.
+2. Identificación de los nodos que forman parte de un ciclo.
+3. Ciclos directos e indirectos.
+4. Grafos acíclicos.
+5. Múltiples ciclos y ciclos que comparten nodos.
+6. Orden topológico correcto.
+7. Respeto de la dirección de las dependencias (`origen -> destino`).
+8. Elementos aislados sin dependencias.
+9. Grafo vacío y grafo con un solo elemento.
+10. Configuraciones que no permiten un orden válido.
+11. Validación de entrada y respuestas de error de la API.
+12. Determinismo y rendimiento.
+13. AC-F3-01 a AC-F3-11, incluida la interfaz de usuario (lista numerada y alerta de ciclo).
+
+**Restricciones:**
+- Ejecutar las pruebas de verdad; no declarar PASS por inspección.
+- Marcar como `BLOCKED` toda prueba no ejecutable, con la razón concreta.
+- No aprobar F3 si algún criterio de aceptación queda sin verificar.
+- Reportar contradicciones documentales en lugar de asumir una resolución.
+- Registrar en `docs/decisions/tester.md` las decisiones de verificación relevantes.
+
+**Entregable:**
+- Informe con totales PASS/FAIL/BLOCKED.
+- Matriz de todos los criterios de aceptación de F3.
+- Fallos con criterio, esperado, obtenido y evidencia reproducible.
+- Pruebas bloqueadas y su razón.
+- Cobertura de criterios de aceptación y conclusión final.

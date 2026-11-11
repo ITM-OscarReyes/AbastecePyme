@@ -75,8 +75,8 @@ test.describe('Interfaz con catálogo vacío', () => {
     await modal.getByRole('button', { name: 'Crear Elemento' }).click();
     await expect(page.locator('.fixed')).toBeHidden();
 
-    await page.getByRole('button', { name: /Enlazar Suministro/i }).click();
-    modal = page.locator('.fixed').filter({ hasText: 'Enlazar Suministro' });
+    await page.getByRole('button', { name: /Crear relación/i }).click();
+    modal = page.locator('.fixed').filter({ hasText: 'Crear relación' });
     const selectores = modal.locator('select');
     await selectores.nth(0).selectOption('INSUMO');
     await selectores.nth(2).selectOption('PRODUCTO');
