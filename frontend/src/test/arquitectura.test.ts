@@ -198,25 +198,27 @@ function codigoSinCadenas(fuente: string): string {
     .replace(/`(?:\\.|[^`\\])*`/g, '``');
 }
 
-describe('AC-F3-11 · El frontend consume el orden de producción del backend', () => {
-  it('AC-F3-11 el cliente de API consume GET /api/v1/orden-produccion', () => {
+describe('AC-F3-10c · El frontend representa los resultados de F3 sin calcularlos', () => {
+  it('AC-F3-10c el cliente de API consume el diagnóstico global y el plan de entrega', () => {
     const cliente = lectura(RUTA_CLIENTE);
     expect(cliente).toContain("'/orden-produccion'");
     expect(cliente).toContain('obtenerOrdenProduccion');
+    expect(cliente).toContain("'/plan-entrega'");
+    expect(cliente).toContain('obtenerPlanEntrega');
   });
 
-  it('AC-F3-11 la vista de producción usa el servicio del backend', () => {
+  it('AC-F3-10c la vista de producción usa los servicios del backend', () => {
     const vista = lectura(join(SRC, 'components', 'VistaOrdenProduccion.tsx'));
     expect(vista).toContain('apiService.obtenerOrdenProduccion');
-    expect(vista).toContain('extraerReporteCiclo');
+    expect(vista).toContain('apiService.obtenerPlanEntrega');
     expect(vista).not.toContain('apiClient.get');
   });
 
-  it('AC-F3-11 el frontend no implementa Kahn, DFS ni ordenamiento topológico', () => {
+  it('AC-F3-10c el frontend no implementa Kahn, SCC, DFS ni ordenamiento topológico', () => {
     // Se buscan declaraciones y estructuras de algoritmo, no menciones en
-    // textos de interfaz como «Kahn determinista» (que describen al backend).
+    // textos de interfaz.
     const patronImplementacion =
-      /(?:function|const|let|var|class)\s+\w*(?:kahn|topolog|dfs)\w*|topologicalSort|inDegree|gradoEntrada|\badyacencia\b|\bvisitados\b|\bdfs\s*\(/i;
+      /(?:function|const|let|var|class)\s+\w*(?:kahn|topolog|dfs|scc|tarjan|kosaraju)\w*|topologicalSort|inDegree|gradoEntrada|\badyacencia\b|\bvisitados\b|\bdfs\s*\(/i;
     const implementaciones = ARCHIVOS.filter((ruta) =>
       patronImplementacion.test(codigoSinCadenas(lectura(ruta)))
     );
