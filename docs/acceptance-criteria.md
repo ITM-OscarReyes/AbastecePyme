@@ -1,15 +1,16 @@
-# Criterios de aceptación — AbastecePyme (F1, F2 y F3)
+# Criterios de aceptación — AbastecePyme (F1, F2, F3 y F4)
 
-Criterios de aceptación de **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**, derivados de `requirements.md` y
-verificables de extremo a extremo en formato Gherkin y tabular.
+Criterios de aceptación de **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto**,
+**F3 — Orden y ciclos de producción** y **F4 — Tablero de abastecimiento demostrable**, derivados de
+`requirements.md` y verificables de extremo a extremo en formato Gherkin y tabular.
 
 - Cada criterio es verificable de forma objetiva: describe una entrada o precondición (Given), una acción (When), y un resultado esperado (Then).
 - Los identificadores son estables y se reutilizan en `requirements.md`, `api-contract.md`,
   `architecture.md` y en las pruebas.
 - `tester` es el único agente autorizado para declarar PASS/FAIL de estos criterios.
-- Los criterios de F4 **no** están aquí: este documento cubre F1 (secciones 1 a 6), F2 (sección 7),
-  F3 (sección 8) y los criterios transversales de interfaz de usuario (sección 10). La sección 10 no
-  sustituye ni modifica los criterios funcionales de F1, F2 ni F3.
+- Este documento cubre F1 (secciones 1 a 6), F2 (sección 7), F3 (sección 8), F4 (sección 11) y los
+  criterios transversales de interfaz de usuario (sección 10). La sección 10 no sustituye ni modifica
+  los criterios funcionales de F1, F2, F3 ni F4.
 
 ## 1. Datos de prueba
 
@@ -630,11 +631,10 @@ Todos los conjuntos son sintéticos y respetan la matriz de F1.
 - **AC-F3-10c.** La inspección del frontend confirma que no implementa Kahn, SCC, DFS ni ningún
   cálculo de plan o de ciclo en TypeScript: solo representa los resultados de la API.
 
-**Nota de dependencia.** Estos criterios de interfaz se verifican cuando el backend implemente el
-contrato de `api-contract.md` §3.7 y §3.8. La vista actual refleja el contrato anterior; la
-expectativa de interfaz y su dependencia están documentadas en `requirements.md` §11.9 y
-`architecture.md` §9.5. El frontend no debe simular el plan de entrega ni el diagnóstico global
-mientras el backend no exponga ese contrato.
+**Nota de dependencia (resuelta).** Estos criterios de interfaz se verifican contra el contrato de
+`api-contract.md` §3.7 y §3.8, que el backend y el frontend ya implementan. La vista de orden de
+producción consume el plan de entrega y el diagnóstico global reales; `AMB-UI-02` queda resuelta. El
+frontend no simula ni calcula el plan ni los ciclos.
 
 ### 8.10 RNF-F3-01 a RNF-F3-05 · Restricciones técnicas y de arquitectura
 
@@ -672,9 +672,10 @@ mientras el backend no exponga ese contrato.
 
 ## 10. Criterios transversales de interfaz de usuario (UI)
 
-Criterios de presentación aplicables a F1, F2 y F3. No sustituyen los criterios funcionales de las
-secciones 2 a 8 ni introducen reglas de negocio. Requisitos en `requirements.md` §12 y estrategia en
-`architecture.md` §9. `tester` es el único autorizado a declarar PASS/FAIL.
+Criterios de presentación aplicables a F1, F2, F3 y F4. No sustituyen los criterios funcionales de
+las secciones 2 a 9 ni los de F4 (§11) ni introducen reglas de negocio. Requisitos en
+`requirements.md` §12 y estrategia en `architecture.md` §9. `tester` es el único autorizado a
+declarar PASS/FAIL.
 
 Los breakpoints obligatorios son **360, 768, 1024, 1440 y 1920 px** de ancho. Las verificaciones de
 layout se realizan con el navegador a esos anchos y, cuando aplique, con alturas de 640, 800 y
@@ -683,7 +684,7 @@ código, registros internos ni nombres de campos del contrato.
 
 ### 10.1 Lenguaje y textos
 
-- **AC-UI-01.** La revisión de las cuatro vistas (Cadena de suministro, Materiales y procesos,
+- **AC-UI-01.** La revisión de las cinco vistas (Tablero, Cadena de suministro, Materiales y procesos,
   Análisis de impacto y Orden de producción), de sus modales principales y de los textos copiables o
   exportables, en ambos temas, no encuentra ninguno de los términos prohibidos de
   `requirements.md` §12.2: `backend`, `frontend`, `API`, `endpoint`, `HTTP`, `409`, `CONFLICT`,
@@ -724,12 +725,10 @@ código, registros internos ni nombres de campos del contrato.
   - no cita F1, F2 ni F3 ni términos prohibidos;
   - cada combinación que enumera coincide con `GET /api/v1/reglas-dependencia`.
 
-- **AC-UI-04b.** Cuando exista la vista nueva de F3 (ver §8.9 y `requirements.md` §11.9), la guía
-  explica el plan de entrega por uno o varios productos y el control general de planta con
-  diagnóstico de dependencias circulares, elementos y productos bloqueados y productos
-  planificables, en lenguaje de negocio. Mientras la vista nueva no exista, la guía no describe ese
-  comportamiento como disponible. Este criterio queda bloqueado por `AMB-UI-02` hasta que el backend
-  implemente el contrato nuevo.
+- **AC-UI-04b.** La guía explica el plan de entrega por uno o varios productos y el control general de
+  planta con diagnóstico de dependencias circulares, elementos y productos bloqueados y productos
+  planificables, en lenguaje de negocio. La vista de F3 ya está disponible, por lo que la guía puede
+  describir ese comportamiento como parte de la operación; `AMB-UI-02` queda resuelta.
 
 - **AC-UI-12.** Al copiar o exportar un informe de análisis de impacto y un orden de producción, el
   texto resultante está en español natural, no contiene términos prohibidos, identifica los
@@ -744,13 +743,13 @@ código, registros internos ni nombres de campos del contrato.
 
 ### 10.2 Viewport y responsive
 
-- **AC-UI-05.** A 360 y 768 px de ancho, las cuatro secciones principales son alcanzables desde el
+- **AC-UI-05.** A 360 y 768 px de ancho, las cinco secciones principales son alcanzables desde el
   header con toque y con teclado (Tab, Enter y Escape), el menú móvil o colapsable abre y cierra con
   estado visible, el foco es visible, la sección activa se indica y ninguna sección queda oculta sin
   una alternativa accesible. A 768 px se acepta tanto la navegación de escritorio como el menú móvil,
-  siempre que las cuatro secciones sean alcanzables.
+  siempre que las cinco secciones sean alcanzables.
 
-- **AC-UI-06.** A 360, 768, 1024, 1440 y 1920 px de ancho, en cada una de las cuatro vistas y con los
+- **AC-UI-06.** A 360, 768, 1024, 1440 y 1920 px de ancho, en cada una de las cinco vistas y con los
   modales principales abiertos (alta de elemento, alta de relación, guía y ficha de elemento), se
   cumple `document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1`. No
   aparece una barra de desplazamiento horizontal en la página. Un desplazamiento interno e
@@ -781,7 +780,7 @@ código, registros internos ni nombres de campos del contrato.
   de elemento, alta de relación, botones primarios de los modales y cierre) tienen un área de
   contacto de al menos 44 × 44 px CSS y sus áreas no se solapan.
 
-- **AC-UI-18.** A 360, 768, 1024, 1440 y 1920 px de ancho, las cuatro vistas se renderizan sin
+- **AC-UI-18.** A 360, 768, 1024, 1440 y 1920 px de ancho, las cinco vistas se renderizan sin
   navegación faltante, sin contenido solapado, sin texto cortado y sin desplazamiento horizontal de
   página. Este criterio es de cobertura: las comprobaciones específicas son AC-UI-05 a AC-UI-09.
 
@@ -799,7 +798,7 @@ código, registros internos ni nombres de campos del contrato.
 
 - **AC-UI-11.** El tema oscuro conserva los valores de sus tokens respecto de la versión aprobada
   por el cliente antes de esta mejora. La comparación de las definiciones de tokens y la revisión
-  visual de las cuatro vistas y de los modales principales no muestran cambios de color ni
+  visual de las cinco vistas y de los modales principales no muestran cambios de color ni
   regresiones de legibilidad. No existe selector de temas adicional ni un tercer tema; el control
   existente de alternancia claro/oscuro sigue funcionando.
 
@@ -847,3 +846,195 @@ código, registros internos ni nombres de campos del contrato.
 | RNF-UI-04 | AC-UI-15 |
 | RNF-UI-05 | AC-UI-17 |
 | RNF-UI-06 | AC-UI-04, AC-UI-04b |
+
+## 11. Criterios de aceptación de F4 — Tablero de abastecimiento demostrable
+
+Requisitos en `requirements.md` §13, contrato en `api-contract.md` §10 y estrategia en
+`architecture.md` §10. F4 **integra** F1, F2 y F3: no añade algoritmos ni endpoints de cálculo.
+`tester` es el único autorizado a declarar PASS/FAIL.
+
+### 11.1 Datos de prueba y precondiciones de F4
+
+Se reutilizan los conjuntos sintéticos de §8.1 y el catálogo de demostración:
+
+| Uso | Conjunto |
+| --- | -------- |
+| Cadena válida | Conjunto A (§8.1): `PROV-ACERO`, `INS-BARRA`, `INS-TORNILLO`, `PROC-CORTE`, `PROD-PANEL`, `PROD-BANCO` |
+| Ciclo | Conjunto B: A más `PROC-CORTE → INS-BARRA` |
+| Producto sin requisitos | Conjunto E: `PROD-SOLO` |
+| Elementos aislados | Conjunto F: `PROD-A`, `PROD-B`, `PROD-C` |
+| Demostración completa | Catálogo de 27 elementos y 37 dependencias del backend |
+
+Sesiones de prueba:
+
+| Precondición | Sesión |
+| ------------ | ------ |
+| Sin sesión | Ninguna cabecera `Authorization` |
+| Compras | `POST /api/v1/sesion` con `{ "perfil": "COMPRAS" }` |
+| Producción | `POST /api/v1/sesion` con `{ "perfil": "PRODUCCION" }` |
+
+### 11.2 RF-F4-01 y RF-F4-02 · Vista inicial y composición real
+
+- **AC-F4-01.** Al abrir la aplicación, la sección activa es «Tablero» y la navegación principal
+  muestra cinco secciones: Tablero, Cadena de suministro, Materiales y procesos, Análisis de impacto
+  y Orden de producción. Las cuatro secciones anteriores siguen siendo accesibles y conservan su
+  comportamiento.
+- **AC-F4-01b.** A 360, 768, 1024, 1440 y 1920 px de ancho, el tablero se renderiza sin
+  desplazamiento horizontal de página, sin contenido solapado y con navegación accesible; en móvil
+  las cinco secciones son alcanzables.
+- **AC-F4-02.** Con el Conjunto A, el tablero muestra: los totales de `GET /api/v1/grafo` (6
+  elementos y 6 dependencias), el impacto de `GET /api/v1/impacto/{id}`, el plan de
+  `GET /api/v1/plan-entrega?productos=PROD-PANEL` y el diagnóstico de
+  `GET /api/v1/orden-produccion`. La inspección de la red del navegador confirma que el tablero no
+  llama a ningún endpoint de cálculo nuevo ni a un agregador propio.
+- **AC-F4-02b.** La inspección del código del frontend confirma que no implementa recorridos de
+  impacto, Kahn, SCC, DFS, ordenamiento topológico, detección de ciclos ni cálculo de planes. Solo
+  compone y presenta respuestas de la API.
+
+### 11.3 RF-F4-03 · Resumen de la cadena
+
+- **AC-F4-03.** Con el Conjunto A, el resumen muestra 6 elementos y 6 relaciones, y clasifica
+  `PROD-BANCO` y `PROD-PANEL` como planificables y ningún producto como bloqueado, coincidiendo con
+  `GET /orden-produccion`.
+- **AC-F4-03b.** Con el catálogo vacío, el tablero muestra un estado vacío comprensible con totales en
+  cero y no muestra elementos, relaciones ni productos de ejemplo.
+- **AC-F4-03c.** Si un insumo tiene `estadoStock: "BAJO"` en el backend, el resumen lo refleja como
+  alerta de stock; el frontend no recalcula el estado de stock.
+
+### 11.4 RF-F4-04 · Impacto desde el tablero
+
+- **AC-F4-04.** Con el Conjunto A, seleccionar `INS-BARRA` y consultar su impacto muestra los
+  afectados `PROC-CORTE`, `PROD-BANCO` y `PROD-PANEL`, en el mismo orden (por `id` ascendente) y con
+  el mismo `total` que devuelve `GET /api/v1/impacto/INS-BARRA`.
+- **AC-F4-04b.** Consultar `PROD-PANEL` (producto terminal) muestra un resultado con cero afectados y
+  un mensaje que distingue «este elemento no afecta a otros» de «el elemento no existe».
+- **AC-F4-04c.** Consultar un identificador inexistente muestra un error de negocio explícito, sin
+  lista de afectados vacía y sin plan inventado.
+- **AC-F4-04d.** Si el backend no responde, el bloque de impacto muestra un mensaje de no
+  disponibilidad y no se rellena con datos simulados.
+
+### 11.5 RF-F4-05 · Plan de entrega y diagnóstico global
+
+- **AC-F4-05.** Con el Conjunto A, el tablero muestra el plan de `PROD-PANEL` con 5 pasos en el mismo
+  orden que `GET /plan-entrega` y el diagnóstico global con `esDag: true` y el orden completo de
+  `GET /orden-produccion`.
+- **AC-F4-05b.** Con el Conjunto B, el tablero muestra una alerta visible de dependencia circular con
+  los elementos y productos bloqueados y no muestra un orden parcial ni un plan presentado como
+  válido.
+- **AC-F4-05c.** Con el Conjunto E, el plan de `PROD-SOLO` muestra un único paso (el propio producto)
+  y el diagnóstico global no inventa requisitos.
+
+### 11.6 RF-F4-06 y RF-F4-10 · Red y resaltado
+
+- **AC-F4-06.** La red del tablero respeta la dirección `origen habilita destino`: una flecha va del
+  origen al destino y la leyenda explica que el origen habilita al destino. La inspección confirma
+  que el frontend no invierte aristas ni colorea por un veredicto calculado en el cliente.
+- **AC-F4-10.** Al seleccionar `INS-BARRA` y consultar su impacto, se resalta el elemento consultado
+  y exactamente los afectados devueltos por la API. El resaltado no añade ni quita nodos del
+  resultado.
+- **AC-F4-10b.** Al seleccionar `PROD-PANEL` en el plan, se resaltan sus requisitos según los pasos
+  devueltos por la API, sin que el frontend calcule el subgrafo.
+
+### 11.7 RF-F4-07 · Perfiles y sesión de demostración
+
+- **AC-F4-07.** `GET /api/v1/perfiles` responde `200` con exactamente dos perfiles: `COMPRAS`
+  («Responsable de compras») y `PRODUCCION` («Coordinador de producción»), cada uno con su capacidad
+  de escritura.
+- **AC-F4-07b.** `POST /api/v1/sesion` con `{ "perfil": "COMPRAS" }` responde `201` con un token
+  opaco; `GET /api/v1/sesion` con `Authorization: Bearer <token>` describe la sesión; `DELETE
+  /api/v1/sesion` responde `204` e invalida el token.
+- **AC-F4-07c.** `POST /api/v1/sesion` con un perfil inexistente responde `422` con `ERR-04` y no
+  crea sesión.
+- **AC-F4-07d.** La sesión vive en memoria: al reiniciar el backend, el token deja de ser válido. El
+  contrato y la interfaz declaran que es una sesión de demostración (`RN-F4-03`).
+
+### 11.8 RF-F4-08 · Autorización de escrituras
+
+- **AC-F4-08.** `POST /api/v1/elementos` sin cabecera de sesión responde `401` con `ERR-11`
+  (`SESION_REQUERIDA`) y el catálogo no cambia.
+- **AC-F4-08b.** `POST /api/v1/elementos` con una sesión `PRODUCCION` responde `403` con `ERR-12`
+  (`PERMISO_DENEGADO`) y el catálogo no cambia.
+- **AC-F4-08c.** `POST /api/v1/elementos` con una sesión `COMPRAS` responde `201` y crea el elemento.
+- **AC-F4-08d.** La misma matriz se aplica a `POST /dependencias`, `PUT /elementos/{id}`,
+  `DELETE /elementos/{id}`, `PUT /dependencias/{origen}/{destino}` y
+  `DELETE /dependencias/{origen}/{destino}`: sin sesión `401`, con `PRODUCCION` `403`, con `COMPRAS`
+  permitido.
+- **AC-F4-08e.** `GET /elementos`, `GET /elementos/{id}`, `GET /dependencias`, `GET /grafo`,
+  `GET /reglas-dependencia`, `GET /impacto/{id}`, `GET /plan-entrega` y `GET /orden-produccion`
+  responden con normalidad sin sesión y con cualquiera de los dos perfiles.
+- **AC-F4-08f.** Tras una petición denegada, el número de elementos y de dependencias del catálogo es
+  exactamente el mismo que antes de la petición.
+
+### 11.9 RF-F4-09 · Interfaz condicionada por perfil
+
+- **AC-F4-09.** Sin sesión o con el perfil `PRODUCCION`, la interfaz no ofrece como disponibles las
+  acciones de crear, editar o eliminar elementos ni relaciones, y explica en lenguaje de negocio que
+  se requiere el perfil de compras.
+- **AC-F4-09b.** Con el perfil `COMPRAS`, las acciones de escritura están disponibles y funcionan
+  contra el backend real.
+- **AC-F4-09c.** El control de perfil muestra el perfil activo; al cambiarlo se cierra la sesión
+  anterior y se actualizan las acciones disponibles.
+- **AC-F4-09d.** Si una escritura con `PRODUCCION` llega al backend (por ejemplo, con una sesión
+  cambiada en otra pestaña), el mensaje visible de la interfaz es de permiso y no un código HTTP.
+
+### 11.10 RF-F4-11 · Escenarios de aceptación
+
+- **AC-F4-11.** Cadena válida: con el Conjunto A se observan un elemento con dependencias, un impacto
+  con afectados y un plan de entrega con pasos, todos provenientes de la API real.
+- **AC-F4-11b.** Elemento inexistente: la consulta muestra un error de negocio explícito y no un
+  resultado vacío presentado como válido.
+- **AC-F4-11c.** Dato inválido: una escritura con un dato mal formado o un identificador duplicado
+  muestra un error que indica el dato y cómo corregirlo, y el catálogo no cambia.
+- **AC-F4-11d.** Ciclo: con el Conjunto B se observa la alerta de dependencia circular, los elementos
+  y productos bloqueados y la ausencia de un orden falso.
+- **AC-F4-11e.** Los cuatro escenarios se ejecutan contra el backend real; la inspección confirma que
+  el frontend no contiene un catálogo de demostración incrustado que oculte el estado real.
+
+### 11.11 RF-F4-12 · Entregables
+
+- **AC-F4-12.** La documentación de F4 está actualizada y es coherente entre `requirements.md`,
+  `acceptance-criteria.md`, `api-contract.md`, `architecture.md`, `graph-model.md`, `README.md` y
+  `docs/decisions/analyst.md`.
+- **AC-F4-12b.** Existe una bitácora de IA de F4 en `docs/entrega/` con el mismo formato de
+  `bitacora-ia-f1.md`: decisiones, rechazos, verificaciones y resultados.
+- **AC-F4-12c.** Existen el guion de video y el pitch, y su contenido describe únicamente
+  comportamientos que el sistema ejecuta: los cuatro escenarios y el valor de negocio.
+
+### 11.12 RF-F4-13 y RNF-F4 · Lenguaje, temas, rendimiento y arquitectura
+
+- **AC-F4-13.** La revisión de los textos visibles del tablero, del control de perfil y de los
+  mensajes de permiso no encuentra términos prohibidos de `requirements.md` §12.2 ni códigos HTTP.
+  Los mensajes de permiso explican qué perfil se necesita y qué puede hacer el usuario.
+- **AC-F4-13b.** El tablero funciona en tema claro y oscuro, no existe un tercer tema ni un selector
+  adicional, y el tema oscuro conserva sus valores aprobados.
+- **AC-F4-13c.** Los estados de impacto, bloqueo, ciclo, stock y selección no dependen solo del color:
+  incluyen icono, texto, borde, patrón o etiqueta.
+- **AC-F4-14.** Sobre el catálogo de demostración, el tablero compone las cuatro consultas sin
+  bloquear la interfaz: cada bloque muestra su propia carga y su propio error, y el conjunto
+  responde en menos de 2 s en el entorno local.
+- **AC-F4-15.** La revisión de capas confirma que la autorización se aplica en el backend, que el
+  frontend solo refleja el permiso y que un fallo de una consulta no se convierte en un resultado
+  aparentemente válido.
+
+### 11.13 Matriz de trazabilidad F4
+
+| Requisito | Criterios de aceptación |
+| --------- | ----------------------- |
+| RF-F4-01 | AC-F4-01, AC-F4-01b |
+| RF-F4-02 | AC-F4-02, AC-F4-02b |
+| RF-F4-03 | AC-F4-03, AC-F4-03b, AC-F4-03c |
+| RF-F4-04 | AC-F4-04, AC-F4-04b, AC-F4-04c, AC-F4-04d |
+| RF-F4-05 | AC-F4-05, AC-F4-05b, AC-F4-05c |
+| RF-F4-06 | AC-F4-06 |
+| RF-F4-07 | AC-F4-07, AC-F4-07b, AC-F4-07c, AC-F4-07d |
+| RF-F4-08 | AC-F4-08, AC-F4-08b, AC-F4-08c, AC-F4-08d, AC-F4-08e, AC-F4-08f |
+| RF-F4-09 | AC-F4-09, AC-F4-09b, AC-F4-09c, AC-F4-09d |
+| RF-F4-10 | AC-F4-10, AC-F4-10b |
+| RF-F4-11 | AC-F4-11, AC-F4-11b, AC-F4-11c, AC-F4-11d, AC-F4-11e |
+| RF-F4-12 | AC-F4-12, AC-F4-12b, AC-F4-12c |
+| RF-F4-13 | AC-F4-13, AC-F4-13b, AC-F4-13c |
+| RNF-F4-01 | AC-F4-02b, AC-F4-13 |
+| RNF-F4-02 | AC-F4-08, AC-F4-08b, AC-F4-08f, AC-F4-15 |
+| RNF-F4-03 | AC-F4-11, AC-F4-11b, AC-F4-11c, AC-F4-11d |
+| RNF-F4-04 | AC-F4-14 |
+| RNF-F4-05 | AC-F4-01b, AC-F4-13b, AC-F4-13c |

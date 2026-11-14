@@ -1,9 +1,10 @@
 # Modelo del grafo — AbastecePyme
 
-Documento de referencia para **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**.
-Define la dirección de las relaciones, la representación del grafo propio, su lectura para el análisis de impacto de F2 (sección 8), la matriz de tipos permitida (sección 4.1), la condición de DAG, el orden topológico determinista de preparación, el plan por entrega y el diagnóstico de ciclos sin bibliotecas de terceros para F3 (sección 6).
+Documento de referencia para **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto**,
+**F3 — Orden y ciclos de producción** y **F4 — Tablero de abastecimiento demostrable**.
+Define la dirección de las relaciones, la representación del grafo propio, su lectura para el análisis de impacto de F2 (sección 8), la matriz de tipos permitida (sección 4.1), la condición de DAG, el orden topológico determinista de preparación, el plan por entrega y el diagnóstico de ciclos sin bibliotecas de terceros para F3 (sección 6). F4 no cambia el modelo: solo compone resultados (sección 9).
 
-- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RF-F1-17 a RF-F1-22, RNF-F1-03, RNF-F1-10, F2 en §9, y RF-F3-01 a RF-F3-10, RNF-F3-01 a RNF-F3-05 en §11).
+- Requisitos relacionados: `requirements.md` (RF-F1-06, RF-F1-15, RF-F1-16, RF-F1-17 a RF-F1-22, RNF-F1-03, RNF-F1-10, F2 en §9, RF-F3-01 a RF-F3-10, RNF-F3-01 a RNF-F3-05 en §11, y F4 en §13).
 - Contrato HTTP: `api-contract.md`.
 - Verificación: `acceptance-criteria.md`.
 
@@ -469,4 +470,30 @@ Ejemplo de respuesta con un producto bloqueado:
 - **Coherencia:** la dirección definida es invariante; no se invierte el grafo para el análisis de impacto.
 - **Documentación:** este significado de «alcanzar» está escrito en el `README.md` del repositorio, como exige el brief de F2.
 - **Contrato:** la forma de la respuesta y los códigos de error están en `api-contract.md` §8.
+
+## 9. Relevancia para F4 — Tablero de abastecimiento
+
+F4 **no cambia el modelo del grafo** ni añade algoritmos. El tablero es una composición de resultados
+ya calculados por F1, F2 y F3:
+
+| Consulta | Qué aporta al tablero | Sección de referencia |
+| -------- | --------------------- | --------------------- |
+| `GET /api/v1/grafo` | Elementos, dependencias y totales para el resumen y la red | Secciones 2 y 3 |
+| `GET /api/v1/impacto/{id}` | Elemento consultado y afectados para el resaltado | Sección 8 |
+| `GET /api/v1/plan-entrega` | Pasos, estados de producto y ciclos del plan | Sección 6.5 |
+| `GET /api/v1/orden-produccion` | Veredicto de DAG, orden global, ciclos y productos bloqueados | Sección 6.4 |
+
+Reglas de F4 sobre el modelo:
+
+- La dirección sigue siendo `origen habilita destino`; el tablero no la invierte ni la reinterpreta.
+- El resaltado usa los identificadores devueltos por la API. No calcula alcanzables, subgrafos,
+  órdenes ni ciclos en el cliente.
+- Un ciclo se presenta como resultado de negocio (`200`) con la misma estructura de F3; no se
+  convierte en error de red ni en un orden parcial.
+- La autorización de escrituras no altera el modelo: solo decide quién puede modificarlo
+  (`api-contract.md` §10).
+- El tablero no añade nodos, aristas ni estados derivados al grafo. El grafo sigue siendo el catálogo
+  registrado y sus dependencias.
+
+Las decisiones de F4 están registradas en `docs/decisions/analyst.md`.
 

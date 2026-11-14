@@ -1,10 +1,12 @@
-# Contrato de API — AbastecePyme (F1, F2 y F3)
+# Contrato de API — AbastecePyme (F1, F2, F3 y F4)
 
-Contrato HTTP de **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto** y **F3 — Orden y ciclos de producción**.
+Contrato HTTP de **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto**,
+**F3 — Orden y ciclos de producción** y **F4 — Tablero de abastecimiento demostrable**.
 
 - Requisitos: `requirements.md`. Dirección y estructura: `graph-model.md`.
 - Verificación: `acceptance-criteria.md`.
-- Alcance: endpoints de F1, F2 y F3. Los endpoints de tablero integrado (F4) **no** se definen aquí.
+- Alcance: endpoints de F1, F2 y F3, y en la sección 10 los perfiles, la sesión de demostración y la
+  composición del tablero de F4. F4 no añade endpoints de cálculo: consume los de F1, F2 y F3.
 
 Los ejemplos en JSON son ilustrativos del formato esperado; no son archivos de datos del proyecto.
 
@@ -556,6 +558,8 @@ Sobre único para todos los endpoints:
 | `ERR-08` | `DEPENDENCIA_DUPLICADA` | `409` | Ya existe una dependencia con el mismo par `(origen, destino)`. | RF-F1-08 |
 | `ERR-09` | `TIPO_NO_ENCONTRADO` | `404` | La ruta solicitada no existe en la API. | RF-F1-12 |
 | `ERR-10` | `CONFIGURACION_CICLICA` | `409` (histórico) | **No se emite en F3.** Permanece en el catálogo por compatibilidad. Los ciclos se reportan con `200` en `ciclos`, `elementosBloqueados`, `productosBloqueados` y `productosPlanificables`. | Histórico; ver RF-F3-03, RF-F3-04 |
+| `ERR-11` | `SESION_REQUERIDA` | `401` | Una operación protegida se intenta sin una sesión válida: una escritura o una consulta o cierre de la sesión. No modifica el catálogo. | RF-F4-07, RF-F4-08 |
+| `ERR-12` | `PERMISO_DENEGADO` | `403` | Una escritura se intenta con un perfil que no tiene permiso (`PRODUCCION`). No modifica el catálogo. | RF-F4-08 |
 
 Ejemplos:
 
@@ -621,8 +625,9 @@ Las decisiones que sustentan este contrato están registradas en `docs/decisions
 
 ## 8. Contrato de API — F2: Análisis de impacto
 
-**Alcance:** únicamente F2. No se definen endpoints de F3 ni de F4. Los endpoints de F2 no están
-implementados todavía: este apartado fija el contrato que debe cumplir la implementación.
+**Alcance:** únicamente F2. No se definen aquí endpoints de F3 ni de F4; sus contratos están en
+§3.7, §3.8 y §10. Los endpoints de F2 están implementados y se consumen desde el análisis de impacto
+del frontend.
 
 - Requisitos: `requirements.md` §9. Dirección y estructura: `graph-model.md` §8.
 - Verificación: `acceptance-criteria.md` §7.
@@ -768,3 +773,173 @@ proceso; si no la tiene, la API responde `422` `DEPENDENCIA_INVALIDA` con detall
 
 El conjunto de afectados y el recorrido no cambian por el stock; el stock es información de
 contexto para el informe y la ficha.
+
+## 10. Contrato de API — F4: Tablero, perfiles y sesión de demostración
+
+**Alcance:** perfiles, sesión de demostración, autorización de escrituras y composición del tablero
+de F4. F4 **no añade endpoints de cálculo ni un agregador**: consume `GET /grafo`,
+`GET /impacto/{id}`, `GET /plan-entrega` y `GET /orden-produccion` de las secciones anteriores.
+
+- Requisitos: `requirements.md` §13. Autorización y capas: `architecture.md` §10.
+- Verificación: `acceptance-criteria.md` §11.
+
+### 10.1 Principios
+
+- La sesión de F4 es **de demostración**: no valida identidad, no usa contraseñas y no persiste. Vive
+  en memoria del backend y se pierde al reiniciarlo (`AMB-F4-01`).
+- La autorización efectiva vive en el backend. La interfaz solo refleja el permiso.
+- Las lecturas son abiertas para ambos perfiles y para quien no tenga sesión.
+- Las escrituras exigen una sesión `COMPRAS`. Una petición denegada no modifica el catálogo.
+- El tablero compone respuestas existentes; no introduce un contrato de cálculo nuevo.
+
+### 10.2 Recurso `Perfil`
+
+| Campo | Tipo | Obligatorio | Reglas |
+| ----- | ---- | ----------- | ------ |
+| `id` | texto | Sí | `COMPRAS` o `PRODUCCION`. |
+| `nombre` | texto | Sí | Nombre visible en español: «Responsable de compras» o «Coordinador de producción». |
+| `puedeEscribir` | booleano | Sí | `true` solo para `COMPRAS`. |
+
+### 10.3 Recurso `Sesion`
+
+| Campo | Tipo | Obligatorio | Reglas |
+| ----- | ---- | ----------- | ------ |
+| `token` | texto | Sí | Token opaco generado por el backend. Se envía como `Authorization: Bearer <token>`. |
+| `perfil` | `Perfil` | Sí | Perfil asociado a la sesión. |
+
+El token no se deriva del perfil ni de datos personales: es un identificador aleatorio en memoria. No
+se documenta su longitud ni su formato como parte del contrato; el cliente debe tratarlo como opaco.
+
+### 10.4 Endpoints de sesión
+
+#### `GET /api/v1/perfiles`
+
+Devuelve los perfiles disponibles para la demostración.
+
+```json
+{
+  "perfiles": [
+    { "id": "COMPRAS", "nombre": "Responsable de compras", "puedeEscribir": true },
+    { "id": "PRODUCCION", "nombre": "Coordinador de producción", "puedeEscribir": false }
+  ],
+  "total": 2
+}
+```
+
+| Código | Cuerpo | Cuándo |
+| ------ | ------ | ------ |
+| `200` | `{ perfiles, total }` | Siempre. |
+
+#### `POST /api/v1/sesion`
+
+Cuerpo:
+
+```json
+{ "perfil": "COMPRAS" }
+```
+
+| Código | Cuerpo | Cuándo |
+| ------ | ------ | ------ |
+| `201` | `Sesion` | Sesión creada. |
+| `422` | Error `ERR-04` | `perfil` ausente, no es texto o no es `COMPRAS` ni `PRODUCCION`. |
+
+#### `GET /api/v1/sesion`
+
+Requiere `Authorization: Bearer <token>`.
+
+| Código | Cuerpo | Cuándo |
+| ------ | ------ | ------ |
+| `200` | `Sesion` | El token es válido. |
+| `401` | Error `ERR-11` | No hay token o el token no es válido. |
+
+#### `DELETE /api/v1/sesion`
+
+Requiere `Authorization: Bearer <token>`. Invalida el token.
+
+| Código | Cuerpo | Cuándo |
+| ------ | ------ | ------ |
+| `204` | Sin cuerpo | Sesión cerrada. |
+| `401` | Error `ERR-11` | No hay token o el token no es válido. |
+
+### 10.5 Autorización y matriz de permisos
+
+| Operación | Endpoint | Sin sesión | `COMPRAS` | `PRODUCCION` |
+| --------- | -------- | ---------- | --------- | ------------ |
+| Leer catálogo y red | `GET /elementos`, `GET /elementos/{id}`, `GET /dependencias`, `GET /grafo`, `GET /reglas-dependencia` | Permitido | Permitido | Permitido |
+| Consultar impacto | `GET /impacto/{id}` | Permitido | Permitido | Permitido |
+| Consultar plan y diagnóstico | `GET /plan-entrega`, `GET /orden-produccion` | Permitido | Permitido | Permitido |
+| Crear elemento | `POST /elementos` | `401` `ERR-11` | Permitido | `403` `ERR-12` |
+| Editar elemento | `PUT /elementos/{id}` | `401` `ERR-11` | Permitido | `403` `ERR-12` |
+| Eliminar elemento | `DELETE /elementos/{id}` | `401` `ERR-11` | Permitido | `403` `ERR-12` |
+| Crear relación | `POST /dependencias` | `401` `ERR-11` | Permitido | `403` `ERR-12` |
+| Editar relación | `PUT /dependencias/{origen}/{destino}` | `401` `ERR-11` | Permitido | `403` `ERR-12` |
+| Eliminar relación | `DELETE /dependencias/{origen}/{destino}` | `401` `ERR-11` | Permitido | `403` `ERR-12` |
+
+Reglas:
+
+1. La comprobación de sesión y de perfil ocurre antes de validar el cuerpo y antes de modificar el
+   catálogo.
+2. Una petición denegada devuelve el sobre de error común y no incluye datos de negocio.
+3. El orden de comprobación es: sesión ausente o inválida → `401` `ERR-11`; sesión válida con perfil
+   sin permiso → `403` `ERR-12`; sesión `COMPRAS` → validación normal del recurso.
+4. Las lecturas no requieren cabecera. Enviar un token inválido en una lectura no cambia el
+   resultado: la lectura sigue siendo abierta (`AMB-F4-01`).
+
+Ejemplo de `401`:
+
+```json
+{
+  "error": {
+    "codigo": "SESION_REQUERIDA",
+    "mensaje": "Necesitas iniciar sesión con el perfil de compras para modificar la cadena."
+  }
+}
+```
+
+Ejemplo de `403`:
+
+```json
+{
+  "error": {
+    "codigo": "PERMISO_DENEGADO",
+    "mensaje": "El perfil de producción solo puede consultar. Cambia al perfil de compras para modificar la cadena."
+  }
+}
+```
+
+### 10.6 Composición del tablero
+
+El tablero no define un endpoint propio. Compone estas respuestas:
+
+| Bloque del tablero | Endpoint | Campos usados |
+| ------------------ | -------- | ------------- |
+| Resumen de la cadena | `GET /api/v1/grafo` | `elementos`, `dependencias`, `resumen.totalElementos`, `resumen.totalDependencias`, `estadoStock`, `alertaStock` |
+| Red de dependencias | `GET /api/v1/grafo` | `elementos`, `dependencias` con `origen`, `destino`, `tipoRelacion` |
+| Impacto del elemento | `GET /api/v1/impacto/{id}` | `elemento`, `afectados`, `total` |
+| Plan de entrega | `GET /api/v1/plan-entrega?productos=...` | `productos`, `esPlanificable`, `pasos`, `totalPasos`, `ciclos`, `elementosBloqueados` |
+| Diagnóstico global | `GET /api/v1/orden-produccion` | `esDag`, `orden`, `totalPasos`, `ciclos`, `elementosBloqueados`, `productosBloqueados`, `productosPlanificables` |
+
+Reglas de composición:
+
+1. El tablero muestra cada bloque con su propio estado de carga y de error. Un fallo de una consulta
+   no se convierte en cero, lista vacía ni dato de ejemplo.
+2. El resumen no recalcula `estadoStock`, `alertaStock`, `productosPlanificables` ni
+   `productosBloqueados`: usa los valores del backend.
+3. El resaltado de la red usa los identificadores de `afectados`, `pasos`, `elementosBloqueados` o
+   `productosBloqueados`; no amplía ni reduce el resultado.
+4. La lista de productos del plan se envía tal como el usuario la selecciona; la normalización y la
+   validación son las de `GET /plan-entrega` (§3.8).
+
+### 10.7 Trazabilidad del contrato de F4
+
+| Endpoint o regla | Requisitos | Criterios de aceptación | Decisión |
+| ---------------- | ---------- | ----------------------- | -------- |
+| `GET /perfiles` | RF-F4-07 | AC-F4-07 | `requirements.md` §13.7 |
+| `POST /sesion` | RF-F4-07 | AC-F4-07, AC-F4-07b, AC-F4-07c | `requirements.md` §13.7 |
+| `GET /sesion` | RF-F4-07 | AC-F4-07b | `requirements.md` §13.7 |
+| `DELETE /sesion` | RF-F4-07 | AC-F4-07b | `requirements.md` §13.7 |
+| Autorización de escrituras | RF-F4-08, RNF-F4-02 | AC-F4-08 a AC-F4-08f, AC-F4-15 | `architecture.md` §10 |
+| Composición del tablero | RF-F4-02, RF-F4-03, RF-F4-04, RF-F4-05, RF-F4-10 | AC-F4-02, AC-F4-03, AC-F4-04, AC-F4-05, AC-F4-10 | `requirements.md` §13.3 |
+| `ERR-11` / `ERR-12` | RF-F4-08 | AC-F4-08, AC-F4-08b | `api-contract.md` §5 |
+
+Las decisiones que sustentan este contrato están registradas en `docs/decisions/analyst.md`.

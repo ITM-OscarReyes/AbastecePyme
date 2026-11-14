@@ -1,17 +1,19 @@
-# Arquitectura y calidad — AbastecePyme (F1, F2 y F3)
+# Arquitectura y calidad — AbastecePyme (F1, F2, F3 y F4)
 
-Este documento operacionaliza para F1, F2 y F3 las reglas obligatorias de `AGENTS.md` (Clean
+Este documento operacionaliza para F1, F2, F3 y F4 las reglas obligatorias de `AGENTS.md` (Clean
 Architecture, SOLID, Clean Code, nomenclatura y prohibición de NetworkX) y las hace verificables.
 
 - Requisitos de calidad asociados: `requirements.md`, sección 5 (`RNF-Q-01` a `RNF-Q-08`) para F1,
   `requirements.md` §9 (`RNF-F2-01` a `RNF-F2-03`) para F2, `requirements.md` §11
-  (`RNF-F3-01` a `RNF-F3-05`) para F3 y `requirements.md` §12 (`RF-UI-01` a `RNF-UI-06`) para la
-  presentación transversal.
+  (`RNF-F3-01` a `RNF-F3-05`) para F3, `requirements.md` §12 (`RF-UI-01` a `RNF-UI-06`) para la
+  presentación transversal y `requirements.md` §13 (`RNF-F4-01` a `RNF-F4-05`) para F4.
 - Verificación: `acceptance-criteria.md` (AC-F1-21 a AC-F1-23 para F1; AC-F2-09 para F2;
-  AC-F3-11 a AC-F3-14 para F3; AC-UI-01 a AC-UI-18 para la presentación).
-- Las secciones 1 a 6 son de F1, la sección 7 es de F2, la sección 8 es de F3 y la sección 9 es
-  transversal a la presentación de F1, F2 y F3. F2 y F3 no modifican ninguna regla de F1, y la
-  sección 9 no modifica reglas de negocio, modelo ni contrato.
+  AC-F3-11 a AC-F3-14 para F3; AC-F4-01 a AC-F4-15 para F4; AC-UI-01 a AC-UI-18 para la
+  presentación).
+- Las secciones 1 a 6 son de F1, la sección 7 es de F2, la sección 8 es de F3, la sección 9 es
+  transversal a la presentación de F1, F2, F3 y F4, y la sección 10 es de F4. F2, F3 y F4 no
+  modifican ninguna regla de F1; F4 no modifica reglas de F2 ni de F3. La sección 9 no modifica
+  reglas de negocio, modelo ni contrato.
 
 No se define aquí ninguna estructura de clases ni de archivos: esas decisiones corresponden a
 `backend-builder` y `frontend-builder`. Se definen responsabilidades, límites y dependencias entre
@@ -28,9 +30,9 @@ infraestructura  ──▶  aplicación  ──▶  dominio
 
 | Capa | Responsabilidad | Contenido esperado | No debe contener |
 | ---- | --------------- | ------------------ | ---------------- |
-| **Dominio** | Reglas de negocio de F1, F2 y F3, y estructura del grafo | Modelo de elemento y tipo, modelo de dependencia, representación del grafo con sus invariantes, matriz de tipos y asociación del insumo, reglas de validación del catálogo, catálogo de errores de negocio, recorrido de impacto, DAG, Kahn, SCC y plan de entrega, puertos de salida | Conocimiento del framework HTTP, del sistema de archivos o de la base de datos; formato de la petición o de la respuesta |
-| **Aplicación** | Orquestación de casos de uso | Casos de uso de F1 (crear elemento, listar elementos, obtener elemento, registrar dependencia, listar dependencias, obtener grafo, obtener reglas de dependencia), F2 (consultar impacto) y F3 (diagnóstico global y plan de entrega), objetos de entrada y salida de aplicación | Validación duplicada del dominio, decisiones de transporte (códigos HTTP, cabeceras), detalles de persistencia |
-| **Infraestructura** | Adaptación a tecnología externa | Presentación HTTP (rutas, esquemas de entrada y salida, traducción de errores a códigos HTTP), adaptador de persistencia del catálogo, composición de dependencias al arrancar | Reglas de negocio, decisiones de validación del dominio |
+| **Dominio** | Reglas de negocio de F1, F2 y F3, y estructura del grafo | Modelo de elemento y tipo, modelo de dependencia, representación del grafo con sus invariantes, matriz de tipos y asociación del insumo, reglas de validación del catálogo, catálogo de errores de negocio, recorrido de impacto, DAG, Kahn, SCC y plan de entrega, puertos de salida | Conocimiento del framework HTTP, del sistema de archivos o de la base de datos; formato de la petición o de la respuesta; perfiles de sesión de demostración |
+| **Aplicación** | Orquestación de casos de uso | Casos de uso de F1 (crear elemento, listar elementos, obtener elemento, registrar dependencia, listar dependencias, obtener grafo, obtener reglas de dependencia), F2 (consultar impacto), F3 (diagnóstico global y plan de entrega) y F4 (abrir y cerrar sesión de demostración, resolver el perfil activo y autorizar escrituras), objetos de entrada y salida de aplicación | Validación duplicada del dominio, decisiones de transporte (códigos HTTP, cabeceras), detalles de persistencia |
+| **Infraestructura** | Adaptación a tecnología externa | Presentación HTTP (rutas, esquemas de entrada y salida, traducción de errores a códigos HTTP), adaptador de persistencia del catálogo, almacén de sesiones en memoria, composición de dependencias al arrancar | Reglas de negocio, decisiones de validación del dominio |
 
 ### 1.1 Dónde vive cada cosa
 
@@ -54,6 +56,11 @@ infraestructura  ──▶  aplicación  ──▶  dominio
 | Exposición de `/orden-produccion` y `/plan-entrega` | Infraestructura (rutas API) |
 | Casos de uso `ObtenerDiagnosticoGlobal` y `ObtenerPlanEntrega` | Aplicación |
 | Recorridos de impacto (F2) | Dominio (F2); F3 no los reutiliza |
+| Regla de autorización: solo `COMPRAS` escribe | Aplicación (caso de uso de autorización), aplicada antes de modificar el catálogo |
+| Almacén de sesiones de demostración y generación del token opaco | Infraestructura (en memoria) |
+| Perfiles `COMPRAS` y `PRODUCCION` y su capacidad de escritura | Aplicación (definición de perfiles), no en el dominio del grafo |
+| Traducción de `ERR-11` y `ERR-12` a `401` y `403` | Infraestructura |
+| Composición del tablero con `GET /grafo`, `/impacto/{id}`, `/plan-entrega` y `/orden-produccion` | Frontend (presentación); no hay cálculo ni agregador nuevo |
 
 ### 1.2 Abstracciones que F1 necesita
 
@@ -95,6 +102,13 @@ Reglas transversales:
   representa los pasos, los estados de producto, el orden global y la alerta de ciclos tal como
   llegan. No calcula el plan, no detecta ciclos, no ordena topológicamente y no decide qué producto
   está bloqueado (`RNF-F3-04`).
+- Para F4, el frontend compone el tablero con `GET /api/v1/grafo`, `GET /api/v1/impacto/{id}`,
+  `GET /api/v1/plan-entrega` y `GET /api/v1/orden-produccion`. No crea un endpoint de cálculo ni un
+  agregador propio, no recalcula el resumen ni el resaltado, y no decide permisos: muestra el perfil
+  activo y las acciones disponibles según la respuesta del backend (`RNF-F4-01`).
+- La sesión de demostración es un estado de presentación y de aplicación: el frontend guarda el token
+  en memoria, lo envía en las escrituras y vuelve a «sin sesión» al cerrarla. No interpreta el token
+  ni deriva permisos por su cuenta.
 - Los textos visibles se rigen por `requirements.md` §12: lenguaje natural de operación de planta,
   sin jerga técnica. La traducción de códigos y resultados a lenguaje de negocio es una
   responsabilidad de presentación y no puede cambiar el significado de la respuesta ni introducir
@@ -269,9 +283,9 @@ Reglas transversales de F3:
   de la API; no recalcula ni reinterpreta las reglas.
 - El determinismo es verificable: mismo catálogo y misma selección producen el mismo JSON.
 
-## 9. Estrategia de presentación (transversal a F1, F2 y F3)
+## 9. Estrategia de presentación (transversal a F1, F2, F3 y F4)
 
-Esta sección aplica a la presentación de F1, F2 y F3. No añade capas nuevas ni cambia las reglas de
+Esta sección aplica a la presentación de F1, F2, F3 y F4. No añade capas nuevas ni cambia las reglas de
 negocio: define cómo se organiza la interfaz para cumplir `requirements.md` §12 y
 `acceptance-criteria.md` §10. La implementación concreta (componentes, valores de color y estructura
 de archivos) corresponde a `frontend-builder`.
@@ -291,6 +305,8 @@ de archivos) corresponde a `frontend-builder`.
 - La presentación de F3 consume las dos consultas reales y no calcula orden, ciclos, estados ni
   planes. La expectativa de interfaz y su dependencia del contrato nuevo están en
   `requirements.md` §11.9 y en la sección 9.5.
+- La presentación de F4 compone el tablero con las consultas existentes y no añade cálculo. El
+  tablero es una quinta sección y vista inicial; las cuatro secciones anteriores siguen disponibles.
 
 ### 9.2 Shell, ancho de datos y ancho de lectura
 
@@ -300,7 +316,7 @@ de archivos) corresponde a `frontend-builder`.
 | Vistas de datos | Catálogo/tabla, red de dependencias y pasos de producción usan el ancho disponible del shell, con el padding definido |
 | Bloques de lectura | Párrafos, formularios y mensajes conservan un ancho máximo de lectura (objetivo 60 a 75 caracteres por línea, rango 45 a 80) y se alinean dentro del shell, no se centran como página |
 | Header | Se reorganiza en dos filas o con navegación colapsable; no amontona logo, pestañas, estado, ayuda, tema y las dos acciones en una fila |
-| Navegación móvil | Por debajo de 768 px existe un menú accesible para las cuatro secciones; no se acepta `hidden md:flex` sin alternativa |
+| Navegación móvil | Por debajo de 768 px existe un menú accesible para las cinco secciones; no se acepta `hidden md:flex` sin alternativa |
 | Alturas | El grafo y los paneles usan `flex`, `min-h-0`, `dvh` o porcentajes, sin alturas fijas en píxeles |
 
 La distinción entre «ancho completo» y «ancho de lectura» es deliberada: los datos se benefician del
@@ -336,21 +352,19 @@ Reglas:
   intencional, pero la página no se desplaza horizontalmente.
 - Objetivos táctiles principales de al menos 44 × 44 px CSS en móvil.
 
-### 9.5 Presentación de F3 y dependencia del backend
+### 9.5 Presentación de F3
 
-La vista de F3 debe presentar dos resultados distintos: el **plan de entrega** de uno o varios
-productos y el **control general de planta**. El detalle funcional está en `requirements.md` §11.9.
-Reglas de presentación:
+La vista de F3 presenta dos resultados distintos: el **plan de entrega** de uno o varios productos y
+el **control general de planta**. El detalle funcional está en `requirements.md` §11.9. Reglas de
+presentación:
 
 - El plan de entrega muestra pasos numerados, el estado `PLANIFICABLE` o `BLOQUEADO` de cada
   producto solicitado y, si hay bloqueo, una alerta visible con lo que se puede preparar igual.
 - El control general muestra el orden global cuando la planta es planificable y, cuando no lo es,
   una alerta visible con las dependencias circulares, los elementos y productos bloqueados y los
   productos planificables. No muestra un orden parcial.
-- La vista no calcula ni simula esos resultados. Mientras el backend no implemente
-  `api-contract.md` §3.7 y §3.8, el rediseño de la vista y la sección de F3 de la guía quedan
-  bloqueados (`AMB-UI-02`). La guía no describe como disponible un comportamiento que la interfaz no
-  ofrece.
+- La vista no calcula ni simula esos resultados: consume el contrato ya implementado de
+  `api-contract.md` §3.7 y §3.8. La dependencia antes registrada como `AMB-UI-02` queda resuelta.
 
 ### 9.6 Verificación
 
@@ -359,3 +373,51 @@ revisión de tokens, textos y separación de responsabilidades es estática; las
 layout, contraste y navegación se hacen sobre la interfaz renderizada en los breakpoints indicados.
 `auditor` puede auditar la trazabilidad entre `requirements.md` §12, esta sección y los criterios
 AC-UI.
+
+## 10. Relevancia para F4 — Tablero, perfiles y autorización
+
+F4 no abre capas nuevas ni añade cálculo de grafo. Añade **composición de presentación** y
+**autorización de escrituras**.
+
+| Aspecto | Ubicación obligatoria |
+| ------- | ---------------------- |
+| Composición del tablero con las consultas de F1, F2 y F3 | Frontend (presentación) |
+| Resumen de cadena, impacto, plan y diagnóstico | Frontend, a partir de respuestas reales |
+| Resaltado de la consulta relevante | Frontend, usando identificadores de la API |
+| Definición de perfiles `COMPRAS` y `PRODUCCION` | Aplicación |
+| Regla de autorización: solo `COMPRAS` escribe | Aplicación, aplicada antes de modificar el catálogo |
+| Generación y almacenamiento del token de demostración | Infraestructura (memoria) |
+| Traducción de `ERR-11` y `ERR-12` a `401` y `403` | Infraestructura |
+| Decisión de permisos en el frontend como única barrera | **Prohibido** (`RNF-F4-02`) |
+| Cálculo de impacto, orden, ciclos o planes en el tablero | **Prohibido** (`RNF-F4-01`) |
+
+Reglas transversales de F4:
+
+- El tablero es una quinta sección y la vista inicial; no reemplaza ni altera las cuatro secciones
+  existentes.
+- La autorización efectiva vive en el backend. La interfaz muestra el perfil activo y condiciona las
+  acciones, pero no es la barrera de seguridad.
+- La sesión de demostración no es autenticación real: no valida identidad, no persiste y no protege
+  las lecturas (`AMB-F4-01`).
+- Un error de una consulta se muestra como error de esa consulta; no se convierte en cero, lista
+  vacía ni dato de ejemplo.
+- La composición no duplica las reglas de F1, F2 ni F3 y no introduce un endpoint agregador.
+- El tablero conserva el lenguaje de negocio de `requirements.md` §12 y los dos temas existentes;
+  F4 no rediseña el tema claro (`AMB-F4-03`).
+
+### 10.1 Flujo de autorización
+
+1. La interfaz obtiene los perfiles con `GET /api/v1/perfiles` y muestra el selector.
+2. Al elegir un perfil, `POST /api/v1/sesion` devuelve un token opaco que la interfaz guarda en
+   memoria.
+3. Toda escritura envía `Authorization: Bearer <token>`. El backend resuelve la sesión y aplica la
+   matriz de `api-contract.md` §10.5 antes de validar el cuerpo.
+4. Sin sesión, el backend responde `401` `ERR-11`; con `PRODUCCION`, `403` `ERR-12`; con `COMPRAS`,
+   continúa la validación normal.
+5. `DELETE /api/v1/sesion` invalida el token y la interfaz vuelve a «sin sesión».
+
+### 10.2 Verificación
+
+La verificación de F4 corresponde a `tester` mediante `acceptance-criteria.md` §11. La revisión de
+capas, de la matriz de permisos y de la ausencia de cálculo en el tablero es estática y funcional; las
+comprobaciones de layout, lenguaje y temas se hacen sobre la interfaz renderizada.
