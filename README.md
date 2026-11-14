@@ -11,7 +11,7 @@ reales.
 | Documento | Contenido |
 | --------- | --------- |
 | [`docs/brief.md`](docs/brief.md) | Fuente de verdad de necesidades, alcance y reglas de negocio |
-| [`docs/requirements.md`](docs/requirements.md) | Requisitos funcionales y no funcionales de F1 y F2, trazabilidad y decisiones pendientes |
+| [`docs/requirements.md`](docs/requirements.md) | Requisitos funcionales y no funcionales de F1, F2, F3 y F4, trazabilidad y decisiones pendientes |
 | [`docs/graph-model.md`](docs/graph-model.md) | Dirección de las aristas y representación del grafo |
 | [`docs/api-contract.md`](docs/api-contract.md) | Contrato REST, validaciones y catálogo de errores |
 | [`docs/architecture.md`](docs/architecture.md) | Capas, responsabilidades y convenciones |
@@ -23,7 +23,9 @@ la traza manual del ejemplo pequeño y la salida de la última ejecución del sc
 
 ## Estado del proyecto
 
-Implementadas la **F1 — Catálogo de dependencias**, la **F2 — Análisis de impacto** y la **F3 — Orden de producción y ciclos**, con las mejoras solicitadas sobre la interfaz: inventario y alertas de stock para suministros, edición y eliminación de elementos y relaciones con aviso de continuidad, reglas de dependencia por tipo, ficha modal de cada elemento, historial de los 10 análisis de impacto más recientes y guía de uso. F4 (tablero integrado) sigue fuera del alcance actual.
+Implementadas y verificadas la **F1 — Catálogo de dependencias**, la **F2 — Análisis de impacto** y la **F3 — Orden de producción y ciclos**, con las mejoras solicitadas sobre la interfaz: inventario y alertas de stock para suministros, edición y eliminación de elementos y relaciones con aviso de continuidad, reglas de dependencia por tipo, ficha modal de cada elemento, historial de los 10 análisis de impacto más recientes y guía de uso.
+
+La **F4 — Tablero de abastecimiento demostrable** está **especificada** en `docs/` (tablero integrado, perfiles con permisos diferenciados y escenarios de aceptación) y **pendiente de implementación**. El tablero compondrá resultados reales de F1, F2 y F3; no añadirá algoritmos ni endpoints de cálculo.
 
 ## Requisitos
 
@@ -68,9 +70,9 @@ python -m venv .venv
 Queda disponible en `http://127.0.0.1:8000`, con la API bajo `/api/v1` y la documentación
 interactiva en `http://127.0.0.1:8000/docs`.
 
-Arranca con el conjunto sintético de demostración: **11 elementos y 11 dependencias** que forman la
-línea de acero y la línea de madera. Los datos viven en memoria, por lo que se restablecen al
-reiniciar el servidor.
+Arranca con el conjunto sintético de demostración: **27 elementos y 37 dependencias** que forman la
+línea de acero, la línea de madera y sus subensamblajes. Los datos viven en memoria, por lo que se
+restablecen al reiniciar el servidor.
 
 ### 2. Frontend
 
@@ -113,12 +115,12 @@ cd backend
 cmd /c ".venv\Scripts\python.exe -X utf8 tests\verificacion_http.py http://127.0.0.1:8000 > ..\docs\entrega\salida-aceptacion-f1.txt"
 ```
 
-El resto de suites de F1:
+El resto de suites:
 
 ```powershell
-cd backend   ; .\.venv\Scripts\python.exe -m pytest      # 166 pruebas
-cd frontend  ; npm run test                              # 31 pruebas
-              npm run test:e2e                           # 19 pruebas (backend en 8000)
+cd backend   ; .\.venv\Scripts\python.exe -m pytest      # 209 pruebas (206 pasan, 3 de fallo esperado)
+cd frontend  ; npm run test                              # 39 pruebas
+              npm run test:e2e                           # 26 pruebas (backend en 8000)
               npm run test:e2e:vacio                     #  5 pruebas (catálogo vacío)
 ```
 
@@ -156,12 +158,50 @@ recorridos, ciclos ni órdenes de producción.
 | `GET` | `/api/v1/reglas-dependencia` | Consultar las combinaciones de tipos permitidas |
 | `GET` | `/api/v1/grafo` | Obtener la representación del grafo |
 | `GET` | `/api/v1/impacto/{id}` | Consultar los elementos afectados por la indisponibilidad de un elemento |
-| `GET` | `/api/v1/orden-produccion` | Obtener el orden de preparación válido (DAG) o reporte de ciclo si hay contradicción |
+| `GET` | `/api/v1/orden-produccion` | Obtener el diagnóstico global: orden de preparación válido (DAG) o reporte de ciclos |
+| `GET` | `/api/v1/plan-entrega` | Obtener el plan de preparación de uno o varios productos |
+| `GET` | `/api/v1/perfiles` | Listar los perfiles de demostración y su capacidad de escritura |
+| `POST` | `/api/v1/sesion` | Iniciar una sesión de demostración con un perfil |
+| `GET` | `/api/v1/sesion` | Consultar la sesión activa |
+| `DELETE` | `/api/v1/sesion` | Cerrar la sesión activa |
 
 Los suministros (`INSUMO`) incluyen `stockDisponible`, `stockMinimo`, `estadoStock` y
 `alertaStock`. La alerta se activa cuando la cantidad disponible es inferior al mínimo aceptable.
 El detalle de los campos, los códigos de estado y el catálogo de errores están en
 [`docs/api-contract.md`](docs/api-contract.md).
+
+Los endpoints de `perfiles` y `sesion` están **especificados para F4** y todavía no forman parte de la
+API implementada; el resto de la tabla ya está disponible.
+
+## Perfiles y sesión de demostración
+
+La especificación de F4 distingue dos usuarios del brief:
+
+| Perfil | Nombre visible | Puede escribir |
+| ------ | -------------- | -------------- |
+| `COMPRAS` | Responsable de compras | Sí: crea, edita y elimina elementos y relaciones |
+| `PRODUCCION` | Coordinador de producción | No: solo consulta |
+
+La sesión es **de demostración**: se elige un perfil con `POST /api/v1/sesion`, se recibe un token
+opaco en memoria y se envía en la cabecera `Authorization: Bearer <token>` para escribir. No hay
+contraseñas, no hay persistencia y las lecturas son abiertas. La autenticación real queda como
+decisión pendiente (`AMB-F4-01`).
+
+La autorización se aplica en el backend: una escritura sin sesión responde `401` y una escritura con
+el perfil de producción responde `403`; en ambos casos el catálogo no cambia. La interfaz solo
+refleja el permiso y explica en lenguaje de negocio qué perfil se necesita.
+
+## Tablero de abastecimiento (F4)
+
+El tablero es la quinta sección y la vista inicial. No calcula nada: compone resultados reales de
+`GET /grafo`, `GET /impacto/{id}`, `GET /plan-entrega` y `GET /orden-produccion`. Muestra el resumen
+de la cadena, la red con la dirección `origen habilita destino`, el impacto del elemento
+seleccionado, el plan de entrega y la alerta de ciclos, y resalta la consulta relevante sobre el mapa.
+
+Los cuatro escenarios de aceptación se ejecutan contra el backend real: cadena válida, elemento
+inexistente, dato inválido y ciclo. La especificación completa está en
+[`docs/requirements.md`](docs/requirements.md) §13 y los criterios en
+[`docs/acceptance-criteria.md`](docs/acceptance-criteria.md) §11.
 
 ## Qué significa «alcanzar»
 

@@ -4,11 +4,14 @@ Especificación técnica derivada de `docs/brief.md`.
 
 - **Fuente de verdad:** `docs/brief.md`.
 - **Alcance de este documento:** **F1 — Catálogo de dependencias**, **F2 — Análisis de impacto**,
-  **F3 — Orden y ciclos de producción** y los **requisitos transversales de interfaz de usuario** de
-  la sección 12, que aplican a la presentación de F1, F2 y F3 sin alterar sus reglas de negocio.
-- **Features fuera de este documento:** F4 **no** se especifica aquí. Solo se menciona como
-  consumidor del modelo de datos cuando F1, F2 o F3 dejan una consecuencia que debe respetarse. Su
-  especificación requerirá una ampliación posterior de este documento por `analyst`.
+  **F3 — Orden y ciclos de producción**, **F4 — Tablero de abastecimiento demostrable** y los
+  **requisitos transversales de interfaz de usuario** de la sección 12, que aplican a la presentación
+  de F1, F2, F3 y F4 sin alterar sus reglas de negocio.
+- **Feature en alcance de esta especificación:** F4. Las secciones de F1, F2 y F3 se conservan como
+  dependencias verificadas y no se redefinen; F4 las integra sin duplicar sus algoritmos.
+- **Features fuera de este documento:** no hay features pendientes de especificación. Cualquier
+  necesidad nueva que no provenga de `docs/brief.md` o de una solicitud explícita del cliente queda
+  como ambigüedad (`AMB-F4-*`) y no se implementa.
 - **Documentos relacionados:** `graph-model.md` (dirección, representación, DAG y algoritmos de orden y ciclos),
   `api-contract.md` (contrato HTTP), `architecture.md` (capas, calidad y estrategia de presentación),
   `acceptance-criteria.md` (verificación).
@@ -19,17 +22,26 @@ Especificación técnica derivada de `docs/brief.md`.
 | ------- | -------- |
 | `RF-F1-nn` | Requisito funcional de F1 |
 | `RNF-F1-nn` | Requisito no funcional de F1 |
+| `RF-F2-nn` | Requisito funcional de F2 |
+| `RNF-F2-nn` | Requisito no funcional de F2 |
 | `RF-F3-nn` | Requisito funcional de F3 |
 | `RNF-F3-nn` | Requisito no funcional de F3 |
+| `RF-F4-nn` | Requisito funcional de F4 |
+| `RNF-F4-nn` | Requisito no funcional de F4 |
+| `RN-F4-nn` | Regla de negocio de F4 |
 | `RNF-Q-nn` | Requisito de calidad y arquitectura, verificable |
-| `RF-UI-nn` | Requisito funcional de presentación, transversal a F1, F2 y F3 |
-| `RNF-UI-nn` | Requisito no funcional de presentación, transversal a F1, F2 y F3 |
+| `RF-UI-nn` | Requisito funcional de presentación, transversal a F1, F2, F3 y F4 |
+| `RNF-UI-nn` | Requisito no funcional de presentación, transversal a F1, F2, F3 y F4 |
 | `AC-F1-nn` | Criterio de aceptación de F1 (ver `acceptance-criteria.md`) |
+| `AC-F2-nn` | Criterio de aceptación de F2 (ver `acceptance-criteria.md`) |
 | `AC-F3-nn` | Criterio de aceptación de F3 (ver `acceptance-criteria.md`) |
+| `AC-F4-nn` | Criterio de aceptación de F4 (ver `acceptance-criteria.md` §11) |
 | `AC-UI-nn` | Criterio de aceptación de presentación (ver `acceptance-criteria.md` §10) |
 | `ERR-nn` | Error del catálogo o de producción (ver `api-contract.md`) |
 | `AMB-F1-nn` | Ambigüedad o decisión pendiente de F1 |
+| `AMB-F2-nn` | Ambigüedad o decisión pendiente de F2 |
 | `AMB-F3-nn` | Ambigüedad o decisión pendiente de F3 |
+| `AMB-F4-nn` | Ambigüedad o decisión pendiente de F4 |
 | `AMB-UI-nn` | Ambigüedad o decisión pendiente de presentación |
 
 ## 2. Necesidades de negocio de F1
@@ -295,7 +307,8 @@ corresponde a otras features y a decisiones posteriores de `analyst`.
 
 ## 9. Requisitos técnicos — F2: Análisis de impacto
 
-Especificación técnica derivada de `docs/brief.md` (Feature 2). Únicamente F2. F3 y F4 fuera de alcance.
+Especificación técnica derivada de `docs/brief.md` (Feature 2). Únicamente F2. F3 y F4 tienen sus
+propias secciones (§11 y §13) y no se redefinen aquí.
 
 - **Fuente de verdad:** `docs/brief.md`.
 - **Alcance:** consulta de impacto respetando la dirección definida del grafo; diferenciación de casos (elemento inexistente, elemento existente sin dependencias, elemento que afecta o depende de una cadena); recorrido propio; documentación del significado de «alcanzar».
@@ -683,14 +696,14 @@ implementa y no se simula en el frontend.**
 | Lenguaje | Todo el contenido cumple la sección 12.2: lenguaje de operación de planta, sin jerga técnica ni códigos HTTP | RF-UI-01 a RF-UI-03 |
 | Integridad | El frontend no calcula orden, ciclos, estados ni planes; solo representa la respuesta real de la API | RNF-F3-04; RNF-UI-05 |
 
-La implementación de esta vista y de la sección de F3 de la guía queda **bloqueada hasta que el
-backend implemente el contrato nuevo** (`api-contract.md` §3.7 y §3.8). Mientras tanto, el frontend
-no debe simular el plan de entrega ni el diagnóstico global, ni presentar como disponible un
-comportamiento que el backend no expone. La dependencia queda registrada como `AMB-UI-02`.
+La implementación de esta vista y de la sección de F3 de la guía **ya está disponible**: el backend
+implementa el contrato nuevo (`api-contract.md` §3.7 y §3.8) y el frontend lo consume en la vista de
+orden de producción. La dependencia antes registrada como `AMB-UI-02` queda resuelta. El frontend no
+simula el plan de entrega ni el diagnóstico global: muestra la respuesta real del backend.
 
 ## 12. Requisitos transversales de interfaz de usuario (UI)
 
-Estos requisitos aplican a la presentación de F1, F2 y F3. **No crean funcionalidades nuevas, no
+Estos requisitos aplican a la presentación de F1, F2, F3 y F4. **No crean funcionalidades nuevas, no
 modifican reglas de negocio, modelo, endpoints ni algoritmos** y no sustituyen los requisitos de cada
 feature. Se derivan de la revisión de interfaz solicitada por el cliente el 2026-11-07 y de los
 usuarios declarados en `docs/brief.md` (responsable de compras y coordinador de producción). La
@@ -765,9 +778,8 @@ comportamiento de F3 en lenguaje de negocio, no solo cambiar la redacción:
 La guía **no puede afirmar** que un proveedor abastece procesos o productos, que un proceso recibe
 insumos directamente de un proveedor o que un insumo alimenta productos. Sus afirmaciones sobre la
 matriz deben coincidir con `GET /api/v1/reglas-dependencia`, cuya definición única vive en el dominio
-(`RNF-F1-10`). La guía no cita F1, F2 ni F3. La sección de F3 se incorpora cuando exista la vista
-nueva de F3 (`AMB-UI-02`); hasta entonces no se describe como disponible un comportamiento que la
-interfaz no ofrece.
+(`RNF-F1-10`). La guía no cita F1, F2, F3 ni F4. La sección de F3 se incorpora con la vista de F3 ya
+implementada; la sección del tablero se incorpora con la vista de F4 (`RF-F4-12`).
 
 **RF-UI-06 — Textos copiables, exportables y de accesibilidad.** Los informes copiables o
 exportables, los nombres accesibles (`aria-label`), los `title` y los `placeholder` cumplen
@@ -792,7 +804,7 @@ caracteres.
 **RF-UI-09 — Header reorganizado y navegación móvil.** El header no amontona logo, pestañas, estado,
 ayuda, tema y las dos acciones principales en una sola fila. Se reorganiza en dos filas o con
 navegación colapsable, de modo que los botones no queden pegados ni se corten. Por debajo de 768 px
-debe existir navegación accesible para las cuatro secciones principales; el patrón `hidden md:flex`
+debe existir navegación accesible para las cinco secciones principales; el patrón `hidden md:flex`
 sin alternativa es un defecto que debe corregirse. La sección activa debe ser visible y las acciones
 principales deben ser alcanzables en móvil.
 
@@ -867,5 +879,254 @@ la misma entrega; la fuente de verdad de la matriz sigue siendo la definición �
 | ID | Ambigüedad o decisión pendiente | Por qué no se resuelve aquí | Impacto si se resuelve distinto |
 | -- | ------------------------------- | ---------------------------- | ------------------------------ |
 | AMB-UI-01 | Redacción final exacta del nombre de la acción de relación: «Crear relación» o «Vincular elementos». Ambas cumplen el criterio de describir la creación de una relación entre elementos y no solo un suministro | Es una decisión de copy; el cliente aprobó ambas opciones y no cambia el comportamiento | Si se elige otra redacción, debe seguir describiendo la creación de una relación entre elementos y no implicar solo suministros |
-| AMB-UI-02 | Momento de actualización de la vista de F3 y de la sección de F3 de la guía. Depende de que el backend implemente el contrato nuevo (`api-contract.md` §3.7 y §3.8) | No se puede enseñar como disponible un comportamiento que el backend aún no expone, ni simularlo en el frontend | Si el backend no implementa el contrato, la guía no puede describir el plan de entrega ni el control general como funciones disponibles |
+| AMB-UI-02 | ~~Momento de actualización de la vista de F3 y de la sección de F3 de la guía. Dependía de que el backend implementara el contrato nuevo (`api-contract.md` §3.7 y §3.8)~~ **Resuelta:** el backend y el frontend ya implementan el contrato de F3 y la vista de F3 está disponible; la guía puede describir el plan de entrega y el control general de planta | Ya no aplica: el contrato nuevo está implementado y verificado | Si se cambiara el contrato de F3, la guía y la vista deben actualizarse en la misma entrega (RNF-UI-06) |
 | AMB-UI-03 | Valores exactos de la paleta clara y del ancho máximo de lectura. Se fijan rangos y criterios medibles (sobriedad, contraste WCAG AA y 45 a 80 caracteres por línea), pero no valores definitivos | La elección de valores es de `frontend-builder` dentro de los criterios; fijarlos aquí sustituiría su decisión y no aporta al negocio | Si el cliente exige una identidad visual concreta, habría que fijar tokens y valores en una decisión posterior |
+
+## 13. Requisitos técnicos — F4: Tablero de abastecimiento demostrable
+
+Especificación técnica derivada de `docs/brief.md` (Feature 4) y de la precisión de producto
+solicitada por el cliente el 2026-11-14 sobre **usuarios y permisos diferenciados**. F4 no crea
+algoritmos nuevos: **integra** los resultados ya calculados por F1, F2 y F3 en un tablero
+demostrable y añade la distinción entre el perfil que registra la cadena y el perfil que la
+consulta.
+
+- **Fuente de verdad:** `docs/brief.md`.
+- **Alcance:** integrar catálogo, análisis de impacto y orden/alerta de ciclos; visualizar
+  dependencias y destacar la consulta relevante; impedir que un perfil no autorizado altere la
+  cadena; ejecutar la aceptación para cadena válida, elemento inexistente, dato inválido y ciclo;
+  entregar documentación, bitácora IA, video y pitch.
+- **Dependencias verificadas:** F1 (catálogo y red), F2 (impacto) y F3 (plan de entrega y
+  diagnóstico global). F4 las consume; no las redefine.
+- **Documentos relacionados:** `api-contract.md` §10 (perfiles, sesión y composición del tablero),
+  `acceptance-criteria.md` §11 (criterios de F4), `architecture.md` §10 (autorización y composición),
+  `graph-model.md` §9 (F4 no cambia el modelo) y `docs/decisions/analyst.md`.
+
+### 13.1 Necesidades de negocio de F4
+
+| Necesidad | Origen |
+| --------- | ------ |
+| N25. El cliente comprende en una sola vista qué falla, qué se afecta y cómo debería organizar producción | brief F4, valor de negocio |
+| N26. El tablero integra catálogo, análisis de impacto y orden/alerta de ciclo con resultados reales | brief F4, primer punto de «Debe permitir» |
+| N27. El tablero visualiza las dependencias y destaca la consulta relevante | brief F4, segundo punto de «Debe permitir» |
+| N28. El sistema distingue al responsable de compras, que registra y gestiona la cadena, del coordinador de producción, que solo consulta | brief, «Usuarios»; precisión del cliente 2026-11-14 |
+| N29. La aceptación se puede ejecutar para una cadena válida, un elemento inexistente, un dato inválido y un ciclo | brief F4, cuarto punto de «Debe permitir» |
+| N30. Se entregan documentación, bitácora IA, video y pitch | brief F4, quinto punto de «Debe permitir» |
+| N31. El tablero no duplica algoritmos ni reglas del backend | `AGENTS.md`, restricciones técnicas; F1, F2 y F3 |
+| N32. El tablero es la vista inicial y no impide acceder a las secciones existentes | decisión de producto 2026-11-14 |
+| N33. Todo texto visible está en español de operación de planta, sin jerga técnica ni códigos HTTP | `requirements.md` §12; revisión de interfaz 2026-11-07 |
+
+La necesidad N28 proviene literalmente de los usuarios del brief. El **mecanismo** de sesión y el
+**alcance exacto** de la autorización son decisiones de esta especificación y quedan registradas en
+§13.7 y en `docs/decisions/analyst.md`. La expresión «adaptar el cambio de requisito docente» del
+brief F4 se interpreta, en esta entrega, como la incorporación de perfiles y permisos; cualquier otro
+alcance de ese cambio queda como `AMB-F4-02` y no se implementa.
+
+### 13.2 Requisitos funcionales de F4
+
+| ID | Requisito | Necesidad | Criterio |
+| -- | --------- | --------- | -------- |
+| RF-F4-01 | El sistema debe ofrecer una quinta sección «Tablero» como vista inicial, que reúne el estado de la cadena, el análisis de impacto, el plan de entrega y la alerta de ciclos. | N25, N26, N32 | AC-F4-01 |
+| RF-F4-02 | El tablero debe componerse exclusivamente con resultados reales de `GET /grafo`, `GET /impacto/{id}`, `GET /plan-entrega` y `GET /orden-produccion`. No se crea un endpoint de cálculo nuevo ni se duplican los algoritmos de F1, F2 o F3. | N26, N31 | AC-F4-02 |
+| RF-F4-03 | El tablero debe mostrar un resumen de la cadena: total de elementos y relaciones por tipo, alertas de stock y conteo de productos planificables y bloqueados, tomado del grafo y del diagnóstico reales. | N25, N26 | AC-F4-03 |
+| RF-F4-04 | El tablero debe permitir seleccionar un elemento y consultar su impacto sin salir de la vista, mostrando los elementos afectados y su estado, con la posibilidad de abrir el detalle de cada uno. | N26, N27 | AC-F4-04 |
+| RF-F4-05 | El tablero debe mostrar el plan de entrega de los productos seleccionados y el diagnóstico global de planta, con una alerta visible cuando existan dependencias circulares. | N25, N26 | AC-F4-05 |
+| RF-F4-06 | El tablero debe visualizar la red de dependencias respetando la dirección `origen habilita destino`, con una leyenda que explique la dirección y sin calcular recorridos, órdenes ni ciclos en el cliente. | N27, N31 | AC-F4-06 |
+| RF-F4-07 | El sistema debe exponer los perfiles de demostración `COMPRAS` y `PRODUCCION` y una sesión de demostración sin credenciales: `GET /perfiles`, `POST /sesion`, `GET /sesion` y `DELETE /sesion`. La sesión se identifica con un token opaco en memoria. | N28 | AC-F4-07 |
+| RF-F4-08 | El backend debe autorizar las escrituras: crear, editar o eliminar elementos y relaciones exige una sesión activa del perfil `COMPRAS`. El perfil `PRODUCCION` y la ausencia de sesión solo pueden consultar. La regla se aplica en el backend, no solo en la interfaz. | N28, N31 | AC-F4-08 |
+| RF-F4-09 | La interfaz debe condicionar las acciones de escritura al perfil activo: con `PRODUCCION` o sin sesión no muestra como disponibles las acciones de alta, edición o eliminación, y explica en lenguaje de negocio que se requiere el perfil de compras. | N28, N33 | AC-F4-09 |
+| RF-F4-10 | El tablero debe destacar la consulta relevante sobre la red: al seleccionar un elemento o un producto, resalta el elemento consultado y sus afectados o sus requisitos, según corresponda, usando los identificadores que devuelve el backend. | N27 | AC-F4-10 |
+| RF-F4-11 | El tablero debe permitir ejecutar y observar los cuatro escenarios de aceptación: cadena válida, elemento inexistente, dato inválido y ciclo, cada uno con un resultado comprensible y sin datos simulados. | N29 | AC-F4-11 |
+| RF-F4-12 | El sistema debe entregar la documentación actualizada, una bitácora de IA de F4, un guion de video y un pitch, coherentes con el comportamiento real del sistema. | N30 | AC-F4-12 |
+| RF-F4-13 | Todo el contenido visible del tablero, de la sesión y de los mensajes de permiso debe cumplir la sección 12: español natural, sin códigos HTTP ni jerga técnica, y coherente en ambos temas. | N33 | AC-F4-13 |
+
+### 13.3 Detalle de los requisitos funcionales de F4
+
+**RF-F4-01 — Quinta sección y vista inicial.** El tablero es una sección más de la navegación
+principal y la primera que ve el usuario al entrar. No sustituye las secciones existentes: catálogo,
+red, análisis de impacto y orden de producción siguen accesibles. En móvil debe ser alcanzable como
+las demás secciones (RF-UI-09).
+
+**RF-F4-02 — Composición sin cálculo nuevo.** El tablero no añade un endpoint que agregue datos ni
+un algoritmo en el frontend. Consume las consultas existentes y compone su presentación:
+
+| Bloque del tablero | Consulta real |
+| ------------------ | ------------- |
+| Resumen de la cadena y red de dependencias | `GET /api/v1/grafo` |
+| Impacto del elemento seleccionado | `GET /api/v1/impacto/{id}` |
+| Plan de entrega de los productos seleccionados | `GET /api/v1/plan-entrega?productos=...` |
+| Alerta de ciclos y diagnóstico global | `GET /api/v1/orden-produccion` |
+
+Cada bloque muestra su propio estado de carga y de error. Un fallo en una consulta no se presenta
+como un resultado vacío válido ni se rellena con datos de ejemplo.
+
+**RF-F4-03 — Resumen de la cadena.** El resumen se deriva de los totales y de los estados que ya
+devuelve el backend: de `GET /grafo` toma `resumen.totalElementos`, `resumen.totalDependencias`,
+`estadoStock` y `alertaStock`; de `GET /orden-produccion` toma `productosPlanificables` y
+`productosBloqueados`. El tablero no recalcula el estado de stock ni el veredicto de ciclos.
+
+**RF-F4-04 — Impacto desde el tablero.** El usuario elige un elemento y ejecuta la consulta de
+impacto. El tablero muestra el elemento consultado, los afectados y, si no hay afectados, un mensaje
+que distingue «este elemento no afecta a otros» de «el elemento no existe». Un identificador
+inexistente o mal formado se presenta como error de negocio, nunca como lista vacía.
+
+**RF-F4-05 — Plan y diagnóstico.** El tablero reutiliza la presentación de F3: pasos numerados del
+plan, estado `PLANIFICABLE` o `BLOQUEADO` por producto y alerta visible de dependencias circulares
+con los elementos y productos bloqueados. Cuando el plan no es posible, no muestra un orden parcial
+ni un plan vacío presentado como éxito.
+
+**RF-F4-06 — Visualización de la red.** La red usa la representación de F1 y conserva la dirección
+`origen habilita destino`. La leyenda explica que una flecha indica que el origen habilita al
+destino. El tablero no colorea nodos por un veredicto calculado en el cliente: los estados de
+impacto, bloqueo o selección provienen de los resultados de la API.
+
+**RF-F4-07 — Perfiles y sesión de demostración.** La sesión de demostración no usa credenciales ni
+persistencia: el usuario elige un perfil y recibe un token opaco que vive en memoria del backend. Al
+reiniciar el backend, las sesiones se pierden. `GET /perfiles` devuelve los dos perfiles con su
+nombre visible y su capacidad de escritura. `POST /sesion` recibe `{ "perfil": "COMPRAS" |
+"PRODUCCION" }` y devuelve el token; `GET /sesion` describe la sesión activa; `DELETE /sesion` la
+cierra. El token se envía en la cabecera `Authorization: Bearer <token>` en las escrituras.
+
+**RF-F4-08 — Autorización en el backend.** La matriz de permisos es:
+
+| Acción | Sin sesión | `COMPRAS` | `PRODUCCION` |
+| ------ | ---------- | --------- | ------------ |
+| Consultar catálogo, red, impacto, plan, orden y tablero | Permitido | Permitido | Permitido |
+| Crear, editar o eliminar elementos | Denegado | Permitido | Denegado |
+| Crear, editar o eliminar relaciones | Denegado | Permitido | Denegado |
+
+Una escritura sin sesión responde `401` `ERR-11` (`SESION_REQUERIDA`); una escritura con el perfil
+`PRODUCCION` responde `403` `ERR-12` (`PERMISO_DENEGADO`). La comprobación ocurre antes de modificar
+el catálogo: una petición denegada no deja cambios. Las lecturas permanecen abiertas en esta
+demostración (`AMB-F4-01`).
+
+**RF-F4-09 — Interfaz condicionada por perfil.** La interfaz muestra el perfil activo y, cuando no
+hay sesión o el perfil es `PRODUCCION`, oculta o deshabilita las acciones de alta, edición y
+eliminación, explicando el motivo en lenguaje de negocio. No se limita a mostrar un error después de
+intentar la acción. El cambio de perfil se hace desde un control visible y cierra la sesión anterior.
+
+**RF-F4-10 — Resaltado de la consulta relevante.** Al seleccionar un elemento en el resumen, en la
+red o en el plan, el tablero resalta el elemento consultado y los identificadores que el backend
+devolvió como afectados o como requisitos. El resaltado es presentación: no añade ni quita elementos
+del resultado.
+
+**RF-F4-11 — Escenarios de aceptación ejecutables.** El tablero o su guía debe permitir observar los
+cuatro escenarios del brief con datos sintéticos:
+
+| Escenario | Qué debe poder verse |
+| --------- | -------------------- |
+| Cadena válida | Elemento con dependencias, impacto con afectados y plan de entrega con pasos |
+| Elemento inexistente | Error de negocio claro, sin afectados ni plan inventado |
+| Dato inválido | Error de validación que indica el dato y cómo corregirlo |
+| Ciclo | Alerta de dependencia circular, elementos y productos bloqueados y ausencia de orden falso |
+
+Los escenarios se ejecutan contra el backend real. No se incluyen datos de demostración incrustados
+en el frontend que oculten el estado real del catálogo.
+
+**RF-F4-12 — Entregables.** La entrega de F4 incluye: documentación técnica actualizada
+(`requirements.md`, `acceptance-criteria.md`, `api-contract.md`, `architecture.md`, `graph-model.md`,
+`README.md`), una bitácora de IA de F4 con el formato de `docs/entrega/bitacora-ia-f1.md`, un guion
+de video que recorra los cuatro escenarios y un pitch que explique el valor de negocio. Los
+entregables no pueden afirmar comportamientos que el sistema no ejecute.
+
+**RF-F4-13 — Lenguaje y coherencia visual.** El tablero, el control de perfil y los mensajes de
+permiso cumplen la sección 12: español natural, sin códigos HTTP, sin términos técnicos y con
+estados que no dependen solo del color. Se mantienen exactamente dos temas, claro y oscuro; F4 no
+rediseña el tema claro (`AMB-F4-03`).
+
+### 13.4 Requisitos no funcionales de F4
+
+| ID | Requisito | Criterio |
+| -- | --------- | -------- |
+| RNF-F4-01 | El tablero se implementa en React + TypeScript, consume la API real y no implementa recorridos de impacto, ordenamientos, detección de ciclos ni cálculo de planes. | AC-F4-02, AC-F4-13 |
+| RNF-F4-02 | La autorización se aplica en el backend y es la barrera efectiva; la interfaz solo refleja el permiso. Una escritura denegada no modifica el catálogo. | AC-F4-08 |
+| RNF-F4-03 | Los datos son sintéticos. Los errores son explícitos y no se convierten en resultados aparentemente válidos. Un bloqueo o un ciclo se presentan como resultado de negocio, no como fallo de red. | AC-F4-11, AC-F4-13 |
+| RNF-F4-04 | El tablero no bloquea la interfaz mientras compone sus consultas: cada bloque muestra carga y error propios. En el entorno local, la composición de las cuatro consultas sobre el catálogo de demostración responde en menos de 2 s. | AC-F4-01, AC-F4-11 |
+| RNF-F4-05 | El tablero funciona en los breakpoints 360, 768, 1024, 1440 y 1920 px, sin scroll horizontal no intencional, con navegación accesible y en ambos temas. | AC-F4-01, AC-F4-13 |
+
+### 13.5 Reglas de negocio de F4
+
+| ID | Regla | Necesidad | Criterio |
+| -- | ----- | --------- | -------- |
+| RN-F4-01 | El tablero compone resultados de F1, F2 y F3; no redefine la dirección, la matriz, el impacto, el orden ni los ciclos. | N26, N31 | AC-F4-02 |
+| RN-F4-02 | Solo el perfil `COMPRAS` puede alterar la cadena. El perfil `PRODUCCION` consulta y no modifica. La ausencia de sesión tampoco permite escribir. | N28 | AC-F4-08, AC-F4-09 |
+| RN-F4-03 | La sesión de demostración no es autenticación real: no valida identidad, no persiste y no protege las lecturas. Se declara como demostración. | N28 | AC-F4-07 |
+| RN-F4-04 | Un error de una consulta se muestra como error de esa consulta. No se sustituye por ceros, listas vacías ni datos de ejemplo. | N31, N33 | AC-F4-04, AC-F4-11 |
+| RN-F4-05 | El tablero es la vista inicial, pero no bloquea el acceso a las demás secciones ni cambia sus reglas. | N32 | AC-F4-01 |
+| RN-F4-06 | El resaltado de la consulta relevante es presentación: usa los identificadores devueltos por el backend y no amplía ni reduce el resultado. | N27 | AC-F4-10 |
+
+### 13.6 Casos límite de F4
+
+| Caso | Resultado esperado | Criterio |
+| ---- | ------------------ | -------- |
+| Cadena válida con productos planificables | Resumen, impacto, plan y diagnóstico coherentes con la API | AC-F4-03, AC-F4-04, AC-F4-05 |
+| Elemento inexistente en el impacto | Error de negocio explícito, sin afectados ni plan | AC-F4-04, AC-F4-11 |
+| Identificador mal formado | Error de validación distinto de «no existe» | AC-F4-11 |
+| Dato inválido en una escritura | Error que indica el dato y cómo corregirlo; catálogo intacto | AC-F4-11 |
+| Ciclo en la red | Alerta visible, productos bloqueados, sin orden parcial | AC-F4-05, AC-F4-11 |
+| Catálogo vacío | Estado vacío comprensible, sin datos de ejemplo | AC-F4-03 |
+| Sin sesión | Solo consulta; las acciones de escritura no se ofrecen como disponibles | AC-F4-09 |
+| Sesión `PRODUCCION` intenta escribir | `403` `ERR-12`; sin cambios en el catálogo | AC-F4-08 |
+| Escritura sin sesión | `401` `ERR-11`; sin cambios en el catálogo | AC-F4-08 |
+| Sesión cerrada | El control vuelve a «sin sesión» y deshabilita escrituras | AC-F4-07, AC-F4-09 |
+| Backend no disponible | Mensaje de no disponibilidad; no se muestran datos simulados | AC-F4-04, AC-F4-11 |
+| Impacto de un producto terminal | `200` con cero afectados y mensaje que lo distingue de un error | AC-F4-04 |
+
+### 13.7 Perfiles, permisos y sesión de demostración
+
+Esta sección fija la decisión de F4 para la necesidad N28. **No inventa un sistema de identidad**: la
+autenticación real (credenciales, persistencia, expiración, recuperación y auditoría) queda como
+`AMB-F4-01` y no se implementa en esta feature.
+
+| Aspecto | Decisión de F4 |
+| ------- | -------------- |
+| Perfiles | `COMPRAS` (nombre visible «Responsable de compras») y `PRODUCCION` (nombre visible «Coordinador de producción») |
+| Obtención de sesión | `POST /api/v1/sesion` con el perfil elegido; sin contraseña |
+| Token | Opaco, generado por el backend y guardado en memoria; se pierde al reiniciar |
+| Envío | `Authorization: Bearer <token>` en las peticiones de escritura |
+| Lecturas | Abiertas para ambos perfiles y para quien no tenga sesión |
+| Escrituras | Solo `COMPRAS` |
+| Cierre | `DELETE /api/v1/sesion` invalida el token |
+| Errores | `401` `ERR-11` sin sesión; `403` `ERR-12` con perfil sin permiso |
+| Interfaz | Selector de perfil visible, perfil activo indicado y acciones de escritura condicionadas |
+
+La decisión se registra en `docs/decisions/analyst.md`. El contrato detallado está en
+`api-contract.md` §10.
+
+### 13.8 Trazabilidad de F4
+
+`necesidad → requisito → criterio de aceptación → solución técnica`
+
+| Necesidad | Requisitos | Criterios | Solución técnica |
+| --------- | ---------- | --------- | ---------------- |
+| N25. Comprensión global en una vista | RF-F4-01, RF-F4-03, RF-F4-05 | AC-F4-01, AC-F4-03, AC-F4-05 | Quinta sección «Tablero» como inicio; resumen, plan y alerta |
+| N26. Integración de catálogo, impacto y orden | RF-F4-01, RF-F4-02, RF-F4-03, RF-F4-04, RF-F4-05 | AC-F4-01 a AC-F4-05 | Composición de `GET /grafo`, `/impacto/{id}`, `/plan-entrega` y `/orden-produccion` |
+| N27. Visualización y resaltado | RF-F4-04, RF-F4-06, RF-F4-10 | AC-F4-04, AC-F4-06, AC-F4-10 | Red de F1 con dirección visible; resaltado por identificadores de la API |
+| N28. Perfiles y permisos | RF-F4-07, RF-F4-08, RF-F4-09 | AC-F4-07, AC-F4-08, AC-F4-09 | Perfiles `COMPRAS`/`PRODUCCION`; sesión de demostración; autorización en backend |
+| N29. Aceptación de cuatro escenarios | RF-F4-11 | AC-F4-11 | Escenarios contra backend real con datos sintéticos |
+| N30. Entregables | RF-F4-12 | AC-F4-12 | Documentación, bitácora IA, video y pitch en `docs/entrega/` |
+| N31. Sin duplicar algoritmos | RF-F4-02, RF-F4-06, RF-F4-08; RNF-F4-01, RNF-F4-02 | AC-F4-02, AC-F4-08, AC-F4-13 | Frontend solo representa; backend autoriza y calcula |
+| N32. Vista inicial sin romper navegación | RF-F4-01; RN-F4-05 | AC-F4-01 | Quinta sección; las cuatro anteriores siguen accesibles |
+| N33. Lenguaje y coherencia visual | RF-F4-13; RNF-F4-03, RNF-F4-05 | AC-F4-13 | Textos de negocio; dos temas; breakpoints de §12 |
+| Restricción: arquitectura y calidad | RNF-F4-01, RNF-F4-02 | AC-F4-02, AC-F4-08 | `architecture.md` §10; autorización en backend; composición en presentación |
+
+### 13.9 Ambigüedades y decisiones pendientes de F4
+
+| ID | Ambigüedad o decisión pendiente | Por qué no se resuelve aquí | Impacto si se resuelve distinto |
+| -- | ------------------------------- | ---------------------------- | ------------------------------ |
+| AMB-F4-01 | Mecanismo real de autenticación: credenciales, persistencia, expiración, recuperación y auditoría | El brief declara usuarios, pero no define identidad ni contraseñas; F4 resuelve solo la demostración de permisos | Si el cliente exige autenticación real, habría que añadir almacenamiento de identidades, gestión de sesiones y pruebas de seguridad, sin cambiar la matriz de permisos |
+| AMB-F4-02 | Alcance exacto de «adaptar el cambio de requisito docente» más allá de los perfiles | El brief no detalla qué otro cambio docente se espera; se interpreta como perfiles y permisos y no se inventan requisitos | Si el cambio incluye otro entregable o comportamiento, debe especificarse y no darse por implementado |
+| AMB-F4-03 | Momento de iniciar la sobriedad del tema claro y de ajustar sus valores | El cliente pidió no iniciar ese ajuste sin pedido explícito; F4 solo conserva los dos temas existentes | Si se inicia, debe hacerse como ajuste de presentación, sin cambiar reglas ni añadir temas |
+| AMB-F4-04 | Formato, duración y audiencia del video y del pitch | El brief pide video y pitch, pero no fija duración ni guion | Si el cliente fija un formato, los entregables se adaptan sin cambiar el comportamiento del sistema |
+| AMB-F4-05 | ¿El coordinador de producción puede consultar toda la cadena o solo un área? | El modelo no tiene áreas ni asignación de responsables; F4 mantiene lectura completa para ambos perfiles | Si se definen áreas, habría que ampliar el modelo y la autorización de lectura, hoy abierta |
+
+### 13.10 Fuera de alcance de F4
+
+- Autenticación real, contraseñas, recuperación de cuenta, OAuth, auditoría de accesos y sesiones
+  persistentes (`AMB-F4-01`).
+- Permisos granulares por área, por elemento o por tipo de operación (`AMB-F4-05`).
+- Nuevos algoritmos de impacto, orden, ciclos o plan: F4 los consume de F2 y F3.
+- Nuevos endpoints de cálculo o un endpoint agregador que duplique las consultas existentes.
+- Edición colaborativa en tiempo real, notificaciones o historial de cambios.
+- Temas adicionales o rediseño del tema claro (`AMB-F4-03`).
+- Inventario real, compras, facturación, pagos o pronósticos.
+- Datos de demostración incrustados en el frontend que sustituyan el estado real del backend.
