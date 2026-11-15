@@ -1,13 +1,22 @@
-"""Casos de uso del catálogo, las relaciones y el análisis de impacto.
+"""Casos de uso del catálogo, las relaciones, el impacto y la sesión de F4.
 
 Cada caso de uso expresa una operación en términos del dominio: valida a
 través de las reglas del dominio, delega en el agregado ``Catalogo`` y no
-contiene decisiones de transporte ni de persistencia.
+contiene decisiones de transporte ni de persistencia. Los casos de uso de F4
+(sessiones y autorización de escrituras) se añaden sin modificar los de F1,
+F2 ni F3.
 """
 
+import uuid
 from collections.abc import Mapping
 
-from app.aplicacion.puertos import RepositorioCatalogo
+from app.aplicacion.perfiles import (
+    PERFILES_DISPONIBLES,
+    Perfil,
+    existe_perfil,
+    perfil_por_id,
+)
+from app.aplicacion.puertos import RepositorioCatalogo, RepositorioSesion
 from app.dominio.catalogo import Catalogo, ResultadoOrdenProduccion, ResultadoPlanEntrega
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
@@ -17,9 +26,12 @@ from app.dominio.errores import (
     DetalleError,
     ElementoNoEncontrado,
     IdentificadorInvalido,
+    PermisoDenegado,
+    SesionRequerida,
     ValidacionFallida,
 )
 from app.dominio.reglas_dependencia import ReglaDependencia, reglas_por_tipo
+from app.dominio.sesion import Sesion
 from app.dominio.tipo_elemento import TipoElemento
 from app.dominio.validacion import (
     es_identificador_valido,
@@ -330,19 +342,137 @@ class ObtenerPlanEntrega:
         return catalogo.plan_entrega(productos_normalizados)
 
 
+class ListarPerfiles:
+    """Devuelve los perfiles de demostración disponibles con su capacidad de escritura.
+
+    Se usa desde F4 para mostrar el selector de perfiles y para que la
+    interfaz conozca qué acciones de escritura están permitidas.
+    """
+
+    def ejecutar(self) -> list[Perfil]:
+        """Devuelve los perfiles en orden estable (COMPRAS, PRODUCCION)."""
+        return list(PERFILES_DISPONIBLES)
+
+
+class AbrirSesion:
+    """Crea una sesión de demostración para un perfil válido.
+
+    No usa credenciales: recibe el identificador de perfil, genera un token
+    opaco, almacena la sesión en memoria y la devuelve. La sesión se pierde
+    al reiniciar el backend (ver ``RN-F4-03``).
+    """
+
+    def __init__(self, repositorio_sesion: RepositorioSesion) -> None:
+        self._repositorio_sesion = repositorio_sesion
+
+    def ejecutar(self, perfil_id: object) -> Sesion:
+        """Valida el perfil, crea la sesión y la almacena en memoria."""
+        if not isinstance(perfil_id, str) or not existe_perfil(perfil_id):
+            raise ValidacionFallida(
+                "El perfil es obligatorio y debe ser COMPRAS o PRODUCCION.",
+                [DetalleError("perfil", "Debe ser COMPRAS o PRODUCCION.")],
+            )
+        token = uuid.uuid4().hex
+        sesion = Sesion(token=token, perfil_id=perfil_id)
+        self._repositorio_sesion.guardar(sesion)
+        return sesion
+
+
+class ObtenerSesion:
+    """Devuelve la sesión asociada a un token, o falla si no existe.
+
+    Se usa para consultar el perfil activo y para validar que el token
+    enviado en una escritura sigue siendo válido.
+    """
+
+    def __init__(self, repositorio_sesion: RepositorioSesion) -> None:
+        self._repositorio_sesion = repositorio_sesion
+
+    def ejecutar(self, token: object) -> Sesion:
+        """Devuelve la sesión o lanza ``SesionRequerida`` si el token no es válido."""
+        if not isinstance(token, str) or not token.strip():
+            raise SesionRequerida(
+                "Se requiere una sesión válida para realizar esta operación.",
+                [DetalleError("token", "Falta el token de sesión.")],
+            )
+        sesion = self._repositorio_sesion.obtener(token.strip())
+        if sesion is None:
+            raise SesionRequerida(
+                "El token de sesión no es válido o ha expirado.",
+                [DetalleError("token", "Token de sesión inválido.")],
+            )
+        return sesion
+
+
+class CerrarSesion:
+    """Invalida una sesión de demostración eliminando su token del almacén."""
+
+    def __init__(self, repositorio_sesion: RepositorioSesion) -> None:
+        self._repositorio_sesion = repositorio_sesion
+
+    def ejecutar(self, token: object) -> None:
+        """Elimina la sesión asociada al ``token`` o lanza ``SesionRequerida``."""
+        if not isinstance(token, str) or not token.strip():
+            raise SesionRequerida(
+                "Se requiere una sesión válida para cerrarla.",
+                [DetalleError("token", "Falta el token de sesión.")],
+            )
+        sesion = self._repositorio_sesion.obtener(token.strip())
+        if sesion is None:
+            raise SesionRequerida(
+                "El token de sesión no es válido o ya fue cerrado.",
+                [DetalleError("token", "Token de sesión inválido.")],
+            )
+        self._repositorio_sesion.eliminar(token.strip())
+
+
+class AutorizarEscritura:
+    """Valida que una petición de escritura cuente con sesión de perfil COMPRAS.
+
+    Se aplica antes de modificar el catálogo en cualquier ruta de escritura
+    de F4 (crear, editar o eliminar elementos y relaciones). El orden de
+    comprobación es: sesion ausente o inválida -> 401 ERR-11; sesion válida
+    con perfil sin permiso -> 403 ERR-12; sesion COMPRAS -> autorizado.
+    """
+
+    def __init__(self, repositorio_sesion: RepositorioSesion) -> None:
+        self._repositorio_sesion = repositorio_sesion
+
+    def ejecutar(self, token: object) -> Sesion:
+        """Devuelve la sesión si autoriza la escritura, o lanza un error de dominio."""
+        sesion = ObtenerSesion(self._repositorio_sesion).ejecutar(token)
+        perfil = perfil_por_id(sesion.perfil_id)
+        if perfil is None or not perfil.puede_escribir:
+            raise PermisoDenegado(
+                "El perfil activo no tiene permiso para modificar la cadena.",
+                [
+                    DetalleError(
+                        "perfil",
+                        "Solo el perfil de compras puede crear, editar o eliminar elementos y relaciones.",
+                    )
+                ],
+            )
+        return sesion
+
+
 __all__ = [
     "ActualizarDependencia",
     "ActualizarElemento",
+    "AbrirSesion",
+    "AutorizarEscritura",
+    "CerrarSesion",
     "ConsultarImpacto",
     "CrearElemento",
     "EliminarDependencia",
     "EliminarElemento",
     "ListarDependencias",
     "ListarElementos",
+    "ListarPerfiles",
     "ObtenerElemento",
     "ObtenerGrafo",
     "ObtenerOrdenProduccion",
     "ObtenerPlanEntrega",
     "ObtenerReglasDependencia",
+    "ObtenerSesion",
     "RegistrarDependencia",
 ]
