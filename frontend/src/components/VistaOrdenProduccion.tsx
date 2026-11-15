@@ -30,11 +30,13 @@ import { obtenerCodigoSku } from '../utils/sku';
 interface VistaOrdenProduccionProps {
   onIrACatalogo?: () => void;
   onIrARed?: (nodoId?: string) => void;
+  productoInicialId?: string | null;
 }
 
 export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
   onIrACatalogo: _onIrACatalogo,
-  onIrARed
+  onIrARed,
+  productoInicialId
 }) => {
   // Pestaña activa dentro de la vista: Plan de Entrega o Diagnóstico Global
   const [subVista, setSubVista] = useState<'plan' | 'diagnostico'>('plan');
@@ -150,6 +152,13 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
     cargarDiagnostico();
     cargarProductos();
   }, [cargarDiagnostico, cargarProductos]);
+
+  useEffect(() => {
+    if (productoInicialId) {
+      setSubVista('plan');
+      setProductosSeleccionados([productoInicialId]);
+    }
+  }, [productoInicialId]);
 
   useEffect(() => {
     if (productosSeleccionados.length > 0) {

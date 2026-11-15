@@ -12,10 +12,8 @@ import {
   ListOrdered,
   Network,
   Package,
-  Plus,
   RefreshCw,
   Search,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   Zap
@@ -37,12 +35,12 @@ interface VistaTableroProps {
   cargandoGrafo: boolean;
   errorGrafo: string | null;
   onRecargarGrafo: () => void;
-  onNavegar: (tab: TabActiva, elementoId?: string) => void;
+  onNavegar: (tab: TabActiva, elementoId?: string, filtroTipo?: string) => void;
   onConsultarElemento: (id: string) => void;
   perfilActivo: Perfil | null;
-  puedeEscribir: boolean;
-  onAbrirModalElemento: () => void;
-  onAbrirModalDependencia: () => void;
+  puedeEscribir?: boolean;
+  onAbrirModalElemento?: () => void;
+  onAbrirModalDependencia?: () => void;
 }
 
 export const VistaTablero: React.FC<VistaTableroProps> = ({
@@ -53,10 +51,13 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
   onNavegar,
   onConsultarElemento,
   perfilActivo,
-  puedeEscribir,
-  onAbrirModalElemento,
-  onAbrirModalDependencia
+  puedeEscribir: _puedeEscribir,
+  onAbrirModalElemento: _onAbrirModalElemento,
+  onAbrirModalDependencia: _onAbrirModalDependencia
 }) => {
+  void _puedeEscribir;
+  void _onAbrirModalElemento;
+  void _onAbrirModalDependencia;
   // Estado para Diagnóstico General de Planta (F3)
   const [ordenProduccion, setOrdenProduccion] = useState<OrdenProduccionRespuesta | null>(null);
   const [cargandoOrden, setCargandoOrden] = useState<boolean>(false);
@@ -224,7 +225,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
         </div>
 
         {/* Acciones Rápidas del Encabezado */}
-        <div className="flex flex-wrap items-center gap-2 self-start md:self-center shrink-0">
+        <div className="flex items-center gap-2 self-start md:self-center shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -241,169 +242,20 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
             <RefreshCw size={14} className={cargandoGrafo || cargandoOrden ? 'animate-spin' : ''} />
             <span>Actualizar</span>
           </button>
-
-          {puedeEscribir ? (
-            <>
-              <button
-                type="button"
-                onClick={onAbrirModalElemento}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white transition-all cursor-pointer active:scale-95 shadow-md shadow-sky-600/20"
-                title="Dar de alta nuevo componente en la cadena"
-              >
-                <Plus size={14} />
-                <span>Nuevo componente</span>
-              </button>
-              <button
-                type="button"
-                onClick={onAbrirModalDependencia}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-all cursor-pointer active:scale-95 shadow-md shadow-indigo-600/20"
-                title="Crear relación entre componentes del catálogo"
-              >
-                <Network size={14} />
-                <span>Crear relación</span>
-              </button>
-            </>
-          ) : (
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-              <Shield size={14} className="text-emerald-500" />
-              <span>Modo consulta</span>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 2. Flujo Visual de Planta (Stepper de la Cadena de Suministro) */}
-      <div className="card-corporate p-4 sm:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Flujo Continuo de la Cadena de Valor
-            </span>
-          </div>
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            4 etapas operativas integradas • Clic en una etapa para explorar
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative">
-          {/* Etapa 1: Proveedores */}
-          <div
-            onClick={() => onNavegar('catalogo')}
-            className="group p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/50 hover:bg-blue-50/60 dark:hover:bg-blue-950/20 border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700/50 transition-all cursor-pointer shadow-xs flex flex-col justify-between"
-            title="Ir a proveedores en el catálogo"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                FASE 1
-              </span>
-              <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="mt-3">
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                Proveedores Externos
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {totalProveedores} fuentes registradas
-              </div>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
-              <span>Ver fuentes</span>
-              <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* Etapa 2: Insumos */}
-          <div
-            onClick={() => onNavegar('catalogo')}
-            className="group p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/50 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 border border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-700/50 transition-all cursor-pointer shadow-xs flex flex-col justify-between"
-            title="Ir a insumos en el catálogo"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                FASE 2
-              </span>
-              <Package size={16} className="text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="mt-3">
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                Insumos & Materiales
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {totalInsumos} materiales en almacén
-              </div>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-              <span>{insumosEnAlerta.length > 0 ? `${insumosEnAlerta.length} con alerta` : 'Stock monitoreado'}</span>
-              <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* Etapa 3: Procesos */}
-          <div
-            onClick={() => onNavegar('catalogo')}
-            className="group p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/50 hover:bg-purple-50/60 dark:hover:bg-purple-950/20 border border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700/50 transition-all cursor-pointer shadow-xs flex flex-col justify-between"
-            title="Ir a procesos en el catálogo"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                FASE 3
-              </span>
-              <Cog size={16} className="text-purple-600 dark:text-purple-400" />
-            </div>
-            <div className="mt-3">
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                Procesos de Planta
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {totalProcesos} etapas de corte/ensamble
-              </div>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
-              <span>Ver secuencia</span>
-              <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* Etapa 4: Productos */}
-          <div
-            onClick={() => onNavegar('produccion')}
-            className="group p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/20 border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700/50 transition-all cursor-pointer shadow-xs flex flex-col justify-between"
-            title="Ir a orden de producción"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                FASE 4
-              </span>
-              <CheckSquare size={16} className="text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="mt-3">
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                Productos Finales
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {totalProductos} modelos listos
-              </div>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-              <span>{ordenProduccion?.productosPlanificables.length ?? 0} planificables</span>
-              <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Tarjetas de Resumen KPI (RF-F4-03) */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {/* Proveedores */}
+      {/* 2. Flujo Continuo de la Cadena de Suministro & Telemetría */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        {/* FASE 1: Proveedores */}
         <div
-          onClick={() => onNavegar('catalogo')}
-          className="card-corporate hover:border-blue-400 dark:hover:border-blue-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between"
-          title="Ver proveedores en el catálogo"
+          onClick={() => onNavegar('catalogo', undefined, 'PROVEEDOR')}
+          className="card-corporate hover:border-blue-400 dark:hover:border-blue-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
+          title="Ver únicamente proveedores en el catálogo"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Proveedores
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              FASE 1
             </span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <Building2 size={16} />
@@ -413,19 +265,26 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
             <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
               {cargandoGrafo ? '—' : totalProveedores}
             </span>
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+              Proveedores Externos
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Fuentes de suministro</p>
+          </div>
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
+            <span>Filtrar catálogo</span>
+            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
-        {/* Insumos */}
+        {/* FASE 2: Insumos */}
         <div
-          onClick={() => onNavegar('catalogo')}
-          className="card-corporate hover:border-amber-400 dark:hover:border-amber-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between"
-          title="Ver insumos en el catálogo"
+          onClick={() => onNavegar('catalogo', undefined, 'INSUMO')}
+          className="card-corporate hover:border-amber-400 dark:hover:border-amber-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
+          title="Ver únicamente materias primas e insumos en el catálogo"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Insumos & Materiales
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              FASE 2
             </span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Package size={16} />
@@ -443,19 +302,26 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                 </span>
               )}
             </div>
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+              Insumos & Materiales
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Materias primas y partes</p>
+          </div>
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+            <span>Filtrar catálogo</span>
+            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
-        {/* Procesos */}
+        {/* FASE 3: Procesos */}
         <div
-          onClick={() => onNavegar('catalogo')}
-          className="card-corporate hover:border-purple-400 dark:hover:border-purple-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between"
-          title="Ver procesos en el catálogo"
+          onClick={() => onNavegar('catalogo', undefined, 'PROCESO')}
+          className="card-corporate hover:border-purple-400 dark:hover:border-purple-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
+          title="Ver únicamente procesos de planta en el catálogo"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Procesos Internos
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+              FASE 3
             </span>
             <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
               <Cog size={16} />
@@ -465,19 +331,26 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
             <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
               {cargandoGrafo ? '—' : totalProcesos}
             </span>
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+              Procesos de Planta
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Transformación y corte</p>
+          </div>
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-purple-600 dark:text-purple-400 font-semibold">
+            <span>Filtrar catálogo</span>
+            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
-        {/* Productos Finales */}
+        {/* FASE 4: Productos */}
         <div
           onClick={() => onNavegar('produccion')}
-          className="card-corporate hover:border-emerald-400 dark:hover:border-emerald-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between"
-          title="Ver plan de producción de productos"
+          className="card-corporate hover:border-emerald-400 dark:hover:border-emerald-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
+          title="Ver planes de producción de productos"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Productos Finales
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              FASE 4
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <CheckSquare size={16} />
@@ -494,19 +367,26 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                 </span>
               )}
             </div>
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+              Productos Finales
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Disponibles para entrega</p>
+          </div>
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span>Ver en orden</span>
+            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
-        {/* Conexiones en la Cadena */}
+        {/* Conexiones de Red */}
         <div
           onClick={() => onNavegar('red')}
-          className="col-span-2 sm:col-span-2 lg:col-span-1 card-corporate hover:border-sky-400 dark:hover:border-sky-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between"
+          className="col-span-1 sm:col-span-2 lg:col-span-1 card-corporate hover:border-sky-400 dark:hover:border-sky-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
           title="Ver red de suministro completa"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Conexiones de Red
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+              RED
             </span>
             <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
               <Network size={16} />
@@ -516,7 +396,14 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
             <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
               {cargandoGrafo ? '—' : grafo.resumen.totalDependencias}
             </span>
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+              Conexiones de Red
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Relaciones origen habilita destino</p>
+          </div>
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-sky-600 dark:text-sky-400 font-semibold">
+            <span>Explorar mapa</span>
+            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
       </div>
@@ -708,7 +595,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                   </div>
                 ) : planEntrega ? (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800">
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800">
                       <div className="flex items-center gap-2">
                         <span
                           className={`w-2.5 h-2.5 rounded-full ${
@@ -727,10 +614,32 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                         >
                           {planEntrega.esPlanificable ? 'Viable para entrega' : 'Bloqueado'}
                         </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          ({planEntrega.totalPasos} operaciones)
+                        </span>
                       </div>
-                      <span className="text-xs text-slate-500 font-medium">
-                        {planEntrega.totalPasos} operaciones
-                      </span>
+
+                      {/* Botones de acción directa del producto */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onNavegar('red', productoSeleccionadoId)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+                          title="Ver línea de producción de este producto en el mapa"
+                        >
+                          <Network size={13} />
+                          <span>Ver línea en el mapa</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onNavegar('produccion', productoSeleccionadoId)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+                          title="Abrir este producto en la orden de producción"
+                        >
+                          <span>Ver en orden de producción</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Previa de Pasos */}
@@ -738,25 +647,44 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                       {planEntrega.pasos.map((paso) => (
                         <div
                           key={`${paso.paso}-${paso.id}`}
-                          onClick={() => onConsultarElemento(paso.id)}
-                          className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-400 text-xs cursor-pointer transition-colors"
-                          title="Ver detalle del elemento"
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-400 text-xs transition-colors group"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            onClick={() => onNavegar('catalogo', paso.id)}
+                            className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
+                            title="Ver este componente en el catálogo"
+                          >
                             <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
                               {paso.paso}
                             </span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                               {paso.nombre}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-[10px] text-slate-400">
+                            <span className="font-mono text-[10px] text-slate-400 shrink-0">
                               {obtenerCodigoSku(paso.id)}
                             </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${claseBadgeTipo(paso.tipo)}`}>
                               {etiquetaTipo(paso.tipo)}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => onNavegar('red', paso.id)}
+                              className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                              title="Ver este elemento en el mapa de red"
+                            >
+                              <Network size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onNavegar('catalogo', paso.id)}
+                              className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                              title="Ver ficha en el catálogo"
+                            >
+                              <Package size={13} />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -765,7 +693,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                     <div className="pt-2 flex justify-end">
                       <button
                         type="button"
-                        onClick={() => onNavegar('produccion')}
+                        onClick={() => onNavegar('produccion', productoSeleccionadoId)}
                         className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <span>Abrir plan en detalle</span>
@@ -824,9 +752,13 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                       className="p-3 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/40 flex flex-col gap-2 text-xs"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
+                        <div
+                          onClick={() => onNavegar('catalogo', insumo.id)}
+                          className="min-w-0 cursor-pointer flex-1"
+                          title="Ir a este insumo en el catálogo"
+                        >
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 dark:text-white truncate">
+                            <span className="font-bold text-slate-900 dark:text-white truncate hover:underline">
                               {insumo.nombre}
                             </span>
                             <span className="font-mono text-[10px] text-slate-500">
@@ -837,15 +769,34 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                             Stock: {disponible} / Mín: {insumo.stockMinimo ?? 0} ({porcentaje}%)
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => ejecutarImpacto(insumo.id)}
-                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition-all cursor-pointer active:scale-95 shrink-0 flex items-center gap-1"
-                          title="Evaluar a qué productos o procesos afecta este insumo"
-                        >
-                          <Zap size={12} />
-                          <span>Impacto</span>
-                        </button>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => onNavegar('red', insumo.id)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95"
+                            title="Ver este insumo en el mapa de red"
+                          >
+                            <Network size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onNavegar('catalogo', insumo.id)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95"
+                            title="Ver ficha en el catálogo"
+                          >
+                            <Package size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => ejecutarImpacto(insumo.id)}
+                            className="px-2 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1"
+                            title="Evaluar a qué productos o procesos afecta este insumo"
+                          >
+                            <Zap size={12} />
+                            <span>Impacto</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                         <div

@@ -107,6 +107,10 @@ export const App: React.FC = () => {
   );
   const [modalAyudaAbierto, setModalAyudaAbierto] = useState<boolean>(false);
 
+  const [filtroTipoCatalogo, setFiltroTipoCatalogo] = useState<string>('TODOS');
+  const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
+  const [productoOrdenId, setProductoOrdenId] = useState<string | null>(null);
+
   const [elementoDetalleId, setElementoDetalleId] = useState<string | null>(null);
   const [modoDetalle, setModoDetalle] = useState<'catalogo' | 'afectado'>('catalogo');
   const [confirmacion, setConfirmacion] = useState<EstadoConfirmacion | null>(null);
@@ -225,20 +229,38 @@ export const App: React.FC = () => {
   }, []);
 
   const navegarA = useCallback(
-    (tab: TabActiva, elementoId?: string) => {
+    (tab: TabActiva, elementoId?: string, filtroTipo?: string) => {
       handleTabChange(tab);
-      if (elementoId) {
-        if (tab === 'red') {
+      if (tab === 'red') {
+        if (elementoId) {
+          const elemento = grafo.elementos.find((e) => e.id === elementoId);
+          if (elemento?.tipo === 'PRODUCTO') {
+            setFiltroProductoGrafoId(elementoId);
+          }
           void handleSelectNode(elementoId);
-        } else if (tab === 'impacto') {
-          setSolicitudImpacto({ id: elementoId, secuencia: Date.now() });
-        } else if (tab === 'catalogo') {
+        }
+      } else if (tab === 'catalogo') {
+        if (filtroTipo) {
+          setFiltroTipoCatalogo(filtroTipo);
+          setBusquedaCatalogo('');
+        } else if (elementoId) {
+          const elemento = grafo.elementos.find((e) => e.id === elementoId);
+          setFiltroTipoCatalogo('TODOS');
+          setBusquedaCatalogo(elemento ? elemento.nombre : elementoId);
           setElementoDetalleId(elementoId);
           setModoDetalle('catalogo');
         }
+      } else if (tab === 'produccion') {
+        if (elementoId) {
+          setProductoOrdenId(elementoId);
+        }
+      } else if (tab === 'impacto') {
+        if (elementoId) {
+          setSolicitudImpacto({ id: elementoId, secuencia: Date.now() });
+        }
       }
     },
-    [handleTabChange, handleSelectNode]
+    [handleTabChange, handleSelectNode, grafo.elementos]
   );
 
   useEffect(() => {
@@ -709,6 +731,10 @@ export const App: React.FC = () => {
           <div className="space-y-6">
             <CatalogTable
               elementos={grafo.elementos}
+              filtroTipoInicial={filtroTipoCatalogo}
+              busquedaInicial={busquedaCatalogo}
+              onCambiarFiltroTipo={setFiltroTipoCatalogo}
+              onCambiarBusqueda={setBusquedaCatalogo}
               onConsultarElemento={(id) => abrirDetalle(id, 'catalogo')}
               onConsultarImpacto={evaluarImpacto}
             />
@@ -736,7 +762,8 @@ export const App: React.FC = () => {
 
         {tabActiva === 'produccion' && (
           <VistaOrdenProduccion
-            onIrACatalogo={() => setTabActiva('catalogo')}
+            productoInicialId={productoOrdenId}
+            onIrACatalogo={() => handleTabChange('catalogo')}
             onIrARed={(nodoId) => {
               setTabActiva('red');
               if (nodoId) {
