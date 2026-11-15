@@ -234,3 +234,37 @@ class PlanEntregaRespuesta(_EsquemaBase):
     elementos_bloqueados: list[str]
     elementos_incompletos: list[str]
     productos_incompletos: list[str]
+
+
+class EntradaSesion(_EsquemaBase):
+    """Cuerpo de ``POST /api/v1/sesion`` de F4; el perfil se valida en dominio."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="allow")
+
+    perfil: Any = None
+
+    def como_diccionario(self) -> dict[str, object]:
+        """Devuelve todos los campos recibidos, incluidos los no reconocidos."""
+        return dict(self.model_dump())
+
+
+class PerfilRespuesta(_EsquemaBase):
+    """Representación HTTP de un perfil de demostración de F4."""
+
+    id: str
+    nombre: str
+    puede_escribir: bool
+
+
+class PerfilesRespuesta(_EsquemaBase):
+    """Respuesta de ``GET /api/v1/perfiles`` de F4."""
+
+    perfiles: list[PerfilRespuesta]
+    total: int
+
+
+class SesionRespuesta(_EsquemaBase):
+    """Respuesta de ``POST /api/v1/sesion`` y ``GET /api/v1/sesion`` de F4."""
+
+    token: str
+    perfil: PerfilRespuesta

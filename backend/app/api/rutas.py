@@ -15,35 +15,45 @@ from app.api.esquemas import (
     EntradaActualizarElemento,
     EntradaDependencia,
     EntradaElemento,
+    EntradaSesion,
     GrafoRespuesta,
     ImpactoRespuesta,
     ListaDependenciasRespuesta,
     ListaElementosRespuesta,
     OrdenProduccionRespuesta,
     PasoProduccionRespuesta,
+    PerfilesRespuesta,
+    PerfilRespuesta,
     PlanEntregaRespuesta,
     ProductoEntregaRespuesta,
     ReglaDependenciaRespuesta,
     ReglasDependenciaRespuesta,
     ResumenGrafo,
     ResumenStockImpacto,
+    SesionRespuesta,
 )
 from app.aplicacion.casos_de_uso import (
+    AbrirSesion,
+    AutorizarEscritura,
     ActualizarDependencia,
     ActualizarElemento,
+    CerrarSesion,
     ConsultarImpacto,
     CrearElemento,
     EliminarDependencia,
     EliminarElemento,
     ListarDependencias,
     ListarElementos,
+    ListarPerfiles,
     ObtenerElemento,
     ObtenerGrafo,
     ObtenerOrdenProduccion,
     ObtenerPlanEntrega,
     ObtenerReglasDependencia,
+    ObtenerSesion,
     RegistrarDependencia,
 )
+from app.aplicacion.perfiles import PERFILES_DISPONIBLES, perfil_por_id
 from app.dominio.dependencia import Dependencia
 from app.dominio.elemento import Elemento
 from app.dominio.errores import PeticionMalFormada
@@ -103,6 +113,37 @@ def _resumen_stock(elemento: Elemento, afectados: list[Elemento]) -> ResumenStoc
     )
 
 
+def _obtener_repositorio_sesion(peticion: Request):
+    """Devuelve el repositorio de sesiones de demostración almacenado en el estado de la app."""
+    return peticion.app.state.repositorio_sesion
+
+
+def _obtener_token(peticion: Request) -> str | None:
+    """Extrae el token de sesion de la cabecera ``Authorization: Bearer <token>``.
+
+    Devuelve ``None`` cuando no hay cabecera o cuando su esquema no es Bearer.
+    Las lecturas de F4 son abiertas y no requieren cabecera (ver ``AMB-F4-01``).
+    """
+    autorizacion = peticion.headers.get("authorization", "")
+    partes = autorizacion.strip().split()
+    if len(partes) == 2 and partes[0].lower() == "bearer":
+        return partes[1]
+    return None
+
+
+def _autorizar_escritura(peticion: Request) -> None:
+    """Valida que la peticion de escritura cuente con sesion de perfil COMPRAS.
+
+    Se aplica antes de cualquier modificacion del catalogo. El orden de
+    comprobacion es: sesion ausente o invalida -> SesionRequerida (401 ERR-11);
+    sesion valida con perfil sin permiso -> PermisoDenegado (403 ERR-12);
+    sesion COMPRAS -> autorizado. Una peticion denegada no modifica el catalogo.
+    """
+    token = _obtener_token(peticion)
+    caso_de_uso = AutorizarEscritura(_obtener_repositorio_sesion(peticion))
+    caso_de_uso.ejecutar(token)
+
+
 def crear_enrutador() -> APIRouter:
     """Construye el enrutador con los casos de uso inyectados."""
     enrutador = APIRouter(prefix="/api/v1")
@@ -120,8 +161,12 @@ def crear_enrutador() -> APIRouter:
         respuesta: Response,
         peticion: Request,
     ) -> ElementoRespuesta:
-        """Alta de un elemento del catálogo (201 + cabecera Location)."""
+        """Alta de un elemento del catálogo (201 + cabecera Location).
+
+        Requiere sesión válida con perfil COMPRAS (F4).
+        """
         _verificar_content_type_json(peticion)
+        _autorizar_escritura(peticion)
         caso_de_uso = CrearElemento(obtener_repositorio(peticion))
         elemento = caso_de_uso.ejecutar(entrada.como_diccionario())
         respuesta.headers["Location"] = f"/api/v1/elementos/{elemento.id}"
@@ -151,8 +196,12 @@ def crear_enrutador() -> APIRouter:
         entrada: EntradaActualizarElemento,
         peticion: Request,
     ) -> ElementoRespuesta:
-        """Actualiza nombre, descripción e inventario; id y tipo no cambian."""
+        """Actualiza nombre, descripción e inventario; id y tipo no cambian.
+
+        Requiere sesión válida con perfil COMPRAS (F4).
+        """
         _verificar_content_type_json(peticion)
+        _autorizar_escritura(peticion)
         caso_de_uso = ActualizarElemento(obtener_repositorio(peticion))
         elemento = caso_de_uso.ejecutar(id, entrada.como_diccionario())
         return _elemento_a_respuesta(elemento)
@@ -165,7 +214,10 @@ def crear_enrutador() -> APIRouter:
 
         Si la ausencia del elemento dejaría una cadena incompleta responde 409.
         Con ``eliminarCadena=true`` elimina también la cadena dependiente.
+
+        Requiere sesión válida con perfil COMPRAS (F4).
         """
+        _autorizar_escritura(peticion)
         caso_de_uso = EliminarElemento(obtener_repositorio(peticion))
         caso_de_uso.ejecutar(id, eliminar_cadena=eliminar_cadena)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -180,8 +232,12 @@ def crear_enrutador() -> APIRouter:
         respuesta: Response,
         peticion: Request,
     ) -> DependenciaRespuesta:
-        """Registra una arista dirigida ``origen habilita destino``."""
+        """Registra una arista dirigida ``origen habilita destino``.
+
+        Requiere sesión válida con perfil COMPRAS (F4).
+        """
         _verificar_content_type_json(peticion)
+        _autorizar_escritura(peticion)
         caso_de_uso = RegistrarDependencia(obtener_repositorio(peticion))
         dependencia = caso_de_uso.ejecutar(entrada.como_diccionario())
         respuesta.headers["Location"] = (
@@ -213,8 +269,12 @@ def crear_enrutador() -> APIRouter:
         entrada: EntradaDependencia,
         peticion: Request,
     ) -> DependenciaRespuesta:
-        """Cambia los extremos de una relación existente."""
+        """Cambia los extremos de una relación existente.
+
+        Requiere sesión válida con perfil COMPRAS (F4).
+        """
         _verificar_content_type_json(peticion)
+        _autorizar_escritura(peticion)
         caso_de_uso = ActualizarDependencia(obtener_repositorio(peticion))
         dependencia = caso_de_uso.ejecutar(origen, destino, entrada.como_diccionario())
         return _dependencia_a_respuesta(dependencia)
@@ -226,7 +286,11 @@ def crear_enrutador() -> APIRouter:
     def eliminar_dependencia(
         origen: str, destino: str, peticion: Request
     ) -> Response:
-        """Elimina una relación existente."""
+        """Elimina una relación existente.
+
+        Requiere sesión válida con perfil COMPRAS (F4).
+        """
+        _autorizar_escritura(peticion)
         caso_de_uso = EliminarDependencia(obtener_repositorio(peticion))
         caso_de_uso.ejecutar(origen, destino)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -363,5 +427,84 @@ def crear_enrutador() -> APIRouter:
             elementos_incompletos=resultado.elementos_incompletos,
             productos_incompletos=resultado.productos_incompletos,
         )
+
+    @enrutador.get("/perfiles", response_model=PerfilesRespuesta)
+    def obtener_perfiles() -> PerfilesRespuesta:
+        """Devuelve los perfiles de demostración disponibles (F4).
+
+        Siempre responde 200, sin requerir sesion.
+        """
+        perfiles = ListarPerfiles().ejecutar()
+        return PerfilesRespuesta(
+            perfiles=[
+                PerfilRespuesta(
+                    id=perfil.id,
+                    nombre=perfil.nombre,
+                    puede_escribir=perfil.puede_escribir,
+                )
+                for perfil in perfiles
+            ],
+            total=len(perfiles),
+        )
+
+    @enrutador.post(
+        "/sesion",
+        response_model=SesionRespuesta,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def crear_sesion(
+        entrada: EntradaSesion,
+        peticion: Request,
+    ) -> SesionRespuesta:
+        """Crea una sesion de demostracion para el perfil elegido (F4).
+
+        No usa credenciales. Recibe { "perfil": "COMPRAS" | "PRODUCCION" }
+        y devuelve un token opaco que el cliente enviara en las escrituras.
+        """
+        _verificar_content_type_json(peticion)
+        datos = entrada.como_diccionario()
+        caso_de_uso = AbrirSesion(_obtener_repositorio_sesion(peticion))
+        sesion = caso_de_uso.ejecutar(datos.get("perfil"))
+        perfil = perfil_por_id(sesion.perfil_id)
+        return SesionRespuesta(
+            token=sesion.token,
+            perfil=PerfilRespuesta(
+                id=perfil.id,
+                nombre=perfil.nombre,
+                puede_escribir=perfil.puede_escribir,
+            ),
+        )
+
+    @enrutador.get("/sesion", response_model=SesionRespuesta)
+    def obtener_sesion(peticion: Request) -> SesionRespuesta:
+        """Describe la sesion activa (F4).
+
+        Requiere ``Authorization: Bearer <token>``. Responde 401 ERR-11
+        si no hay token o el token no es valido.
+        """
+        token = _obtener_token(peticion)
+        caso_de_uso = ObtenerSesion(_obtener_repositorio_sesion(peticion))
+        sesion = caso_de_uso.ejecutar(token)
+        perfil = perfil_por_id(sesion.perfil_id)
+        return SesionRespuesta(
+            token=sesion.token,
+            perfil=PerfilRespuesta(
+                id=perfil.id,
+                nombre=perfil.nombre,
+                puede_escribir=perfil.puede_escribir,
+            ),
+        )
+
+    @enrutador.delete("/sesion", status_code=status.HTTP_204_NO_CONTENT)
+    def cerrar_sesion(peticion: Request) -> Response:
+        """Cierra la sesion activa invalidando su token (F4).
+
+        Requiere ``Authorization: Bearer <token>``. Responde 204 al cerrar
+        o 401 ERR-11 si el token no es valido.
+        """
+        token = _obtener_token(peticion)
+        caso_de_uso = CerrarSesion(_obtener_repositorio_sesion(peticion))
+        caso_de_uso.ejecutar(token)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return enrutador

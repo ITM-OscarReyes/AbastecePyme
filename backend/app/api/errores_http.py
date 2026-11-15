@@ -24,7 +24,9 @@ from app.dominio.errores import (
     ErrorDominio,
     IdentificadorInvalido,
     PeticionMalFormada,
+    PermisoDenegado,
     RutaNoEncontrada,
+    SesionRequerida,
     ValidacionFallida,
 )
 
@@ -41,6 +43,8 @@ _HTTP_POR_CODIGO: dict[str, int] = {
     DependenciaNoEncontrada.codigo: status.HTTP_404_NOT_FOUND,
     ConfiguracionCiclica.codigo: status.HTTP_409_CONFLICT,
     CadenaIncompleta.codigo: status.HTTP_409_CONFLICT,
+    SesionRequerida.codigo: status.HTTP_401_UNAUTHORIZED,
+    PermisoDenegado.codigo: status.HTTP_403_FORBIDDEN,
     "TIPO_NO_ENCONTRADO": status.HTTP_404_NOT_FOUND,
 }
 

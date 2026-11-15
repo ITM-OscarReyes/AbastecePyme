@@ -100,7 +100,7 @@ class ConfiguracionCiclica(ErrorDominio):
 
 
 class CadenaIncompleta(ErrorDominio):
-    """ERR-11: una operación dejaría elementos sin cadena de abastecimiento.
+    """ERR-11 (histórico de F1): una operación dejaría elementos sin cadena de abastecimiento.
 
     Se lanza al intentar eliminar un elemento cuando su ausencia dejaría
     suministros sin origen, procesos sin insumos o productos sin proceso. La
@@ -109,3 +109,25 @@ class CadenaIncompleta(ErrorDominio):
     """
 
     codigo = "CADENA_INCOMPLETA"
+
+
+class SesionRequerida(ErrorDominio):
+    """ERR-11: se intentó una escritura sin una sesión válida de demostración.
+
+    La operación es de escritura y no se presenta ningún token de sesión, o el
+    token no es válido. La traducción a HTTP 401 ocurre en la capa de
+    infraestructura; el dominio no conoce HTTP.
+    """
+
+    codigo = "SESION_REQUERIDA"
+
+
+class PermisoDenegado(ErrorDominio):
+    """ERR-12: la sesión es válida pero el perfil no tiene permiso para escribir.
+
+    Solo el perfil ``COMPRAS`` puede crear, editar o eliminar elementos y
+    relaciones. El perfil ``PRODUCCION`` solo puede consultar. La traducción a
+    HTTP 403 ocurre en la capa de infraestructura; el dominio no conoce HTTP.
+    """
+
+    codigo = "PERMISO_DENEGADO"

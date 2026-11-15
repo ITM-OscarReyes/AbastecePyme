@@ -506,6 +506,43 @@ Estandariza todos los diálogos modales, formularios, controles de entrada y vis
    - **Producto:** Fondo esmeralda pastel `bg-emerald-50 dark:bg-emerald-500/10`, borde `border-emerald-200 dark:border-emerald-500/30`, texto esmeralda profundo `text-emerald-700 dark:text-emerald-400`.
 5. **Verificación:** `npm run build` completado exitosamente sin errores, 14 pruebas de arquitectura en verde y 3 pruebas unitarias de F3 aprobadas.
 
+## 15 — Backend de F4 con el agente backend-builder
+
+Hola, por favor con el agente backend-builder continúa con el desarrollo del backend necesario únicamente para el feature 4 (F4 — Tablero de abastecimiento demostrable) de AbastecePyme, aprovechando el backend ya existente que se realizó en el feature 3, todo dentro del branch `f4-backend`. Usar Python 3.12+ y FastAPI. Almacena la documentación del prompt en el archivo `prompts.md` y trata de que el propio código quede con una documentación clara.
+
+Contexto del proyecto:
+- F1, F2 y F3 ya están implementadas y verificadas (Catálogo de dependencias, Análisis de impacto, Orden de producción y ciclos).
+- F4 es "Tablero de abastecimiento demostrable": integrar catálogo, análisis de impacto y orden/alerta de ciclos; visualizar dependencias y destacar la consulta relevante; impedir que un perfil no autorizado altere la cadena.
+- F4 no añade endpoints de cálculo ni un agregador: consume `GET /api/v1/grafo`, `GET /api/v1/impacto/{id}`, `GET /api/v1/plan-entrega` y `GET /api/v1/orden-produccion`.
+- F4 añade: perfiles de demostración (`COMPRAS`, `PRODUCCION`), sesión de demostración (token opaco en memoria, sin credenciales) y autorización de escrituras en el backend.
+- Endpoints de F4: `GET /api/v1/perfiles`, `POST /api/v1/sesion`, `GET /api/v1/sesion`, `DELETE /api/v1/sesion`.
+- Errores de F4: `ERR-11` (`SESION_REQUERIDA`, 401) y `ERR-12` (`PERMISO_DENEGADO`, 403).
+- Matriz de permisos: lecturas abiertas para todos; escrituras requieren sesión válida con perfil `COMPRAS`; sin sesión → 401; con `PRODUCCION` → 403.
+- No usar NetworkX para cálculos principales.
+- Código con documentación clara, respetando Clean Architecture, SOLID y las convenciones de nomenclatura del proyecto.
+
+Pasos a seguir:
+1. Primero, explora el código existente del backend (F1, F2 y F3) para entender la estructura, modelos, API y algoritmos del grafo.
+2. Verifica que estás en la rama `f4-backend`.
+3. Documenta este prompt en `prompts.md`.
+4. Implementa los endpoints y lógica de F4:
+   - `GET /api/v1/perfiles` (devuelve los dos perfiles con su capacidad de escritura)
+   - `POST /api/v1/sesion` (crea sesión de demostración con el perfil elegido)
+   - `GET /api/v1/sesion` (describe la sesión activa, requiere token)
+   - `DELETE /api/v1/sesion` (cierra la sesión, requiere token)
+   - Autorización de escrituras: las rutas `POST/PUT/DELETE /elementos` y `POST/PUT/DELETE /dependencias` exigen sesión válida con perfil `COMPRAS`; sin sesión responde 401 `ERR-11`, con `PRODUCCION` responde 403 `ERR-12`.
+   - Errores `ERR-11` y `ERR-12` en el catálogo de errores del dominio y traducción a HTTP en infraestructura.
+5. Asegura que la implementación respete SOLID, Clean Architecture, y las convenciones del proyecto (dominio sin conocimiento de HTTP ni de sesiones; aplicación con casos de uso de sesión y autorización; infraestructura con almacén de sesiones en memoria y traducción de errores).
+6. Escribe pruebas básicas para validar la funcionalidad.
+
+REQUISITOS ESTRICTOS DE ALCANCE:
+1. **Solo F4.** No implementes funcionalidades de F1, F2 ni F3 (ya existen). No crees endpoints de cálculo ni un agregador nuevo.
+2. No modifiques las reglas de negocio, el modelo del grafo, la matriz de tipos ni los algoritmos de F1, F2 o F3.
+3. Los endpoints del backend deben coincidir exactamente con `docs/api-contract.md` §10.
+4. La verificación de F4 la realiza `tester`. Tú no declares PASS/FAIL.
+
+---
+
 ## 14 — Verificación de F3 (tester)
 
 Actúa como `tester` de AbastecePyme y verifica de forma objetiva la Feature 3 (F3 — Orden de producción y ciclos). No implementes ni corrijas código de producción; tu tarea es crear/completar las pruebas necesarias, ejecutarlas realmente y emitir un informe con veredicto PASS/FAIL/BLOCKED.
