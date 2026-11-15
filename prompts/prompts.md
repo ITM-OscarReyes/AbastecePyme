@@ -586,3 +586,49 @@ Actúa como `tester` de AbastecePyme y verifica de forma objetiva la Feature 3 (
 - Fallos con criterio, esperado, obtenido y evidencia reproducible.
 - Pruebas bloqueadas y su razón.
 - Cobertura de criterios de aceptación y conclusión final.
+
+## 16 — Verificación de F4 (tester)
+
+Actúa como `tester` / QA de AbastecePyme y verifica de forma objetiva la Feature 4 (F4 — Tablero de abastecimiento) en la rama `f4-supply-dashboard`. Analiza, diseña, implementa y ejecuta las pruebas necesarias exclusivamente para F4 y entrega un informe de resultados. No modifiques código de producción.
+
+**Contexto:**
+- `docs/brief.md` es la fuente de verdad. La especificación derivada de F4 está en `docs/requirements.md` §13, `docs/acceptance-criteria.md` §11, `docs/api-contract.md` §10 y `docs/architecture.md` §10.
+- F1, F2 y F3 ya están implementadas y verificadas. F4 las integra en una única vista (tablero de abastecimiento) y añade perfiles de demostración, sesión en memoria y autorización de escrituras.
+- F4 no añade endpoints de cálculo ni un agregador: compone `GET /api/v1/grafo`, `GET /api/v1/impacto/{id}`, `GET /api/v1/plan-entrega` y `GET /api/v1/orden-produccion`, y añade `GET /api/v1/perfiles`, `POST /api/v1/sesion`, `GET /api/v1/sesion` y `DELETE /api/v1/sesion`.
+- La rama de trabajo es `f4-supply-dashboard`.
+- No se puede usar NetworkX ni otra librería para reemplazar los algoritmos propios del proyecto.
+
+**Alcance de la verificación:**
+- Verificar únicamente F4 y la integración con F1, F2 y F3 estrictamente necesaria.
+- No modificar el comportamiento de F1, F2 ni F3; no refactorizar, no cambiar la arquitectura y no eliminar ni reemplazar pruebas existentes de otras features.
+- No modificar código de producción para hacer pasar una prueba sin documentar antes el defecto; si se encuentra un error fuera de F4, documentarlo pero no corregirlo.
+- Reutilizar los frameworks y convenciones de prueba existentes; usar las pruebas de F1 a F3 solo como referencia de estilo.
+
+**Reglas importantes:**
+- Las pruebas deben ser independientes, reproducibles y no depender de información externa innecesaria.
+- No falsear resultados ni marcar como aprobadas pruebas que no se ejecutaron.
+- Ejecutar las pruebas de verdad; no declarar PASS por inspección.
+- Marcar como `BLOCKED` toda prueba no ejecutable, con la razón concreta.
+
+**Casos mínimos a cubrir (AC-F4-01 a AC-F4-15c):**
+1. Vista inicial «Tablero» y navegación de cinco secciones, usable de 360 a 1920 px.
+2. Composición real de grafo, impacto, plan y diagnóstico sin endpoints nuevos ni cálculos en el cliente.
+3. Resumen de la cadena con totales, clasificación de productos y alerta de stock.
+4. Consulta de impacto desde el tablero (afectados, producto terminal, inexistente, backend caído).
+5. Plan de entrega y diagnóstico global, incluida la alerta de ciclo.
+6. Red dirigida `origen habilita destino` con leyenda.
+7. Perfiles de demostración y ciclo de sesión en memoria.
+8. Autorización de las seis rutas de escritura por perfil.
+9. Interfaz condicionada por perfil (acciones y mensajes de permiso).
+10. Resaltado del elemento y de sus afectados / requisitos en la red.
+11. Cuatro escenarios de aceptación sobre el backend real.
+12. Entregables documentales de F4.
+13. Lenguaje, temas, rendimiento (<2 s) y separación de capas.
+
+**Entregable:**
+- Informe con totales PASS/FAIL/BLOCKED y cobertura de criterios de F4.
+- Matriz de todos los criterios de aceptación de F4.
+- Fallos con criterio, esperado, obtenido y evidencia reproducible.
+- Pruebas bloqueadas y su razón.
+- Lista de criterios de F4 no verificados y por qué.
+- Registrar en `docs/decisions/tester.md` las decisiones de verificación relevantes.
