@@ -5,25 +5,39 @@ import type {
   CrearElementoDto,
   Dependencia,
   Elemento,
+  EntradaSesionDto,
   ErrorApiResponse,
   ImpactoRespuesta,
   OrdenProduccionRespuesta,
+  PerfilesRespuesta,
   PlanEntregaRespuesta,
   ReglasDependenciaRespuesta,
   ReporteCicloError,
   RespuestaColeccionDependencias,
   RespuestaColeccionElementos,
   RespuestaGrafo,
+  SesionRespuesta,
   TipoElemento
 } from '../types';
 
 const API_BASE = '/api/v1';
+
+let tokenSesionActual: string | null = null;
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+apiClient.interceptors.request.use((config) => {
+  if (tokenSesionActual) {
+    config.headers.Authorization = `Bearer ${tokenSesionActual}`;
+  } else {
+    delete config.headers.Authorization;
+  }
+  return config;
 });
 
 export function extraerMensajeError(error: unknown): string {
@@ -152,5 +166,37 @@ export const apiService = {
     const params = { productos: productos.join(',') };
     const { data } = await apiClient.get<PlanEntregaRespuesta>('/plan-entrega', { params });
     return data;
+  },
+
+  establecerTokenSesion(token: string | null): void {
+    tokenSesionActual = token;
+  },
+
+  obtenerTokenSesion(): string | null {
+    return tokenSesionActual;
+  },
+
+  async obtenerPerfiles(): Promise<PerfilesRespuesta> {
+    const { data } = await apiClient.get<PerfilesRespuesta>('/perfiles');
+    return data;
+  },
+
+  async crearSesion(dto: EntradaSesionDto): Promise<SesionRespuesta> {
+    const { data } = await apiClient.post<SesionRespuesta>('/sesion', dto);
+    tokenSesionActual = data.token;
+    return data;
+  },
+
+  async obtenerSesion(): Promise<SesionRespuesta> {
+    const { data } = await apiClient.get<SesionRespuesta>('/sesion');
+    return data;
+  },
+
+  async cerrarSesion(): Promise<void> {
+    try {
+      await apiClient.delete('/sesion');
+    } finally {
+      tokenSesionActual = null;
+    }
   }
 };

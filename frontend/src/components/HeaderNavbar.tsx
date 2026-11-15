@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Network,
   Package,
@@ -11,10 +11,16 @@ import {
   Sun,
   Moon,
   Menu,
-  X
+  X,
+  LayoutDashboard,
+  UserCheck,
+  Shield,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+import type { Perfil, PerfilId } from '../types';
 
-export type TabActiva = 'red' | 'catalogo' | 'impacto' | 'produccion';
+export type TabActiva = 'tablero' | 'red' | 'catalogo' | 'impacto' | 'produccion';
 
 interface HeaderNavbarProps {
   tabActiva: TabActiva;
@@ -25,6 +31,10 @@ interface HeaderNavbarProps {
   apiConectada: boolean;
   esModoOscuro: boolean;
   onToggleModoOscuro: () => void;
+  perfilActivo?: Perfil | null;
+  perfilesDisponibles?: Perfil[];
+  onCambiarPerfil?: (perfilId: PerfilId) => void;
+  puedeEscribir?: boolean;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -35,30 +45,57 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onAbrirAyuda,
   apiConectada,
   esModoOscuro,
-  onToggleModoOscuro
+  onToggleModoOscuro,
+  perfilActivo = null,
+  perfilesDisponibles = [],
+  onCambiarPerfil,
+  puedeEscribir = false
 }) => {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState<boolean>(false);
+  const [menuPerfilAbierto, setMenuPerfilAbierto] = useState<boolean>(false);
+  const refMenuPerfil = useRef<HTMLDivElement>(null);
 
-  // Cerrar menú móvil al presionar Escape
+  // Cerrar menús al presionar Escape o clic exterior
   useEffect(() => {
     const manejarEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && menuMovilAbierto) {
-        setMenuMovilAbierto(false);
+      if (e.key === 'Escape') {
+        if (menuPerfilAbierto) setMenuPerfilAbierto(false);
+        if (menuMovilAbierto) setMenuMovilAbierto(false);
       }
     };
+
+    const manejarClicExterior = (e: MouseEvent) => {
+      if (
+        menuPerfilAbierto &&
+        refMenuPerfil.current &&
+        !refMenuPerfil.current.contains(e.target as Node)
+      ) {
+        setMenuPerfilAbierto(false);
+      }
+    };
+
     window.addEventListener('keydown', manejarEscape);
-    return () => window.removeEventListener('keydown', manejarEscape);
-  }, [menuMovilAbierto]);
+    document.addEventListener('mousedown', manejarClicExterior);
+    return () => {
+      window.removeEventListener('keydown', manejarEscape);
+      document.removeEventListener('mousedown', manejarClicExterior);
+    };
+  }, [menuPerfilAbierto, menuMovilAbierto]);
 
   const seleccionarTab = (tab: TabActiva) => {
     onTabChange(tab);
     setMenuMovilAbierto(false);
   };
 
+  const seleccionarPerfil = (perfilId: PerfilId) => {
+    onCambiarPerfil?.(perfilId);
+    setMenuPerfilAbierto(false);
+  };
+
   return (
     <header className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 sticky top-0 z-40 shadow-sm dark:shadow-xl transition-colors duration-200">
       <div className="w-full px-3 sm:px-6 lg:px-8">
-        {/* Fila superior: identidad y acciones. Las acciones nunca se ocultan. */}
+        {/* Fila superior: identidad, perfil y acciones */}
         <div className="flex items-center justify-between min-h-16 py-2.5 gap-2 sm:gap-4">
           {/* Identidad de la Empresa y Aplicación */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -94,13 +131,96 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             </div>
           </div>
 
-          {/* Acciones de Operación y Estado: siempre visibles, con etiquetas a partir de lg */}
+          {/* Acciones de Operación, Selector de Perfil y Estado */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Estado de conexión con el sistema */}
             <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-medium">
               <span className={`w-2 h-2 rounded-full ${apiConectada ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 animate-pulse'}`}></span>
               <span className={apiConectada ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-amber-700 dark:text-amber-400 font-semibold'}>
                 {apiConectada ? 'Sistema Sincronizado' : 'Sin Conexión'}
               </span>
+            </div>
+
+            {/* Selector de Perfil (RF-F4-07 / RF-F4-09) */}
+            <div className="relative" ref={refMenuPerfil}>
+              <button
+                type="button"
+                onClick={() => setMenuPerfilAbierto((prev) => !prev)}
+                className={`flex items-center gap-2 h-11 min-h-[44px] px-2.5 sm:px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+                  perfilActivo?.puedeEscribir
+                    ? 'bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60'
+                    : 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                }`}
+                title="Cambiar perfil de usuario"
+                aria-expanded={menuPerfilAbierto}
+                aria-haspopup="true"
+              >
+                {perfilActivo?.puedeEscribir ? (
+                  <UserCheck size={16} className="text-sky-600 dark:text-sky-400 shrink-0" />
+                ) : (
+                  <Shield size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                )}
+                <div className="text-left hidden sm:block">
+                  <div className="text-[11px] font-bold leading-tight">
+                    {perfilActivo?.nombre ?? 'Seleccionar perfil'}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider opacity-75">
+                    {perfilActivo?.puedeEscribir ? 'Edición permitida' : 'Solo consulta'}
+                  </div>
+                </div>
+                <ChevronDown size={14} className="opacity-60 shrink-0" />
+              </button>
+
+              {menuPerfilAbierto && (
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-left">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Perfil operativo
+                    </span>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
+                      Elige el rol para operar la planta:
+                    </p>
+                  </div>
+                  <div className="py-1 space-y-1">
+                    {perfilesDisponibles.map((perfil) => {
+                      const esSeleccionado = perfilActivo?.id === perfil.id;
+                      return (
+                        <button
+                          key={perfil.id}
+                          type="button"
+                          onClick={() => seleccionarPerfil(perfil.id)}
+                          className={`w-full flex items-start gap-3 p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${
+                            esSeleccionado
+                              ? 'bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/80 text-sky-900 dark:text-sky-100 font-semibold'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <div className="mt-0.5 shrink-0">
+                            {perfil.id === 'COMPRAS' ? (
+                              <UserCheck size={16} className="text-sky-600 dark:text-sky-400" />
+                            ) : (
+                              <Shield size={16} className="text-emerald-600 dark:text-emerald-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold">{perfil.nombre}</span>
+                              {esSeleccionado && (
+                                <Check size={14} className="text-sky-600 dark:text-sky-400" />
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-0.5 leading-snug">
+                              {perfil.puedeEscribir
+                                ? 'Permite registrar, modificar y eliminar elementos y relaciones en la cadena.'
+                                : 'Modo de consulta y evaluación de impacto; protege la configuración de planta contra modificaciones.'}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Selector Dark / Light Mode - Con objetivo táctil de 44x44px */}
@@ -130,19 +250,41 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
               </button>
             )}
 
+            {/* Acciones de modificación protegidas por perfil (RF-F4-09) */}
             <button
-              onClick={onAbrirModalElemento}
-              className="flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3.5 lg:py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-sky-600/20 transition-all active:scale-95 cursor-pointer"
-              title="Registrar nuevo proveedor, suministro, proceso o producto"
+              type="button"
+              onClick={puedeEscribir ? onAbrirModalElemento : undefined}
+              disabled={!puedeEscribir}
+              className={`flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3.5 lg:py-2 rounded-xl text-xs font-semibold shadow-lg transition-all ${
+                puedeEscribir
+                  ? 'bg-sky-600 hover:bg-sky-500 text-white shadow-sky-600/20 active:scale-95 cursor-pointer'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-75'
+              }`}
+              title={
+                puedeEscribir
+                  ? 'Registrar nuevo proveedor, suministro, proceso o producto'
+                  : 'Acción restringida: solo disponible para Responsable de compras'
+              }
               aria-label="Nuevo Componente"
             >
               <Plus size={16} />
               <span className="hidden lg:inline">Nuevo Componente</span>
             </button>
+
             <button
-              onClick={onAbrirModalDependencia}
-              className="flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3.5 lg:py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition-all active:scale-95 cursor-pointer"
-              title="Crear relación entre componentes del catálogo"
+              type="button"
+              onClick={puedeEscribir ? onAbrirModalDependencia : undefined}
+              disabled={!puedeEscribir}
+              className={`flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3.5 lg:py-2 rounded-xl text-xs font-semibold shadow-lg transition-all ${
+                puedeEscribir
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20 active:scale-95 cursor-pointer'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-75'
+              }`}
+              title={
+                puedeEscribir
+                  ? 'Crear relación entre componentes del catálogo'
+                  : 'Acción restringida: solo disponible para Responsable de compras'
+              }
               aria-label="Crear relación"
             >
               <Link2 size={16} />
@@ -151,9 +293,24 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           </div>
         </div>
 
-        {/* Navegación de escritorio: segunda fila a ancho completo (>= 768px) */}
+        {/* Navegación de escritorio: segunda fila a ancho completo (>= 768px) con 5 secciones */}
         <nav className="hidden md:flex items-center gap-1 w-full bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800 mb-2 overflow-x-auto">
           <button
+            type="button"
+            onClick={() => seleccionarTab('tablero')}
+            className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              tabActiva === 'tablero'
+                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/80 dark:border-transparent'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-800'
+            }`}
+            title="Tablero general de abastecimiento (Atajo: 0)"
+          >
+            <LayoutDashboard size={14} />
+            <span>Tablero</span>
+            <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">0</kbd>
+          </button>
+          <button
+            type="button"
             onClick={() => seleccionarTab('red')}
             className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               tabActiva === 'red'
@@ -167,6 +324,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">1</kbd>
           </button>
           <button
+            type="button"
             onClick={() => seleccionarTab('catalogo')}
             className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               tabActiva === 'catalogo'
@@ -180,6 +338,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">2</kbd>
           </button>
           <button
+            type="button"
             onClick={() => seleccionarTab('impacto')}
             className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               tabActiva === 'impacto'
@@ -193,6 +352,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">3</kbd>
           </button>
           <button
+            type="button"
             onClick={() => seleccionarTab('produccion')}
             className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               tabActiva === 'produccion'
@@ -207,13 +367,30 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           </button>
         </nav>
 
-        {/* Menú Móvil Desplegable (< 768px): Garantiza acceso a las 4 secciones */}
+        {/* Menú Móvil Desplegable (< 768px): Garantiza acceso a las 5 secciones */}
         {menuMovilAbierto && (
           <nav
             aria-label="Navegación móvil"
             className="md:hidden py-3 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-1.5 animate-in fade-in duration-150"
           >
             <button
+              type="button"
+              onClick={() => seleccionarTab('tablero')}
+              className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                tabActiva === 'tablero'
+                  ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <LayoutDashboard size={16} />
+                <span>Tablero General</span>
+              </div>
+              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">0</kbd>
+            </button>
+
+            <button
+              type="button"
               onClick={() => seleccionarTab('red')}
               className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 tabActiva === 'red'
@@ -229,6 +406,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => seleccionarTab('catalogo')}
               className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 tabActiva === 'catalogo'
@@ -244,6 +422,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => seleccionarTab('impacto')}
               className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 tabActiva === 'impacto'
@@ -259,6 +438,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => seleccionarTab('produccion')}
               className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 tabActiva === 'produccion'
