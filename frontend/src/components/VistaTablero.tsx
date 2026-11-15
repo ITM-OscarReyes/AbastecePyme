@@ -432,7 +432,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => onNavegar('produccion')}
+                onClick={() => onNavegar('produccion', 'diagnostico')}
                 className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>Ver orden completo</span>
@@ -1005,7 +1005,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
           </div>
 
           <div
-            onClick={() => onNavegar('produccion')}
+            onClick={() => onNavegar('produccion', 'ciclos')}
             className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
           >
             <span className="font-bold text-emerald-400 block">4. Detección de ciclos</span>

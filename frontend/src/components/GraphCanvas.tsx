@@ -81,6 +81,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [esPantallaCompleta, setEsPantallaCompleta] = useState<boolean>(false);
   const [filtroProductoInterno, setFiltroProductoInterno] = useState<string>('TODOS');
   const filtroProductoActivo = filtroProductoIdProp !== undefined ? filtroProductoIdProp : filtroProductoInterno;
+  const [aislarCadena, setAislarCadena] = useState<boolean>(true);
 
   const [menuLineaAbierto, setMenuLineaAbierto] = useState<boolean>(false);
   const [busquedaLinea, setBusquedaLinea] = useState<string>('');
@@ -205,8 +206,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       return a.id.localeCompare(b.id);
     });
 
+    const elementosFinales =
+      aislarCadena && nodosLineaFiltro
+        ? elementosOrdenados.filter((e) => nodosLineaFiltro.has(e.id))
+        : elementosOrdenados;
+
+    const dependenciasFinales =
+      aislarCadena && nodosLineaFiltro
+        ? dependencias.filter(
+            (d) => nodosLineaFiltro.has(d.origen) && nodosLineaFiltro.has(d.destino)
+          )
+        : dependencias;
+
     // Paleta visual empresarial de alto contraste calibrada para Modo Claro y Modo Oscuro
-    const cyNodes = elementosOrdenados.map((e) => {
+    const cyNodes = elementosFinales.map((e) => {
       let colorFondo: string;
       let colorBorde: string;
       let colorTexto: string;
@@ -285,7 +298,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     });
 
     // Modelado de aristas dirigidas de abastecimiento con pesos calibrados
-    const cyEdges = dependencias.map((d, index) => {
+    const cyEdges = dependenciasFinales.map((d, index) => {
       const aristaEnCadenaImpacto =
         (nodoSeleccionadoId === d.origen && nodosAfectadosIds.includes(d.destino)) ||
         (nodosAfectadosIds.includes(d.origen) && nodosAfectadosIds.includes(d.destino));
@@ -438,7 +451,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode, esModoOscuro, filtroProductoActivo, cambiarFiltro]);
+  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode, esModoOscuro, filtroProductoActivo, aislarCadena, cambiarFiltro]);
 
   const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
   const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
@@ -586,14 +599,32 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               </button>
 
               {filtroProductoActivo !== 'TODOS' && (
-                <button
-                  type="button"
-                  onClick={() => cambiarFiltro('TODOS')}
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Restablecer a todas las líneas"
-                >
-                  <X size={13} />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setAislarCadena((prev) => !prev)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer border ${
+                      aislarCadena
+                        ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300'
+                        : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                    title={
+                      aislarCadena
+                        ? 'Mostrando solo los componentes de este producto. Clic para ver toda la planta.'
+                        : 'Mostrando en contexto de toda la planta. Clic para aislar solo esta cadena.'
+                    }
+                  >
+                    {aislarCadena ? 'Cadena aislada' : 'Red completa'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cambiarFiltro('TODOS')}
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Restablecer a todas las líneas"
+                  >
+                    <X size={13} />
+                  </button>
+                </>
               )}
             </div>
 

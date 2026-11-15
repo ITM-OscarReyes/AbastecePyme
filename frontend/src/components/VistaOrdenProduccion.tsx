@@ -31,15 +31,23 @@ interface VistaOrdenProduccionProps {
   onIrACatalogo?: () => void;
   onIrARed?: (nodoId?: string) => void;
   productoInicialId?: string | null;
+  subVistaInicial?: 'plan' | 'diagnostico';
 }
 
 export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
   onIrACatalogo: _onIrACatalogo,
   onIrARed,
-  productoInicialId
+  productoInicialId,
+  subVistaInicial
 }) => {
   // Pestaña activa dentro de la vista: Plan de Entrega o Diagnóstico Global
-  const [subVista, setSubVista] = useState<'plan' | 'diagnostico'>('plan');
+  const [subVista, setSubVista] = useState<'plan' | 'diagnostico'>(subVistaInicial ?? 'plan');
+
+  useEffect(() => {
+    if (subVistaInicial) {
+      setSubVista(subVistaInicial);
+    }
+  }, [subVistaInicial]);
 
   // Estado del Diagnóstico Global
   const [cargandoDiagnostico, setCargandoDiagnostico] = useState<boolean>(true);
@@ -121,13 +129,17 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
     try {
       const res = await apiService.obtenerElementos('PRODUCTO');
       setProductosDisponibles(res.elementos);
-      if (res.elementos.length > 0 && productosSeleccionados.length === 0) {
-        setProductosSeleccionados([res.elementos[0].id]);
+      if (productoInicialId) {
+        setProductosSeleccionados([productoInicialId]);
+      } else {
+        setProductosSeleccionados((prev) =>
+          prev.length === 0 && res.elementos.length > 0 ? [res.elementos[0].id] : prev
+        );
       }
     } catch {
       // Ignorar fallo de carga de lista
     }
-  }, [productosSeleccionados.length]);
+  }, [productoInicialId]);
 
   // 3. Ejecutar consulta de Plan de Entrega para los productos seleccionados
   const consultarPlanEntrega = useCallback(async (ids: string[]) => {

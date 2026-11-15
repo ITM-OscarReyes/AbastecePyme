@@ -112,6 +112,7 @@ export const App: React.FC = () => {
   const [filtroTipoCatalogo, setFiltroTipoCatalogo] = useState<string>('TODOS');
   const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
   const [productoOrdenId, setProductoOrdenId] = useState<string | null>(null);
+  const [subVistaOrden, setSubVistaOrden] = useState<'plan' | 'diagnostico'>('plan');
 
   const [elementoDetalleId, setElementoDetalleId] = useState<string | null>(null);
   const [modoDetalle, setModoDetalle] = useState<'catalogo' | 'afectado'>('catalogo');
@@ -253,8 +254,13 @@ export const App: React.FC = () => {
           setModoDetalle('catalogo');
         }
       } else if (tab === 'produccion') {
-        if (elementoId) {
+        if (elementoId === 'ciclos' || elementoId === 'diagnostico') {
+          setSubVistaOrden('diagnostico');
+        } else if (elementoId) {
+          setSubVistaOrden('plan');
           setProductoOrdenId(elementoId);
+        } else {
+          setSubVistaOrden('plan');
         }
       } else if (tab === 'impacto') {
         if (elementoId) {
@@ -770,6 +776,7 @@ export const App: React.FC = () => {
         {tabActiva === 'produccion' && (
           <VistaOrdenProduccion
             productoInicialId={productoOrdenId}
+            subVistaInicial={subVistaOrden}
             onIrACatalogo={() => handleTabChange('catalogo')}
             onIrARed={(nodoId) => {
               setTabActiva('red');
