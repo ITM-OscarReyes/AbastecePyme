@@ -23,6 +23,7 @@ import { ModalCrearDependencia } from './components/ModalCrearDependencia';
 import { ModalAyudaOperativa } from './components/ModalAyudaOperativa';
 import { ModalDetalleElemento } from './components/ModalDetalleElemento';
 import { ModalConfirmarRiesgo } from './components/ModalConfirmarRiesgo';
+import { ModalPerfilesAcceso } from './components/ModalPerfilesAcceso';
 import { PanelDetalleNodo, MensajeSinSeleccion } from './components/PanelDetalleNodo';
 import { useHistorialImpactos } from './hooks/useHistorialImpactos';
 import {
@@ -106,6 +107,7 @@ export const App: React.FC = () => {
     null
   );
   const [modalAyudaAbierto, setModalAyudaAbierto] = useState<boolean>(false);
+  const [modalPerfilesAbierto, setModalPerfilesAbierto] = useState<boolean>(false);
 
   const [filtroTipoCatalogo, setFiltroTipoCatalogo] = useState<string>('TODOS');
   const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
@@ -230,7 +232,7 @@ export const App: React.FC = () => {
 
   const navegarA = useCallback(
     (tab: TabActiva, elementoId?: string, filtroTipo?: string) => {
-      handleTabChange(tab);
+      setTabActiva(tab);
       if (tab === 'red') {
         if (elementoId) {
           const elemento = grafo.elementos.find((e) => e.id === elementoId);
@@ -257,10 +259,13 @@ export const App: React.FC = () => {
       } else if (tab === 'impacto') {
         if (elementoId) {
           setSolicitudImpacto({ id: elementoId, secuencia: Date.now() });
+        } else {
+          setSolicitudImpacto(null);
+          setClaveVistaImpacto((clave) => clave + 1);
         }
       }
     },
-    [handleTabChange, handleSelectNode, grafo.elementos]
+    [handleSelectNode, grafo.elementos]
   );
 
   useEffect(() => {
@@ -575,6 +580,7 @@ export const App: React.FC = () => {
         perfilActivo={perfilActivo}
         perfilesDisponibles={perfilesDisponibles}
         onCambiarPerfil={manejarCambiarPerfil}
+        onAbrirModalPerfiles={() => setModalPerfilesAbierto(true)}
         puedeEscribir={puedeEscribir}
       />
 
@@ -614,6 +620,7 @@ export const App: React.FC = () => {
             puedeEscribir={puedeEscribir}
             onAbrirModalElemento={abrirNuevoElemento}
             onAbrirModalDependencia={abrirNuevaDependencia}
+            onAbrirModalPerfiles={() => setModalPerfilesAbierto(true)}
           />
         )}
 
@@ -827,6 +834,14 @@ export const App: React.FC = () => {
         abierto={modalAyudaAbierto}
         onCerrar={() => setModalAyudaAbierto(false)}
         onNavegar={handleTabChange}
+      />
+
+      <ModalPerfilesAcceso
+        isOpen={modalPerfilesAbierto}
+        onClose={() => setModalPerfilesAbierto(false)}
+        perfilActivo={perfilActivo}
+        perfilesDisponibles={perfilesDisponibles}
+        onCambiarPerfil={manejarCambiarPerfil}
       />
     </div>
   );

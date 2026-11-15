@@ -41,6 +41,7 @@ interface VistaTableroProps {
   puedeEscribir?: boolean;
   onAbrirModalElemento?: () => void;
   onAbrirModalDependencia?: () => void;
+  onAbrirModalPerfiles?: () => void;
 }
 
 export const VistaTablero: React.FC<VistaTableroProps> = ({
@@ -53,7 +54,8 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
   perfilActivo,
   puedeEscribir: _puedeEscribir,
   onAbrirModalElemento: _onAbrirModalElemento,
-  onAbrirModalDependencia: _onAbrirModalDependencia
+  onAbrirModalDependencia: _onAbrirModalDependencia,
+  onAbrirModalPerfiles
 }) => {
   void _puedeEscribir;
   void _onAbrirModalElemento;
@@ -977,7 +979,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
           </div>
 
           <div
-            onClick={() => onNavegar('impacto')}
+            onClick={() => onNavegar('impacto', '001')}
             className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
           >
             <span className="font-bold text-amber-400 block">2. Elemento inexistente</span>
@@ -987,7 +989,13 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
           </div>
 
           <div
-            onClick={() => onNavegar('catalogo')}
+            onClick={() => {
+              if (onAbrirModalPerfiles) {
+                onAbrirModalPerfiles();
+              } else {
+                onNavegar('catalogo');
+              }
+            }}
             className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
           >
             <span className="font-bold text-purple-400 block">3. Validación de datos y permisos</span>

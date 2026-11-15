@@ -16,7 +16,8 @@ import {
   UserCheck,
   Shield,
   ChevronDown,
-  Check
+  Check,
+  KeyRound
 } from 'lucide-react';
 import type { Perfil, PerfilId } from '../types';
 
@@ -34,6 +35,7 @@ interface HeaderNavbarProps {
   perfilActivo?: Perfil | null;
   perfilesDisponibles?: Perfil[];
   onCambiarPerfil?: (perfilId: PerfilId) => void;
+  onAbrirModalPerfiles?: () => void;
   puedeEscribir?: boolean;
 }
 
@@ -49,6 +51,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   perfilActivo = null,
   perfilesDisponibles = [],
   onCambiarPerfil,
+  onAbrirModalPerfiles,
   puedeEscribir = false
 }) => {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState<boolean>(false);
@@ -219,6 +222,22 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                       );
                     })}
                   </div>
+
+                  {onAbrirModalPerfiles && (
+                    <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuPerfilAbierto(false);
+                          onAbrirModalPerfiles();
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        <KeyRound size={14} className="text-sky-500" />
+                        <span>Ver control de acceso detallado</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
