@@ -10,6 +10,7 @@ import {
   Network,
   Package,
   ShieldCheck,
+  UserCheck,
   X,
   Zap
 } from 'lucide-react';
@@ -252,9 +253,47 @@ export const ModalAyudaOperativa: React.FC<ModalAyudaOperativaProps> = ({
 
         <section className="space-y-3">
           <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+            Roles y permisos de operación
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="p-3 rounded-xl bg-sky-50/80 dark:bg-slate-950 border border-sky-200 dark:border-sky-500/30 flex items-start gap-2.5">
+              <UserCheck size={18} className="text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-xs font-bold text-sky-700 dark:text-sky-300">Responsable de compras</span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Gestión integral de la cadena: registra proveedores e insumos, define conexiones operativas y actualiza datos.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-slate-950 border border-emerald-200 dark:border-emerald-500/30 flex items-start gap-2.5">
+              <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Coordinador de producción</span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Modo de consulta y planificación: evalúa impactos, consulta secuencias de preparación y valida la continuidad sin alterar la red.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
             Navegación rápida
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-center text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                navegar(onNavegar, 'tablero');
+                onCerrar();
+              }}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 transition-colors cursor-pointer"
+            >
+              <kbd className="px-2 py-1 bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 font-mono rounded font-bold border border-slate-200 dark:border-slate-700">0</kbd>
+              <span className="block mt-1.5 text-[11px] text-slate-700 dark:text-slate-300">Tablero general</span>
+            </button>
             <button
               type="button"
               onClick={() => {

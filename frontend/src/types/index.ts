@@ -140,13 +140,15 @@ export interface OrdenProduccionRespuesta {
   elementosBloqueados: string[];
   productosBloqueados: string[];
   productosPlanificables: string[];
+  elementosIncompletos?: string[];
+  productosIncompletos?: string[];
 }
 
 export interface ProductoEntrega {
   id: string;
   tipo: string;
   nombre: string;
-  estado: 'PLANIFICABLE' | 'BLOQUEADO';
+  estado: 'PLANIFICABLE' | 'BLOQUEADO' | 'INCOMPLETO';
 }
 
 export interface PlanEntregaRespuesta {
@@ -156,6 +158,8 @@ export interface PlanEntregaRespuesta {
   totalPasos: number;
   ciclos: CicloDetectado[];
   elementosBloqueados: string[];
+  elementosIncompletos?: string[];
+  productosIncompletos?: string[];
 }
 
 export interface ReporteCicloError {
@@ -164,4 +168,28 @@ export interface ReporteCicloError {
   ciclo: string[];
   elementosBloqueados: string[];
 }
+
+// F4 — Perfiles, sesión y tablero
+export type PerfilId = 'COMPRAS' | 'PRODUCCION';
+
+export interface Perfil {
+  id: PerfilId;
+  nombre: string;
+  puedeEscribir: boolean;
+}
+
+export interface PerfilesRespuesta {
+  perfiles: Perfil[];
+  total: number;
+}
+
+export interface SesionRespuesta {
+  token: string;
+  perfil: Perfil;
+}
+
+export interface EntradaSesionDto {
+  perfil: string;
+}
+
 

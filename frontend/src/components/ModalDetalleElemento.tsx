@@ -28,6 +28,7 @@ interface ModalDetalleElementoProps {
   onEvaluarImpacto: (id: string) => void;
   onEditar?: (elemento: Elemento) => void;
   onEliminar?: (elemento: Elemento) => void;
+  puedeEscribir?: boolean;
 }
 
 const iconoTipo = (tipo: Elemento['tipo']) => {
@@ -52,13 +53,14 @@ export const ModalDetalleElemento: React.FC<ModalDetalleElementoProps> = ({
   onVerEnMapa,
   onEvaluarImpacto,
   onEditar,
-  onEliminar
+  onEliminar,
+  puedeEscribir = false
 }) => {
   if (!elemento) return null;
 
   const entrantes = dependencias.filter((dependencia) => dependencia.destino === elemento.id);
   const salientes = dependencias.filter((dependencia) => dependencia.origen === elemento.id);
-  const gestionHabilitada = modo === 'catalogo';
+  const gestionHabilitada = modo === 'catalogo' && puedeEscribir;
 
   const nombreDe = (id: string): string =>
     elementos.find((candidato) => candidato.id === id)?.nombre ?? id;
