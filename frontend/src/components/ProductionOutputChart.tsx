@@ -103,19 +103,29 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
     <div className="flex flex-col h-full bg-white dark:bg-[#080C14] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 overflow-hidden shadow-xs dark:shadow-lg select-none transition-colors">
       {/* Header del Gráfico */}
       <div className="flex items-center justify-between pb-1.5 mb-1 border-b border-slate-100 dark:border-white/[0.06] shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400"></span>
-          <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 tracking-wide">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400 shrink-0"></span>
+          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 tracking-wide truncate">
             Inventario Real de Insumos
           </span>
-          <span className="text-[9px] font-mono text-slate-500">
+          <span className="text-[8.5px] font-mono text-slate-500 shrink-0">
             ({datos.length} SKUs)
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Leyenda Visual explicativa de líneas */}
+        <div className="hidden sm:flex items-center gap-2 text-[8px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-0.5 bg-sky-400 rounded"></span> Stock Real
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-0.5 border-b border-dashed border-rose-400"></span> Mínimo
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
           {/* Badge Umbral estilo Foundry */}
-          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+          <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold border shrink-0 whitespace-nowrap ${
             totalEnAlerta > 0
               ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border-rose-300 dark:border-rose-500/40'
               : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40'
@@ -224,22 +234,40 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             </g>
           ))}
 
-          {/* Etiquetas del eje X (SKU abreviado de cada insumo real) */}
+          {/* Etiquetas del eje X legibles sin superposición: Destacar insumos en alerta y extremos */}
           {coordenadas.map((pt, idx) => {
-            // Mostrar etiqueta cada 2 o 3 puntos para legibilidad
-            if (idx % 2 !== 0 && idx !== coordenadas.length - 1) return null;
+            const esPrimero = idx === 0;
+            const esUltimo = idx === coordenadas.length - 1;
+            const esAlerta = pt.data.alerta;
+
+            if (!esAlerta && !esPrimero && !esUltimo) {
+              return (
+                <line
+                  key={idx}
+                  x1={pt.x}
+                  y1={svgHeight - 13}
+                  x2={pt.x}
+                  y2={svgHeight - 9}
+                  className="stroke-slate-300 dark:stroke-slate-700"
+                  strokeWidth="0.8"
+                />
+              );
+            }
+
+            const nombreCorto = pt.data.rotulo.split(' ')[0];
+
             return (
               <text
                 key={idx}
-                x={pt.x}
-                y={svgHeight - 4}
-                textAnchor="middle"
-                fill={pt.data.alerta ? '#EF4444' : '#64748B'}
+                x={esPrimero ? pt.x + 2 : esUltimo ? pt.x - 2 : pt.x}
+                y={svgHeight - 3}
+                textAnchor={esPrimero ? 'start' : esUltimo ? 'end' : 'middle'}
+                fill={esAlerta ? '#EF4444' : '#64748B'}
                 fontSize="7"
                 fontFamily="monospace"
-                fontWeight="600"
+                fontWeight={esAlerta ? 'bold' : '500'}
               >
-                {pt.data.sku.replace('INS-', '')}
+                {nombreCorto}
               </text>
             );
           })}

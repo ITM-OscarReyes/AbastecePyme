@@ -112,7 +112,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
   const svgWidth = 330;
   const svgHeight = 115;
   const padLeft = 32;
-  const padRight = 12;
+  const padRight = 24;
   const padTop = 14;
   const padBottom = 22;
 
@@ -151,24 +151,35 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
 
   return (
     <div className="flex flex-col h-full justify-between select-none">
-      {/* Header del gráfico */}
-      <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
-        <div className="flex items-center gap-1.5">
-          <Layers size={12} className="text-sky-600 dark:text-sky-400" />
-          <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-            Cobertura Operativa por Estación
+      {/* Header del gráfico con Leyenda Explícita */}
+      <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0 gap-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Layers size={11} className="text-sky-600 dark:text-sky-400 shrink-0" />
+          <span className="text-[10px] font-bold text-slate-800 dark:text-white uppercase tracking-wider truncate">
+            Cobertura por Estación
           </span>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Leyenda Visual explicativa de líneas */}
+        <div className="hidden sm:flex items-center gap-2 text-[8px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-0.5 bg-sky-400 rounded"></span> Cobertura
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-0.5 border-b border-dashed border-rose-400"></span> Meta 100%
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
           {cantBajoUmbral > 0 ? (
-            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 flex items-center gap-1 font-bold shrink-0">
-              <AlertTriangle size={9} className="text-rose-600 dark:text-rose-400" />
-              {cantBajoUmbral} Estaciones con Déficit
+            <span className="text-[8.5px] font-mono px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 flex items-center gap-1 font-bold shrink-0 whitespace-nowrap">
+              <AlertTriangle size={9} className="text-rose-600 dark:text-rose-400 shrink-0" />
+              {cantBajoUmbral} con Déficit
             </span>
           ) : (
-            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1 font-bold shrink-0">
-              <CheckCircle2 size={9} className="text-emerald-600 dark:text-emerald-400" />
-              100% Cobertura Plena
+            <span className="text-[8.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1 font-bold shrink-0 whitespace-nowrap">
+              <CheckCircle2 size={9} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              100% Plena
             </span>
           )}
         </div>
@@ -274,12 +285,13 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
               />
               {/* Etiqueta de la estación en el eje X */}
               <text
-                x={pt.x}
+                x={i === 0 ? pt.x + 2 : i === coords.length - 1 ? pt.x - 2 : pt.x}
                 y={svgHeight - 4}
-                textAnchor="middle"
+                textAnchor={i === 0 ? 'start' : i === coords.length - 1 ? 'end' : 'middle'}
                 className="fill-slate-600 dark:fill-[#94A3B8]"
-                fontSize="8"
+                fontSize="7.5"
                 fontFamily="monospace"
+                fontWeight="500"
               >
                 {pt.rotulo}
               </text>
