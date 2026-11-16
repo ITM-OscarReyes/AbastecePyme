@@ -486,12 +486,20 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     </span>
                     <div className="grid grid-cols-2 gap-1 mt-2">
                       <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
-                        <span className="text-lg sm:text-2xl font-bold font-mono text-amber-700 dark:text-amber-400 tabular-nums block">2/3</span>
-                        <span className="text-[9px] text-amber-800 dark:text-amber-300 font-medium block">Insumos OK</span>
+                        <span className="text-lg sm:text-2xl font-bold font-mono text-amber-700 dark:text-amber-400 tabular-nums block">
+                          67%
+                        </span>
+                        <span className="text-[9px] text-amber-800 dark:text-amber-300 font-medium block">
+                          2/3 Insumos OK
+                        </span>
                       </div>
                       <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
-                        <span className="text-lg sm:text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 tabular-nums block">-3L</span>
-                        <span className="text-[9px] text-rose-700 dark:text-rose-300 font-mono block">Déficit</span>
+                        <span className="text-lg sm:text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 tabular-nums block">
+                          -3L
+                        </span>
+                        <span className="text-[9px] text-rose-700 dark:text-rose-300 font-mono block">
+                          Déficit Barniz
+                        </span>
                       </div>
                     </div>
                     <div className="text-[9px] font-mono text-amber-800 dark:text-amber-200/90 mt-1 truncate text-center">
@@ -514,52 +522,58 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   Lotes de Entrega
                 </span>
 
-                <div className="flex-1 p-2.5 rounded-lg bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-around overflow-hidden">
+                <div className="flex-1 p-2 rounded-lg bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-around overflow-hidden gap-1">
                   {/* Mesa de Trabajo */}
                   <div
-                    onClick={() => onConsultarElemento?.(productoMesa?.id || 'PROD-MESA-TRABAJO')}
-                    className="cursor-pointer group"
+                    onClick={() => productoMesa?.id && onConsultarElemento?.(productoMesa.id)}
+                    className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    title={`Consultar ${productoMesa?.nombre || 'Mesa de trabajo'}`}
                   >
-                    <div className="flex items-center justify-between text-[10px] mb-1 gap-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
-                        {productoMesa?.nombre || 'Mesa de trabajo metálica'}
-                      </span>
-                      <span className="font-mono text-sky-700 dark:text-sky-400 font-bold shrink-0 tabular-nums">7 pasos · 67%</span>
+                    <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-sky-600 dark:group-hover:text-sky-400 leading-tight">
+                      {productoMesa?.nombre || 'Mesa de trabajo metálica'}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-mono mt-0.5 mb-1">
+                      <span className="text-slate-500 dark:text-slate-400">7 pasos</span>
+                      <span className="text-sky-700 dark:text-sky-400 font-bold tabular-nums">67% listo</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                      <div className="h-full bg-sky-500 dark:bg-sky-400 rounded-full" style={{ width: '67%' }}></div>
+                      <div className="h-full bg-sky-500 dark:bg-sky-400 rounded-full transition-all" style={{ width: '67%' }}></div>
                     </div>
                   </div>
 
                   {/* Repisa Flotante */}
                   <div
-                    onClick={() => onConsultarElemento?.(productoRepisa?.id || 'PROD-REPISA')}
-                    className="cursor-pointer group"
+                    onClick={() => productoRepisa?.id && onConsultarElemento?.(productoRepisa.id)}
+                    className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    title={`Consultar ${productoRepisa?.nombre || 'Repisa flotante'}`}
                   >
-                    <div className="flex items-center justify-between text-[10px] mb-1 gap-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                        {productoRepisa?.nombre || 'Repisa de madera flotante'}
-                      </span>
-                      <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold shrink-0 tabular-nums">15 pasos · 67%</span>
+                    <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 leading-tight">
+                      {productoRepisa?.nombre || 'Repisa de madera flotante'}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-mono mt-0.5 mb-1">
+                      <span className="text-slate-500 dark:text-slate-400">15 pasos</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold tabular-nums">67% listo</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                      <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: '67%' }}></div>
+                      <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all" style={{ width: '67%' }}></div>
                     </div>
                   </div>
 
                   {/* Escritorio */}
                   <div
-                    onClick={() => onConsultarElemento?.(productoEscritorio?.id || 'PROD-ESCRITORIO')}
-                    className="cursor-pointer group"
+                    onClick={() => productoEscritorio?.id && onConsultarElemento?.(productoEscritorio.id)}
+                    className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    title={`Consultar ${productoEscritorio?.nombre || 'Escritorio de madera'}`}
                   >
-                    <div className="flex items-center justify-between text-[10px] mb-1 gap-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400">
-                        {productoEscritorio?.nombre || 'Escritorio con cajones'}
-                      </span>
-                      <span className="font-mono text-amber-700 dark:text-amber-400 font-bold shrink-0 tabular-nums">20 pasos · 73%</span>
+                    <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 leading-tight">
+                      {productoEscritorio?.nombre || 'Escritorio con cajones'}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-mono mt-0.5 mb-1">
+                      <span className="text-slate-500 dark:text-slate-400">20 pasos</span>
+                      <span className="text-amber-700 dark:text-amber-400 font-bold tabular-nums">73% listo</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                      <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: '73%' }}></div>
+                      <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full transition-all" style={{ width: '73%' }}></div>
                     </div>
                   </div>
                 </div>
