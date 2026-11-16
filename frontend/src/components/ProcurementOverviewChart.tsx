@@ -9,9 +9,11 @@ interface ProcurementOverviewChartProps {
 interface PuntoProveedorReal {
   id: string;
   rotulo: string;
+  porcentaje: number;
+  conformes: number;
+  total: number;
   volumen: number;
   minimo: number;
-  cantidadSuministros: number;
   alertas: number;
   esBajoMinimo: boolean;
   nombresAlerta: string[];
@@ -20,7 +22,6 @@ interface PuntoProveedorReal {
 interface CoordenadaProveedor {
   x: number;
   y: number;
-  yUmbral: number;
   data: PuntoProveedorReal;
 }
 
@@ -29,8 +30,8 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
 }) => {
   const [puntoHover, setPuntoHover] = useState<PuntoProveedorReal | null>(null);
 
-  // Calcula el aprovisionamiento real por proveedor del grafo
-  const { datos, totalStockActual, maximoValor, cantProveedoresAlerta } = useMemo(() => {
+  // Calcula la tasa de cumplimiento real (0-100%) por proveedor del grafo
+  const { datos, totalStockActual, cantProveedoresAlerta } = useMemo(() => {
     const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
     const todosProveedores = elementos.filter((e) => e.tipo === 'PROVEEDOR');
 
@@ -75,7 +76,10 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
         (i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0)
       );
       const cantAlertas = alertasInsumos.length;
-      const esBajoMinimo = totalVolumen < totalMinimo || cantAlertas > 0;
+      const totalSKUs = suministrosDelProv.length;
+      const conformes = totalSKUs - cantAlertas;
+      const pct = totalSKUs > 0 ? Math.round((conformes / totalSKUs) * 100) : 100;
+      const esBajoMinimo = pct < 100;
       const nombresAlerta = alertasInsumos.map(
         (i) => `${i.nombre} (${i.stockDisponible}/${i.stockMinimo})`
       );
@@ -92,9 +96,11 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
       return {
         id: prov.id,
         rotulo: rotuloCorto,
+        porcentaje: pct,
+        conformes,
+        total: totalSKUs,
         volumen: totalVolumen,
         minimo: totalMinimo,
-        cantidadSuministros: suministrosDelProv.length,
         alertas: cantAlertas,
         esBajoMinimo,
         nombresAlerta
@@ -102,13 +108,11 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
     });
 
     const stockTotal = insumos.reduce((acc, curr) => acc + (curr.stockDisponible || 0), 0);
-    const maxVol = puntos.reduce((max, p) => Math.max(max, p.volumen, p.minimo), 200);
     const proveedoresAlerta = puntos.filter((p) => p.esBajoMinimo).length;
 
     return {
       datos: puntos,
       totalStockActual: stockTotal,
-      maximoValor: Math.ceil(maxVol / 100) * 100,
       cantProveedoresAlerta: proveedoresAlerta
     };
   }, [elementos]);
@@ -116,39 +120,40 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
   // Dimensiones del SVG
   const svgWidth = 320;
   const svgHeight = 115;
-  const padLeft = 28;
-  const padRight = 14;
-  const padTop = 12;
+  const padLeft = 32;
+  const padRight = 20;
+  const padTop = 14;
   const padBottom = 20;
 
   const chartW = svgWidth - padLeft - padRight;
   const chartH = svgHeight - padTop - padBottom;
-  const maxVal = maximoValor || 700;
+  const maxVal = 100; // Escala 0% a 100%
+  const yUmbral100 = padTop; // 100% de cumplimiento está en la parte superior
 
-  // Coordenadas con datos reales (curva de stock real y curva de stock mínimo)
+  // Coordenadas en escala normalizada 0-100%
   const coordenadas: CoordenadaProveedor[] = useMemo(() => {
     if (datos.length === 0) return [];
     return datos.map((d, i) => {
       const divisor = datos.length > 1 ? datos.length - 1 : 1;
       const x = padLeft + (i / divisor) * chartW;
-      const y = padTop + chartH - (d.volumen / maxVal) * chartH;
-      const yUmbral = padTop + chartH - (d.minimo / maxVal) * chartH;
-      return { x, y, yUmbral, data: d };
+      const y = padTop + chartH - (d.porcentaje / maxVal) * chartH;
+      return { x, y, data: d };
     });
   }, [datos, chartW, chartH, padLeft, padTop, maxVal]);
 
-  // Curvas suaves (Stock real y Umbral mínimo requerido)
-  const { pathD, pathUmbralD, areaD } = useMemo(() => {
-    if (coordenadas.length === 0) return { pathD: '', pathUmbralD: '', areaD: '' };
+  // Curva suave de porcentaje de cumplimiento
+  const { pathD, areaD } = useMemo(() => {
+    if (coordenadas.length === 0) return { pathD: '', areaD: '' };
 
     let d = `M ${coordenadas[0].x} ${coordenadas[0].y}`;
-    let dUmb = `M ${coordenadas[0].x} ${coordenadas[0].yUmbral}`;
     for (let i = 1; i < coordenadas.length; i++) {
       const prev = coordenadas[i - 1];
       const curr = coordenadas[i];
-      const cx = (prev.x + curr.x) / 2;
-      d += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
-      dUmb += ` C ${cx} ${prev.yUmbral}, ${cx} ${curr.yUmbral}, ${curr.x} ${curr.yUmbral}`;
+      const cx1 = prev.x + (curr.x - prev.x) / 2;
+      const cy1 = prev.y;
+      const cx2 = prev.x + (curr.x - prev.x) / 2;
+      const cy2 = curr.y;
+      d += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${curr.x} ${curr.y}`;
     }
 
     const last = coordenadas[coordenadas.length - 1];
@@ -156,7 +161,7 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
     const yBase = padTop + chartH;
     const aD = `${d} L ${last.x} ${yBase} L ${first.x} ${yBase} Z`;
 
-    return { pathD: d, pathUmbralD: dUmb, areaD: aD };
+    return { pathD: d, areaD: aD };
   }, [coordenadas, chartH, padTop]);
 
   return (
@@ -166,17 +171,17 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 shrink-0"></span>
           <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 tracking-wide truncate">
-            Aprovisionamiento por Proveedor
+            Cumplimiento por Proveedor
           </span>
         </div>
 
         {/* Leyenda Visual explicativa de líneas */}
         <div className="hidden sm:flex items-center gap-2 text-[8px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-0.5 bg-cyan-400 rounded"></span> Stock Real
+            <span className="w-2.5 h-0.5 bg-cyan-400 rounded"></span> Cumplimiento
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-0.5 border-b border-dashed border-rose-400"></span> Mínimo
+            <span className="w-2.5 h-0.5 border-b border-dashed border-rose-400"></span> Meta 100%
           </span>
         </div>
 
@@ -222,8 +227,8 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
             </filter>
           </defs>
 
-          {/* Líneas de cuadrícula horizontal y etiquetas de eje Y con valores reales */}
-          {[maxVal, Math.round(maxVal * 0.66), Math.round(maxVal * 0.33), 0].map((val) => {
+          {/* Líneas de cuadrícula horizontal (0%, 25%, 50%, 75%, 100%) */}
+          {[100, 75, 50, 25, 0].map((val) => {
             const y = padTop + chartH - (val / maxVal) * chartH;
             return (
               <g key={val}>
@@ -241,30 +246,41 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
                   y={y + 3}
                   textAnchor="end"
                   className="fill-slate-400 dark:fill-[#64748B]"
-                  fontSize="8"
+                  fontSize="7.5"
                   fontFamily="monospace"
                 >
-                  {val}
+                  {val}%
                 </text>
               </g>
             );
           })}
 
-          {/* Curva de Umbral Mínimo Requerido por Proveedor (Línea discontinua rosa) */}
-          {pathUmbralD && (
-            <path
-              d={pathUmbralD}
-              fill="none"
-              stroke="#F43F5E"
-              strokeWidth="1.3"
-              strokeDasharray="3 3"
-            />
-          )}
+          {/* Línea de Umbral de Meta de Abastecimiento Pleno (Línea discontinua fija al 100%) */}
+          <line
+            x1={padLeft}
+            y1={yUmbral100}
+            x2={svgWidth - padRight}
+            y2={yUmbral100}
+            stroke="#F43F5E"
+            strokeWidth="1.3"
+            strokeDasharray="4 3"
+          />
+          <text
+            x={svgWidth - padRight - 2}
+            y={yUmbral100 - 3}
+            textAnchor="end"
+            fill="#F43F5E"
+            fontSize="7"
+            fontFamily="monospace"
+            fontWeight="bold"
+          >
+            Meta: 100% Conforme
+          </text>
 
           {/* Relleno de Área con Gradiente */}
           <path d={areaD} fill="url(#procGradReal)" />
 
-          {/* Trazo de Curva Resplandeciente (Stock Real en Planta) */}
+          {/* Trazo de Curva Resplandeciente (Cumplimiento por Proveedor) */}
           <path
             d={pathD}
             fill="none"
@@ -286,11 +302,11 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
               <circle
                 cx={pt.x}
                 cy={pt.y}
-                r={pt.data.esBajoMinimo ? '4' : '3.5'}
+                r={pt.data.esBajoMinimo ? '4.5' : '3.5'}
                 fill={pt.data.esBajoMinimo ? '#EF4444' : '#0F172A'}
-                stroke={pt.data.esBajoMinimo ? '#F87171' : '#06B6D4'}
+                stroke={pt.data.esBajoMinimo ? '#FCA5A5' : '#06B6D4'}
                 strokeWidth="1.8"
-                className="hover:r-5 transition-all"
+                className="hover:r-5.5 transition-all"
               />
             </g>
           ))}
@@ -317,12 +333,15 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
             <div className="flex items-center gap-1.5 font-bold">
               <Truck size={11} className="text-cyan-400" />
               <span className="text-cyan-300">{puntoHover.rotulo}:</span>
-              <span>{puntoHover.volumen} uds (Mínimo: {puntoHover.minimo} uds)</span>
+              <span>{puntoHover.porcentaje}% Cumplimiento ({puntoHover.conformes}/{puntoHover.total} SKUs)</span>
+            </div>
+            <div className="text-[9px] text-slate-300 font-mono">
+              Stock total en planta: {puntoHover.volumen} uds (Mínimo agrupado: {puntoHover.minimo} uds)
             </div>
             <div className={puntoHover.esBajoMinimo ? 'text-rose-400 font-bold text-[9px]' : 'text-emerald-400 font-bold text-[9px]'}>
               {puntoHover.esBajoMinimo
-                ? `⚠ Déficit operativo (${puntoHover.alertas} insumos: ${puntoHover.nombresAlerta.join(', ')})`
-                : `✓ Abastecimiento conforme (+${puntoHover.volumen - puntoHover.minimo} uds sobre umbral)`}
+                ? `⚠ Déficit en ${puntoHover.alertas} insumo(s): ${puntoHover.nombresAlerta.join(', ')}`
+                : '✓ 100% Abastecido (Todos los SKUs conformes)'}
             </div>
           </div>
         )}

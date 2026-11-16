@@ -234,13 +234,11 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             </g>
           ))}
 
-          {/* Etiquetas del eje X legibles sin superposición: Destacar insumos en alerta y extremos */}
+          {/* Etiquetas del eje X: Destacar únicamente los insumos en alerta crítica */}
           {coordenadas.map((pt, idx) => {
-            const esPrimero = idx === 0;
-            const esUltimo = idx === coordenadas.length - 1;
             const esAlerta = pt.data.alerta;
 
-            if (!esAlerta && !esPrimero && !esUltimo) {
+            if (!esAlerta) {
               return (
                 <line
                   key={idx}
@@ -259,13 +257,13 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             return (
               <text
                 key={idx}
-                x={esPrimero ? pt.x + 2 : esUltimo ? pt.x - 2 : pt.x}
+                x={pt.x}
                 y={svgHeight - 3}
-                textAnchor={esPrimero ? 'start' : esUltimo ? 'end' : 'middle'}
-                fill={esAlerta ? '#EF4444' : '#64748B'}
-                fontSize="7"
+                textAnchor="middle"
+                fill="#EF4444"
+                fontSize="7.5"
                 fontFamily="monospace"
-                fontWeight={esAlerta ? 'bold' : '500'}
+                fontWeight="bold"
               >
                 {nombreCorto}
               </text>
