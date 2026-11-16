@@ -155,7 +155,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
       <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0 gap-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <Layers size={11} className="text-sky-600 dark:text-sky-400 shrink-0" />
-          <span className="text-[10px] font-bold text-slate-800 dark:text-white uppercase tracking-wider truncate">
+          <span className="text-[10px] font-bold text-slate-800 dark:text-white uppercase tracking-wider whitespace-nowrap">
             Cobertura por Estación
           </span>
         </div>
@@ -299,17 +299,22 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
           ))}
         </svg>
 
-        {/* Tooltip interactivo flotante con regla matemática 100% coherente */}
+        {/* Tooltip táctico flotante posicionado de forma segura para no recortarse jamás */}
         {puntoHover && (
           <div
-            className="absolute z-20 px-2.5 py-1.5 rounded bg-[#0A0F1A] border border-sky-500/40 text-[9px] font-mono text-white shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
+            className="absolute z-30 pointer-events-none px-2.5 py-1.5 rounded bg-[#0A0F1A]/95 border border-sky-500/50 shadow-2xl backdrop-blur-md text-[9px] font-mono text-white max-w-[240px]"
             style={{
-              left: `${(puntoHover.x / svgWidth) * 100}%`,
-              top: `${(puntoHover.y / svgHeight) * 100 - 8}%`
+              left: puntoHover.x > svgWidth * 0.65 
+                ? 'auto' 
+                : `${Math.max(6, (puntoHover.x / svgWidth) * 100 - 15)}%`,
+              right: puntoHover.x > svgWidth * 0.65 ? '10px' : 'auto',
+              top: puntoHover.y < svgHeight * 0.55
+                ? `${((puntoHover.y + 12) / svgHeight) * 100}%`
+                : `${Math.max(4, ((puntoHover.y - 45) / svgHeight) * 100)}%`
             }}
           >
             <div className="font-bold text-sky-400">{puntoHover.nombreCompleto}</div>
-            <div className="font-bold mt-0.5">
+            <div className="font-semibold text-slate-200 mt-0.5">
               Cobertura: {puntoHover.porcentajeCobertura}% ({puntoHover.insumosConformes}/{puntoHover.totalInsumos} insumos)
             </div>
             <div className={puntoHover.esBajoUmbral ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
