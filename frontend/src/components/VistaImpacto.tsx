@@ -324,9 +324,9 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl space-y-5 text-slate-900 dark:text-white">
+      <div className="foundry-panel p-4 sm:p-5 border border-slate-200 dark:border-white/[0.08] space-y-4 text-slate-900 dark:text-white">
         <div className="flex items-start gap-3.5 border-b border-slate-200 dark:border-slate-800/80 pb-5">
-          <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-200 dark:border-amber-500/20">
+          <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-500/20">
             <ShieldAlert size={26} />
           </div>
           <div>
@@ -366,7 +366,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                 }
               }}
               onKeyDown={manejarTeclasInput}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-950 focus:ring-1 focus:ring-amber-500 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all font-sans"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-amber-500 focus:bg-white dark:focus:bg-slate-950 focus:ring-1 focus:ring-amber-500 rounded-lg pl-10 pr-10 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all font-sans"
             />
 
             {terminoBusqueda && (
@@ -384,7 +384,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               <div
                 id="sugerencias-componentes"
                 role="listbox"
-                className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80"
+                className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-lg shadow-2xl overflow-hidden backdrop-blur-xl max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80"
               >
                 {sugerencias.length > 0 ? (
                   sugerencias.map((elemento, index) => {
@@ -446,7 +446,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           <button
             type="submit"
             disabled={cargando || !terminoBusqueda.trim()}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-lg shadow-amber-600/20 transition-all active:scale-95 cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-lg shadow-amber-600/20 transition-all active:scale-95 cursor-pointer shrink-0"
           >
             {cargando ? (
               <>
@@ -474,7 +474,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           </div>
 
           {historial.length === 0 ? (
-            <p className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 px-3 py-2.5 text-[11px] text-slate-500">
+            <p className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 px-3 py-2.5 text-[11px] text-slate-500">
               Todavía no se han ejecutado análisis de impacto. Selecciona un elemento y presiona
               «Evaluar impacto».
             </p>
@@ -485,7 +485,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                   key={`${analisis.elementoId}-${analisis.fecha}`}
                   type="button"
                   onClick={() => ejecutarConsulta(analisis.elementoId)}
-                  className={`rounded-xl border p-2.5 text-left transition-colors cursor-pointer ${
+                  className={`rounded-lg border p-2.5 text-left transition-colors cursor-pointer ${
                     resultado?.elemento.id === analisis.elementoId
                       ? 'border-amber-400 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10'
                       : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900'
@@ -523,7 +523,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
       </div>
 
       {errorConsulta && (
-        <div className="p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/25 text-red-800 dark:text-red-300 space-y-2 animate-in fade-in">
+        <div className="p-5 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/25 text-red-800 dark:text-red-300 space-y-2 animate-in fade-in">
           <div className="flex items-center gap-2 font-bold text-sm text-red-700 dark:text-red-400">
             <AlertTriangle size={18} />
             <span>Atención: no fue posible completar el análisis de impacto</span>
@@ -543,7 +543,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
       )}
 
       {!resultado && !cargando && !errorConsulta && (
-        <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl text-center space-y-3 text-slate-900 dark:text-white">
+        <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-lg text-center space-y-3 text-slate-900 dark:text-white">
           <Sparkles size={30} className="mx-auto text-amber-500 dark:text-amber-400" />
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Comienza un análisis de impacto</h3>
           <p className="mx-auto max-w-xl text-xs leading-relaxed text-slate-600 dark:text-slate-400">
@@ -556,7 +556,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
 
       {resultado && (
         <div className="space-y-4 animate-in fade-in">
-          <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-slate-900 dark:text-white">
+          <div className="glass-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-slate-900 dark:text-white">
             <div>
               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Punto de partida del análisis
@@ -599,7 +599,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               <button
                 type="button"
                 onClick={handleCopiarInforme}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-white rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-white rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 title="Copiar el informe del análisis al portapapeles"
               >
                 {copiadoInforme ? <Check size={15} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={15} />}
@@ -615,7 +615,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                       resultado.afectados.map((afectado) => afectado.id)
                     )
                   }
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-white rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-white rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                   title="Ver la ruta de afectación resaltada en el mapa de la cadena"
                 >
                   <Network size={15} />
@@ -632,7 +632,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           )}
 
           {resultado.total === 0 ? (
-            <div className="glass-card bg-emerald-50/60 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/20 p-6 rounded-2xl text-center space-y-3">
+            <div className="glass-card bg-emerald-50/60 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/20 p-6 rounded-lg text-center space-y-3">
               <CheckCircle2 size={36} className="mx-auto text-emerald-600 dark:text-emerald-400" />
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Sin afectación en la cadena
@@ -646,7 +646,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
           ) : (
             <div className="space-y-4">
               {resultado.resumenStock.suministrosBajoMinimo > 0 && (
-                <div className="flex items-start gap-2 rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10 p-4 text-xs text-red-800 dark:text-red-200">
+                <div className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10 p-4 text-xs text-red-800 dark:text-red-200">
                   <AlertTriangle size={17} className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
                   <div>
                     <p className="font-bold">Alerta de stock en el análisis</p>
@@ -660,7 +660,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-slate-900/90 border border-amber-200 dark:border-amber-500/20 space-y-1">
+                <div className="p-4 rounded-lg bg-amber-50/60 dark:bg-slate-900/90 border border-amber-200 dark:border-amber-500/20 space-y-1">
                   <span className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400">
                     Suministros afectados
                   </span>
@@ -668,7 +668,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">Suministros que dependen de este origen</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-slate-900/90 border border-purple-200 dark:border-purple-500/20 space-y-1">
+                <div className="p-4 rounded-lg bg-purple-50/60 dark:bg-slate-900/90 border border-purple-200 dark:border-purple-500/20 space-y-1">
                   <span className="text-[10px] font-bold uppercase text-purple-800 dark:text-purple-400">
                     Procesos afectados
                   </span>
@@ -676,7 +676,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">Estaciones de trabajo que se detienen</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-red-50/60 dark:bg-slate-900/90 border border-red-200 dark:border-red-500/20 space-y-1">
+                <div className="p-4 rounded-lg bg-red-50/60 dark:bg-slate-900/90 border border-red-200 dark:border-red-500/20 space-y-1">
                   <span className="text-[10px] font-bold uppercase text-red-800 dark:text-red-400">
                     Productos afectados
                   </span>
@@ -692,7 +692,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                     Elementos afectados ({resultado.total})
                   </h4>
 
-                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] font-semibold">
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] font-semibold">
                     <button
                       type="button"
                       onClick={() => setFiltroTipoAfectados('TODOS')}
@@ -753,7 +753,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                         key={afectado.id}
                         type="button"
                         onClick={() => onConsultarAfectado(afectado.id)}
-                        className={`p-4 rounded-xl bg-white dark:bg-slate-900 border text-left transition-colors space-y-2 relative overflow-hidden group shadow-sm cursor-pointer ${
+                        className={`p-4 rounded-lg bg-white dark:bg-slate-900 border text-left transition-colors space-y-2 relative overflow-hidden group shadow-sm cursor-pointer ${
                           afectado.alertaStock
                             ? 'border-red-300 dark:border-red-500/30 hover:border-red-400 dark:hover:border-red-500/50'
                             : 'border-slate-200 dark:border-red-500/20 hover:border-sky-300 dark:hover:border-red-500/40'
@@ -795,7 +795,7 @@ export const VistaImpacto: React.FC<VistaImpactoProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="p-4 text-center rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                     No se registran elementos de la categoría seleccionada en esta cadena de
                     afectación.
                   </div>
@@ -815,7 +815,7 @@ const TarjetaStockInline: React.FC<{ resultado: ImpactoRespuesta }> = ({ resulta
 
   return (
     <div
-      className={`rounded-2xl border p-4 space-y-2 ${
+      className={`rounded-lg border p-4 space-y-2 ${
         bajoMinimo
           ? 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-200'
           : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 text-slate-800 dark:text-slate-300'
