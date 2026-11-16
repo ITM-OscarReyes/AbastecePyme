@@ -24,7 +24,7 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
   const [puntoHover, setPuntoHover] = useState<PuntoSuministro | null>(null);
 
   // Calcula la serie con los datos 100% reales de inventario de cada suministro del grafo
-  const { datos, maximoValor, umbralPromedio, totalEnAlerta } = useMemo(() => {
+  const { datos, maximoValor, totalEnAlerta } = useMemo(() => {
     const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
 
     const puntos: PuntoSuministro[] = insumos.map((i) => {
@@ -44,15 +44,11 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
     });
 
     const maxDisp = puntos.reduce((max, p) => Math.max(max, p.disponible, p.minimo), 100);
-    const promMin = puntos.length > 0
-      ? Math.round(puntos.reduce((acc, p) => acc + p.minimo, 0) / puntos.length)
-      : 30;
     const enAlerta = puntos.filter((p) => p.alerta).length;
 
     return {
       datos: puntos,
       maximoValor: Math.ceil(maxDisp / 50) * 50,
-      umbralPromedio: promMin,
       totalEnAlerta: enAlerta
     };
   }, [elementos]);
@@ -69,30 +65,30 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
   const chartH = svgHeight - padTop - padBottom;
   const maxVal = maximoValor || 300;
 
-  // Coordenadas de los puntos reales
+  // Coordenadas de los puntos reales y de sus umbrales específicos
   const coordenadas = useMemo(() => {
     if (datos.length === 0) return [];
     return datos.map((d, i) => {
       const divisor = datos.length > 1 ? datos.length - 1 : 1;
       const x = padLeft + (i / divisor) * chartW;
       const y = padTop + chartH - (d.disponible / maxVal) * chartH;
-      return { x, y, data: d };
+      const yUmbral = padTop + chartH - (d.minimo / maxVal) * chartH;
+      return { x, y, yUmbral, data: d };
     });
   }, [datos, chartW, chartH, padLeft, padTop, maxVal]);
 
-  // Generar curva suave y área con datos reales
-  const { pathD, areaD, yUmbral } = useMemo(() => {
-    if (coordenadas.length === 0) return { pathD: '', areaD: '', yUmbral: 0 };
+  // Generar curva suave de stock, curva de umbrales y área con datos reales
+  const { pathD, pathUmbralD, areaD } = useMemo(() => {
+    if (coordenadas.length === 0) return { pathD: '', pathUmbralD: '', areaD: '' };
 
     let d = `M ${coordenadas[0].x} ${coordenadas[0].y}`;
+    let dUmb = `M ${coordenadas[0].x} ${coordenadas[0].yUmbral}`;
     for (let i = 1; i < coordenadas.length; i++) {
       const prev = coordenadas[i - 1];
       const curr = coordenadas[i];
-      const cx1 = prev.x + (curr.x - prev.x) / 2;
-      const cy1 = prev.y;
-      const cx2 = prev.x + (curr.x - prev.x) / 2;
-      const cy2 = curr.y;
-      d += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${curr.x} ${curr.y}`;
+      const cx = (prev.x + curr.x) / 2;
+      d += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
+      dUmb += ` C ${cx} ${prev.yUmbral}, ${cx} ${curr.yUmbral}, ${curr.x} ${curr.yUmbral}`;
     }
 
     const last = coordenadas[coordenadas.length - 1];
@@ -100,10 +96,8 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
     const yBase = padTop + chartH;
     const aD = `${d} L ${last.x} ${yBase} L ${first.x} ${yBase} Z`;
 
-    const yU = padTop + chartH - (umbralPromedio / maxVal) * chartH;
-
-    return { pathD: d, areaD: aD, yUmbral: yU };
-  }, [coordenadas, chartH, padTop, umbralPromedio, maxVal]);
+    return { pathD: d, pathUmbralD: dUmb, areaD: aD };
+  }, [coordenadas, chartH, padTop]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#080C14] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 overflow-hidden shadow-xs dark:shadow-lg select-none transition-colors">
@@ -185,32 +179,21 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             );
           })}
 
-          {/* Línea de Umbral Promedio Real */}
-          <line
-            x1={padLeft}
-            y1={yUmbral}
-            x2={svgWidth - padRight}
-            y2={yUmbral}
-            stroke="#EF4444"
-            strokeWidth="1.2"
-            strokeDasharray="4,3"
-          />
-          <text
-            x={svgWidth - padRight - 2}
-            y={yUmbral - 3}
-            textAnchor="end"
-            fill="#EF4444"
-            fontSize="8"
-            fontWeight="bold"
-            letterSpacing="0.5"
-          >
-            Mín. Prom: {umbralPromedio}
-          </text>
+          {/* Curva de Umbral Mínimo Específico de cada Insumo */}
+          {pathUmbralD && (
+            <path
+              d={pathUmbralD}
+              fill="none"
+              stroke="#EF4444"
+              strokeWidth="1.2"
+              strokeDasharray="3,3"
+            />
+          )}
 
           {/* Relleno de Área con Gradiente */}
           <path d={areaD} fill="url(#prodRealGrad)" />
 
-          {/* Trazo de Curva Resplandeciente con datos reales */}
+          {/* Trazo de Curva Resplandeciente con datos reales de stock disponible */}
           <path
             d={pathD}
             fill="none"
@@ -273,14 +256,12 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             <span className="font-mono text-sky-300 font-bold">{puntoHover.sku}:</span>
             <span className="truncate max-w-[120px]">{puntoHover.rotulo}</span>
             <span className="font-mono font-bold">
-              {puntoHover.disponible} / mín. {puntoHover.minimo} uds
+              {puntoHover.disponible}/{puntoHover.minimo} uds
             </span>
-            <span
-              className={`text-[9px] font-bold ${
-                puntoHover.alerta ? 'text-rose-400' : 'text-emerald-400'
-              }`}
-            >
-              {puntoHover.alerta ? '(Bajo mínimo)' : '(Conforme)'}
+            <span className={`text-[9px] font-bold ${puntoHover.alerta ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {puntoHover.alerta
+                ? `(-${puntoHover.minimo - puntoHover.disponible} bajo umbral)`
+                : `(+${puntoHover.disponible - puntoHover.minimo} sobre umbral)`}
             </span>
           </div>
         )}

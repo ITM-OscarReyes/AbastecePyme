@@ -22,7 +22,16 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
   // Calcula el aprovisionamiento real por proveedor del grafo
   const { datos, totalStockActual, maximoValor } = useMemo(() => {
     const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
-    const proveedores = elementos.filter((e) => e.tipo === 'PROVEEDOR');
+    const todosProveedores = elementos.filter((e) => e.tipo === 'PROVEEDOR');
+
+    // Ordenar los proveedores según la secuencia lógica de manufactura:
+    // Madera -> Acero -> Acabados -> Ferretería
+    const ordenLogico = ['MADERA', 'ACERO', 'ACABADOS', 'FERRETERIA'];
+    const proveedores = [...todosProveedores].sort((a, b) => {
+      const idxA = ordenLogico.findIndex((k) => a.id.includes(k));
+      const idxB = ordenLogico.findIndex((k) => b.id.includes(k));
+      return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+    });
 
     const puntos: PuntoProveedorReal[] = proveedores.map((prov) => {
       // Identificar suministros asociados al proveedor por prefijo o coincidencia
@@ -48,12 +57,22 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
         (acc, curr) => acc + (curr.stockDisponible || 0),
         0
       );
-      const cantAlertas = suministrosDelProv.filter((i) => i.alertaStock).length;
-      const rotuloCorto = prov.nombre.replace('Proveedor de ', '').replace('Proveedor ', '');
+      const cantAlertas = suministrosDelProv.filter(
+        (i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0)
+      ).length;
+
+      let rotuloCorto = 'Proveedor';
+      if (prov.id.includes('MADERA')) rotuloCorto = 'Madera';
+      else if (prov.id.includes('ACERO')) rotuloCorto = 'Acero';
+      else if (prov.id.includes('ACABADOS')) rotuloCorto = 'Acabados';
+      else if (prov.id.includes('FERRETERIA')) rotuloCorto = 'Ferretería';
+      else {
+        rotuloCorto = prov.nombre.replace('Proveedor de ', '').replace('Proveedor ', '').split(' ')[0];
+      }
 
       return {
         id: prov.id,
-        rotulo: rotuloCorto.charAt(0).toUpperCase() + rotuloCorto.slice(1),
+        rotulo: rotuloCorto,
         volumen: totalVolumen,
         cantidadSuministros: suministrosDelProv.length,
         alertas: cantAlertas

@@ -13,7 +13,8 @@ interface PuntoEstacionReal {
   nombreCompleto: string;
   stockDisponible: number;
   stockMinimo: number;
-  alerta: boolean;
+  esBajoUmbral: boolean;
+  insumosConAlerta: string[];
   insumosEntrada: string[];
 }
 
@@ -30,18 +31,26 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
   const [puntoHover, setPuntoHover] = useState<CoordenadaEstacion | null>(null);
 
   // Calcula las métricas 100% reales de disponibilidad y umbrales mínimos por estación de proceso
-  const { datos, maximoValor, hayAlertas } = useMemo(() => {
-    const procesos = elementos.filter((e) => e.tipo === 'PROCESO');
+  const { datos, maximoValor, hayEstacionesBajoUmbral } = useMemo(() => {
+    const todosProcesos = elementos.filter((e) => e.tipo === 'PROCESO');
     const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
 
-    if (procesos.length === 0) {
-      return { datos: [], maximoValor: 200, hayAlertas: false };
+    if (todosProcesos.length === 0) {
+      return { datos: [], maximoValor: 200, hayEstacionesBajoUmbral: false };
     }
+
+    // Ordenar las estaciones según el flujo real del proceso productivo
+    const ordenFlujo = ['CORTE', 'ACABADO', 'MESA', 'REPISA', 'ESCRITORIO'];
+    const procesosOrdenados = [...todosProcesos].sort((a, b) => {
+      const idxA = ordenFlujo.findIndex((k) => a.id.includes(k));
+      const idxB = ordenFlujo.findIndex((k) => b.id.includes(k));
+      return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+    });
 
     const mapaInsumos = new Map<string, Elemento>();
     insumos.forEach((i) => mapaInsumos.set(i.id, i));
 
-    const puntos: PuntoEstacionReal[] = procesos.map((proc) => {
+    const puntos: PuntoEstacionReal[] = procesosOrdenados.map((proc) => {
       const aristasEntrada = dependencias.filter((dep) => dep.destino === proc.id);
       const insumosEntrada = aristasEntrada
         .map((dep) => mapaInsumos.get(dep.origen))
@@ -61,16 +70,27 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
 
       const totalDisp = insumosEfectivos.reduce((acc, i) => acc + (i.stockDisponible ?? 0), 0);
       const totalMin = insumosEfectivos.reduce((acc, i) => acc + (i.stockMinimo ?? 0), 0);
-      const alerta = insumosEfectivos.some(
-        (i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0)
-      );
+
+      // REGLA MATEMÁTICA ESTRICTA: El punto está bajo el umbral ÚNICAMENTE si totalDisp < totalMin
+      const esBajoUmbral = totalDisp < totalMin;
+
+      // Insumos individuales que tienen déficit para avisar en el tooltip informativo
+      const insumosConAlerta = insumosEfectivos
+        .filter((i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0))
+        .map((i) => `${i.nombre} (${i.stockDisponible}/${i.stockMinimo})`);
 
       const nombresInsumos = insumosEfectivos.map((i) => i.nombre);
-      const rotulo = proc.nombre
-        .replace('Ensamble de ', '')
-        .replace('Corte de ', '')
-        .replace('Acabado de ', '')
-        .split(' ')[0];
+
+      // Rótulos claros y correctos para cada estación
+      let rotulo = 'Estación';
+      if (proc.id.includes('CORTE')) rotulo = 'Corte';
+      else if (proc.id.includes('ACABADO')) rotulo = 'Acabado';
+      else if (proc.id.includes('MESA')) rotulo = 'Mesa';
+      else if (proc.id.includes('REPISA')) rotulo = 'Repisa';
+      else if (proc.id.includes('ESCRITORIO')) rotulo = 'Escritorio';
+      else {
+        rotulo = proc.nombre.split(' ')[0];
+      }
 
       return {
         id: proc.id,
@@ -78,7 +98,8 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
         nombreCompleto: proc.nombre,
         stockDisponible: totalDisp,
         stockMinimo: totalMin,
-        alerta,
+        esBajoUmbral,
+        insumosConAlerta,
         insumosEntrada: nombresInsumos
       };
     });
@@ -87,12 +108,12 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
       (max, p) => Math.max(max, p.stockDisponible, p.stockMinimo),
       100
     );
-    const tieneAlerta = puntos.some((p) => p.alerta);
+    const hayBajo = puntos.some((p) => p.esBajoUmbral);
 
     return {
       datos: puntos,
       maximoValor: Math.ceil(maxVal / 50) * 50,
-      hayAlertas: tieneAlerta
+      hayEstacionesBajoUmbral: hayBajo
     };
   }, [elementos, dependencias]);
 
@@ -155,7 +176,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {hayAlertas ? (
+          {hayEstacionesBajoUmbral ? (
             <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 flex items-center gap-1 font-bold shrink-0">
               <AlertTriangle size={9} className="text-rose-600 dark:text-rose-400" />
               Déficit en estación
@@ -163,7 +184,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
           ) : (
             <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1 font-bold shrink-0">
               <CheckCircle2 size={9} className="text-emerald-600 dark:text-emerald-400" />
-              Stock nominal
+              Capacidad nominal
             </span>
           )}
         </div>
@@ -215,7 +236,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
             );
           })}
 
-          {/* Curva de Umbral de Seguridad de Planta (Línea discontinua ámbar/rosa) */}
+          {/* Curva de Umbral Mínimo Requerido (Línea discontinua rosa) */}
           {pathUmbralD && (
             <path
               d={pathUmbralD}
@@ -251,7 +272,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
                 cy={pt.y}
                 r={4}
                 className={`transition-all hover:r-5.5 ${
-                  pt.alerta
+                  pt.esBajoUmbral
                     ? 'fill-rose-500 stroke-rose-300 stroke-[1.8]'
                     : 'fill-white dark:fill-[#0A0F1A] stroke-sky-600 dark:stroke-[#38BDF8] stroke-[1.8]'
                 }`}
@@ -271,7 +292,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
           ))}
         </svg>
 
-        {/* Tooltip interactivo flotante */}
+        {/* Tooltip interactivo flotante con regla matemática 100% coherente */}
         {puntoHover && (
           <div
             className="absolute z-20 px-2 py-1 rounded bg-[#0A0F1A] border border-sky-500/40 text-[9px] font-mono text-white shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
@@ -283,9 +304,16 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
             <div className="font-bold text-sky-400">{puntoHover.nombreCompleto}</div>
             <div>Disponible: {puntoHover.stockDisponible} uds</div>
             <div className="text-slate-400">Umbral mín: {puntoHover.stockMinimo} uds</div>
-            <div className={puntoHover.alerta ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
-              {puntoHover.alerta ? '⚠ Insumo bajo mínimo' : '✓ Stock conforme'}
+            <div className={puntoHover.esBajoUmbral ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+              {puntoHover.esBajoUmbral
+                ? `⚠ Bajo umbral mínimo (-${puntoHover.stockMinimo - puntoHover.stockDisponible} uds)`
+                : `✓ Stock conforme (+${puntoHover.stockDisponible - puntoHover.stockMinimo} uds sobre umbral)`}
             </div>
+            {puntoHover.insumosConAlerta.length > 0 && !puntoHover.esBajoUmbral && (
+              <div className="text-amber-300 text-[8px] mt-0.5">
+                (Nota: {puntoHover.insumosConAlerta.length} insumo individual bajo mínimo)
+              </div>
+            )}
           </div>
         )}
       </div>
