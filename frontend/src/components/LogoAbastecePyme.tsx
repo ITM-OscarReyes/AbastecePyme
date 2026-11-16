@@ -68,7 +68,7 @@ export const LogoAbastecePyme: React.FC<LogoAbastecePymeProps> = ({
               <stop offset="100%" stopColor="#3B82F6" />
             </linearGradient>
 
-            {/* Sombra de profundidad */}
+            {/* Sombra isometrica 3D */}
             <filter id="logoElevation" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000000" floodOpacity="0.45" />
             </filter>
