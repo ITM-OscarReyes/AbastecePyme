@@ -25,6 +25,7 @@ import { ModalAyudaOperativa } from './components/ModalAyudaOperativa';
 import { ModalDetalleElemento } from './components/ModalDetalleElemento';
 import { ModalConfirmarRiesgo } from './components/ModalConfirmarRiesgo';
 import { ModalPerfilesAcceso } from './components/ModalPerfilesAcceso';
+import { ModalSolicitudVenta } from './components/ModalSolicitudVenta';
 import { PanelDetalleNodo, MensajeSinSeleccion } from './components/PanelDetalleNodo';
 import { useHistorialImpactos } from './hooks/useHistorialImpactos';
 import {
@@ -106,6 +107,7 @@ export const App: React.FC = () => {
   );
   const [modalAyudaAbierto, setModalAyudaAbierto] = useState<boolean>(false);
   const [modalPerfilesAbierto, setModalPerfilesAbierto] = useState<boolean>(false);
+  const [modalVentaAbierto, setModalVentaAbierto] = useState<boolean>(false);
 
   const [filtroTipoCatalogo, setFiltroTipoCatalogo] = useState<string>('TODOS');
   const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
@@ -582,6 +584,7 @@ export const App: React.FC = () => {
         onCambiarPerfil={manejarCambiarPerfil}
         onAbrirModalPerfiles={() => setModalPerfilesAbierto(true)}
         puedeEscribir={puedeEscribir}
+        onAbrirSolicitudVenta={() => setModalVentaAbierto(true)}
       />
 
       <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
@@ -828,6 +831,12 @@ export const App: React.FC = () => {
         perfilActivo={perfilActivo}
         perfilesDisponibles={perfilesDisponibles}
         onCambiarPerfil={manejarCambiarPerfil}
+      />
+
+      <ModalSolicitudVenta
+        isOpen={modalVentaAbierto}
+        onClose={() => setModalVentaAbierto(false)}
+        productos={grafo.elementos.filter((e) => e.tipo === 'PRODUCTO')}
       />
     </div>
   );

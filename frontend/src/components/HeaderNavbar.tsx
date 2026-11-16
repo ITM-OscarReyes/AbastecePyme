@@ -8,7 +8,8 @@ import {
   Plus,
   Link2,
   Check,
-  ChevronDown
+  ChevronDown,
+  ShoppingBag
 } from 'lucide-react';
 import type { Perfil, PerfilId } from '../types';
 import { LogoAbastecePyme } from './LogoAbastecePyme';
@@ -29,6 +30,7 @@ interface HeaderNavbarProps {
   onCambiarPerfil?: (perfilId: PerfilId) => void;
   onAbrirModalPerfiles?: () => void;
   puedeEscribir?: boolean;
+  onAbrirSolicitudVenta?: () => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -42,7 +44,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   perfilesDisponibles = [],
   onCambiarPerfil,
   onAbrirModalPerfiles,
-  puedeEscribir = false
+  puedeEscribir = false,
+  onAbrirSolicitudVenta
 }) => {
   const [fechaHoraUtc, setFechaHoraUtc] = useState<string>('');
   const [menuAccionesAbierto, setMenuAccionesAbierto] = useState<boolean>(false);
@@ -95,7 +98,17 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
       {/* Derecha: Acciones rapidas, Ayuda, Notificaciones, Selector de Perfiles y Menu */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {puedeEscribir && (
+        {perfilActivo?.id === 'VENTAS' ? (
+          <button
+            type="button"
+            onClick={onAbrirSolicitudVenta}
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold border border-emerald-500 shadow-xs dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-300 dark:border-emerald-500/40 text-[11px] transition-all cursor-pointer mr-1"
+            title="Solicitar preparación o producción de un producto terminado a Planta"
+          >
+            <ShoppingBag size={13} className="text-white dark:text-emerald-300" />
+            <span>SOLICITAR PRODUCCIÓN</span>
+          </button>
+        ) : puedeEscribir && (
           <div className="hidden lg:flex items-center gap-1.5 mr-1">
             <button
               type="button"
@@ -160,16 +173,24 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           )}
         </button>
 
-        {/* SELECTOR DE PERFILES REALES (COMPRAS / PRODUCCIÓN) */}
+        {/* SELECTOR DE PERFILES REALES (ADMINISTRADOR / COMPRAS / PRODUCCIÓN / VENTAS) */}
         <div className="relative" ref={refMenuPerfil}>
           <button
             type="button"
             onClick={() => setMenuPerfilAbierto((prev) => !prev)}
             className="flex items-center gap-2 pl-2 pr-2 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-slate-200 dark:border-white/[0.08] transition-colors cursor-pointer text-left"
-            title="Alternar entre perfil Responsable de Compras y Coordinador de Producción"
+            title="Alternar entre perfil Administrador, Compras, Producción o Ventas"
           >
             <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              perfilActivo?.puedeEscribir ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/40' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/40'
+              perfilActivo?.id === 'ADMINISTRADOR'
+                ? 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-400/40'
+                : perfilActivo?.id === 'COMPRAS'
+                ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/40'
+                : perfilActivo?.id === 'PRODUCCION'
+                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/40'
+                : perfilActivo?.id === 'VENTAS'
+                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-400/40'
+                : 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/40'
             }`}>
               {perfilActivo ? perfilActivo.nombre.charAt(0) : 'C'}
             </div>
@@ -178,7 +199,15 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                 {perfilActivo ? perfilActivo.nombre : 'Responsable de compras'}
               </span>
               <span className="text-[9px] text-slate-500 dark:text-slate-400 leading-tight">
-                {perfilActivo?.puedeEscribir ? 'EDICIÓN TOTAL' : 'SOLO LECTURA'}
+                {perfilActivo?.id === 'ADMINISTRADOR'
+                  ? 'CONTROL TOTAL'
+                  : perfilActivo?.id === 'COMPRAS'
+                  ? 'PROVEEDORES E INSUMOS'
+                  : perfilActivo?.id === 'PRODUCCION'
+                  ? 'PROCESOS Y PRODUCTOS'
+                  : perfilActivo?.id === 'VENTAS'
+                  ? 'COMERCIAL Y PEDIDOS'
+                  : perfilActivo?.puedeEscribir ? 'EDICIÓN TOTAL' : 'SOLO LECTURA'}
               </span>
             </div>
             <ChevronDown size={12} className="text-slate-500 dark:text-slate-400" />
@@ -186,12 +215,23 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
           {/* Menú flotante de perfiles reales */}
           {menuPerfilAbierto && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#0D121D] border border-slate-200 dark:border-white/[0.1] rounded-lg shadow-2xl py-1.5 z-50 text-xs">
-              <div className="px-3 py-1.5 border-b border-slate-100 dark:border-white/[0.08] text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">
-                Perfiles del Sistema (F4)
+            <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#0D121D] border border-slate-200 dark:border-white/[0.1] rounded-lg shadow-2xl py-1.5 z-50 text-xs">
+              <div className="px-3 py-1.5 border-b border-slate-100 dark:border-white/[0.08] text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                Gobernanza y Perfiles de Acceso
               </div>
               {perfilesDisponibles.map((p) => {
                 const activo = perfilActivo?.id === p.id;
+                const descripcionRol =
+                  p.id === 'ADMINISTRADOR'
+                    ? 'Control total y configuración de red'
+                    : p.id === 'COMPRAS'
+                    ? 'Gestión de proveedores e insumos'
+                    : p.id === 'PRODUCCION'
+                    ? 'Gestión de procesos y productos finales'
+                    : p.id === 'VENTAS'
+                    ? 'Consulta de catálogo y solicitud de pedidos'
+                    : p.puedeEscribir ? 'Permiso de edición' : 'Modo protegido';
+
                 return (
                   <button
                     key={p.id}
@@ -207,7 +247,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                     <div>
                       <p className="font-bold text-[11px]">{p.nombre}</p>
                       <p className="text-[9px] text-slate-500 dark:text-slate-400">
-                        {p.puedeEscribir ? 'Permiso total de edición' : 'Modo protegido (solo consulta)'}
+                        {descripcionRol}
                       </p>
                     </div>
                     {activo && <Check size={14} className="text-sky-600 dark:text-sky-400 shrink-0" />}
@@ -223,7 +263,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                   }}
                   className="w-full text-center text-[10px] font-bold text-sky-600 dark:text-sky-400 hover:underline py-1 cursor-pointer"
                 >
-                  Comparativa de permisos detallada
+                  Ver matriz de permisos detallada
                 </button>
               </div>
             </div>

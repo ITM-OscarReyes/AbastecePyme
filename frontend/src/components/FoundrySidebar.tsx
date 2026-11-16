@@ -113,9 +113,15 @@ export const FoundrySidebar: React.FC<FoundrySidebarProps> = ({
           title="Ver o cambiar perfil operativo de la sesión"
         >
           <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 font-bold text-xs ${
-            perfilActivo?.puedeEscribir 
-              ? 'bg-sky-100 dark:bg-sky-950 border border-sky-300 dark:border-sky-500/40 text-sky-700 dark:text-sky-400' 
-              : 'bg-amber-100 dark:bg-amber-950 border border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-400'
+            perfilActivo?.id === 'ADMINISTRADOR'
+              ? 'bg-purple-100 dark:bg-purple-950 border border-purple-300 dark:border-purple-500/40 text-purple-700 dark:text-purple-400'
+              : perfilActivo?.id === 'COMPRAS'
+              ? 'bg-sky-100 dark:bg-sky-950 border border-sky-300 dark:border-sky-500/40 text-sky-700 dark:text-sky-400'
+              : perfilActivo?.id === 'PRODUCCION'
+              ? 'bg-amber-100 dark:bg-amber-950 border border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-400'
+              : perfilActivo?.id === 'VENTAS'
+              ? 'bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400'
+              : 'bg-sky-100 dark:bg-sky-950 border border-sky-300 dark:border-sky-500/40 text-sky-700 dark:text-sky-400'
           }`}>
             {perfilActivo?.puedeEscribir ? <ShieldCheck size={14} /> : <Lock size={13} />}
           </div>
@@ -125,7 +131,15 @@ export const FoundrySidebar: React.FC<FoundrySidebarProps> = ({
                 {perfilActivo ? perfilActivo.nombre : 'Responsable de compras'}
               </p>
               <p className="text-[9px] text-slate-500 dark:text-slate-400 truncate uppercase">
-                {perfilActivo?.puedeEscribir ? 'EDICIÓN HABILITADA' : 'MODO PROTEGIDO'}
+                {perfilActivo?.id === 'ADMINISTRADOR'
+                  ? 'CONTROL TOTAL'
+                  : perfilActivo?.id === 'COMPRAS'
+                  ? 'COMPRAS Y PROVEEDORES'
+                  : perfilActivo?.id === 'PRODUCCION'
+                  ? 'PROCESOS Y PRODUCTOS'
+                  : perfilActivo?.id === 'VENTAS'
+                  ? 'COMERCIAL Y PEDIDOS'
+                  : perfilActivo?.puedeEscribir ? 'EDICIÓN HABILITADA' : 'MODO PROTEGIDO'}
               </p>
             </div>
           )}

@@ -1,5 +1,14 @@
 import React from 'react';
-import { Check, Shield, UserCheck, X, KeyRound, Lock, Unlock } from 'lucide-react';
+import {
+  Check,
+  Shield,
+  UserCheck,
+  X,
+  KeyRound,
+  Unlock,
+  Wrench,
+  ShoppingBag
+} from 'lucide-react';
 import type { Perfil, PerfilId } from '../types';
 
 interface ModalPerfilesAccesoProps {
@@ -19,22 +28,85 @@ export const ModalPerfilesAcceso: React.FC<ModalPerfilesAccesoProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const comprasPerfil = perfilesDisponibles.find((p) => p.id === 'COMPRAS') ?? {
-    id: 'COMPRAS' as const,
-    nombre: 'Responsable de compras',
-    puedeEscribir: true
-  };
-
-  const produccionPerfil = perfilesDisponibles.find((p) => p.id === 'PRODUCCION') ?? {
-    id: 'PRODUCCION' as const,
-    nombre: 'Coordinador de producción',
-    puedeEscribir: false
-  };
-
   const seleccionarYSalir = (perfilId: PerfilId) => {
     onCambiarPerfil(perfilId);
     onClose();
   };
+
+  const infoPerfiles: Record<
+    PerfilId,
+    {
+      icono: React.ReactNode;
+      colorFondo: string;
+      colorBorde: string;
+      textoBadge: string;
+      descripcion: string;
+      permisos: string[];
+    }
+  > = {
+    ADMINISTRADOR: {
+      icono: <Shield size={20} className="text-purple-600 dark:text-purple-400" />,
+      colorFondo: 'bg-purple-500/10 dark:bg-purple-950/40',
+      colorBorde: 'border-purple-300 dark:border-purple-700',
+      textoBadge: 'Control Total',
+      descripcion: 'Acceso irrestricto a todas las funciones, catálogos y órdenes.',
+      permisos: [
+        'Crear, editar y eliminar proveedores e insumos',
+        'Crear, editar y eliminar procesos y productos',
+        'Gestionar todas las relaciones de la cadena',
+        'Supervisión y control de gobernanza'
+      ]
+    },
+    COMPRAS: {
+      icono: <UserCheck size={20} className="text-sky-600 dark:text-sky-400" />,
+      colorFondo: 'bg-sky-500/10 dark:bg-sky-950/40',
+      colorBorde: 'border-sky-300 dark:border-sky-700',
+      textoBadge: 'Gestión Externa',
+      descripcion: 'Responsable de aprovisionamiento de materias primas y proveedores.',
+      permisos: [
+        'Alta y gestión de proveedores externos',
+        'Registro de materias primas y suministros',
+        'Crear relación Proveedor → Insumo',
+        'Control de stock disponible y mínimo'
+      ]
+    },
+    PRODUCCION: {
+      icono: <Wrench size={20} className="text-amber-600 dark:text-amber-400" />,
+      colorFondo: 'bg-amber-500/10 dark:bg-amber-950/40',
+      colorBorde: 'border-amber-300 dark:border-amber-700',
+      textoBadge: 'Planta y Armado',
+      descripcion: 'Coordinador de manufactura, ensamble y productos terminados.',
+      permisos: [
+        'Creación y configuración de procesos de manufactura',
+        'Alta de productos terminados de catálogo',
+        'Crear relaciones Insumo → Proceso y Proceso → Producto',
+        'Consulta de diagnósticos y planes de entrega'
+      ]
+    },
+    VENTAS: {
+      icono: <ShoppingBag size={20} className="text-emerald-600 dark:text-emerald-400" />,
+      colorFondo: 'bg-emerald-500/10 dark:bg-emerald-950/40',
+      colorBorde: 'border-emerald-300 dark:border-emerald-700',
+      textoBadge: 'Comercial',
+      descripcion: 'Consulta de disponibilidad y emisión de solicitudes de pedidos.',
+      permisos: [
+        'Consulta de productos terminados disponibles',
+        'Visualización de la red y tiempos de entrega',
+        'Solicitar preparación o producción para ventas',
+        'Protegido: no altera la estructura de la planta'
+      ]
+    }
+  };
+
+  const perfilesAMostrar =
+    perfilesDisponibles.length > 0
+      ? perfilesDisponibles
+      : ([
+          { id: 'ADMINISTRADOR', nombre: 'Administrador', puedeEscribir: true },
+          { id: 'COMPRAS', nombre: 'Responsable de compras', puedeEscribir: true },
+          { id: 'PRODUCCION', nombre: 'Coordinador de producción', puedeEscribir: true },
+          { id: 'VENTAS', nombre: 'Asesor de ventas', puedeEscribir: false }
+        ] as Perfil[]);
 
   return (
     <div
@@ -42,14 +114,14 @@ export const ModalPerfilesAcceso: React.FC<ModalPerfilesAccesoProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-7 space-y-6"
+        className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#0A101D] border border-slate-200 dark:border-white/[0.1] rounded-3xl shadow-2xl p-6 sm:p-7 space-y-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-modal-perfiles"
       >
         {/* Cabecera */}
-        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div className="flex items-start justify-between border-b border-slate-100 dark:border-white/[0.08] pb-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
               <KeyRound size={22} />
@@ -59,170 +131,90 @@ export const ModalPerfilesAcceso: React.FC<ModalPerfilesAccesoProps> = ({
                 Control de Acceso y Perfiles de Demostración
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Gobernanza de permisos operativos: Compras vs Producción
+                Matriz de gobernanza operativa: Administrador · Compras · Producción · Ventas
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
             title="Cerrar ventana"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Tarjetas de los dos perfiles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Perfil 1: Responsable de compras */}
-          <div
-            className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
-              perfilActivo?.id === 'COMPRAS'
-                ? 'bg-sky-50/70 dark:bg-sky-950/40 border-sky-300 dark:border-sky-700 shadow-md shadow-sky-500/10'
-                : 'bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-            }`}
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-300 flex items-center justify-center">
-                  <UserCheck size={20} />
+        {/* Tarjetas de los 4 perfiles */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {perfilesAMostrar.map((perfil) => {
+            const perfilId = perfil.id as PerfilId;
+            const config = infoPerfiles[perfilId] || infoPerfiles.COMPRAS;
+            const activo = perfilActivo?.id === perfilId;
+
+            return (
+              <div
+                key={perfil.id}
+                className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
+                  activo
+                    ? `${config.colorFondo} ${config.colorBorde} shadow-md`
+                    : 'bg-slate-50/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.15]'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center">
+                      {config.icono}
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-white dark:bg-white/[0.06] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/[0.08]">
+                      <Unlock size={11} />
+                      <span>{config.textoBadge}</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {perfil.nombre}
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      Código: {perfil.id}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      {config.descripcion}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1 text-[11px] text-slate-600 dark:text-slate-300">
+                    {config.permisos.map((permiso) => (
+                      <div key={permiso} className="flex items-start gap-1.5">
+                        <Check size={13} className="text-sky-500 shrink-0 mt-0.5" />
+                        <span>{permiso}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  <Unlock size={11} />
-                  <span>Edición total</span>
-                </span>
+
+                <button
+                  type="button"
+                  onClick={() => seleccionarYSalir(perfilId)}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center justify-center gap-2 ${
+                    activo
+                      ? 'bg-sky-600 text-white cursor-default shadow-sky-600/20'
+                      : 'bg-white dark:bg-white/[0.06] hover:bg-sky-50 dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/[0.1]'
+                  }`}
+                >
+                  {activo ? (
+                    <>
+                      <Check size={14} />
+                      <span>Perfil actualmente activo</span>
+                    </>
+                  ) : (
+                    <span>Activar perfil {perfil.nombre}</span>
+                  )}
+                </button>
               </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  {comprasPerfil.nombre}
-                </h3>
-                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                  Código de perfil: {comprasPerfil.id}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1 text-[11px] text-slate-600 dark:text-slate-300">
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-sky-500 shrink-0 mt-0.5" />
-                  <span>Alta de nuevos proveedores y materiales</span>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-sky-500 shrink-0 mt-0.5" />
-                  <span>Creación y modificación de relaciones en la cadena</span>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-sky-500 shrink-0 mt-0.5" />
-                  <span>Eliminación de componentes y dependencias</span>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-sky-500 shrink-0 mt-0.5" />
-                  <span>Actualización de inventario y stock mínimo</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => seleccionarYSalir('COMPRAS')}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 ${
-                perfilActivo?.id === 'COMPRAS'
-                  ? 'bg-sky-600 text-white cursor-default shadow-sky-600/20'
-                  : 'bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/60 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {perfilActivo?.id === 'COMPRAS' ? (
-                <>
-                  <Check size={15} />
-                  <span>Perfil actualmente activo</span>
-                </>
-              ) : (
-                <span>Ingresar como Responsable de compras</span>
-              )}
-            </button>
-          </div>
-
-          {/* Perfil 2: Coordinador de producción */}
-          <div
-            className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
-              perfilActivo?.id === 'PRODUCCION'
-                ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 shadow-md shadow-emerald-500/10'
-                : 'bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-            }`}
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
-                  <Shield size={20} />
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  <Lock size={11} />
-                  <span>Solo consulta</span>
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  {produccionPerfil.nombre}
-                </h3>
-                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                  Código de perfil: {produccionPerfil.id}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1 text-[11px] text-slate-600 dark:text-slate-300">
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Consulta de la red completa y trazabilidad</span>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Análisis de impacto y cálculo de líneas de producto</span>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <Check size={13} className="text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Generación de planes de entrega y secuencias</span>
-                </div>
-                <div className="flex items-start gap-1.5 text-amber-700 dark:text-amber-300 font-medium">
-                  <Lock size={13} className="shrink-0 mt-0.5" />
-                  <span>Modo protegido: edición y eliminación bloqueadas</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => seleccionarYSalir('PRODUCCION')}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 ${
-                perfilActivo?.id === 'PRODUCCION'
-                  ? 'bg-emerald-600 text-white cursor-default shadow-emerald-600/20'
-                  : 'bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {perfilActivo?.id === 'PRODUCCION' ? (
-                <>
-                  <Check size={15} />
-                  <span>Perfil actualmente activo</span>
-                </>
-              ) : (
-                <span>Ingresar como Coordinador de producción</span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Nota explicativa de sesión */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-            <span className="truncate">
-              Sesión de demostración activa: <strong className="text-slate-800 dark:text-slate-200">{perfilActivo?.nombre}</strong>
-            </span>
-          </div>
-          <span className="text-[10px] font-mono uppercase tracking-wider shrink-0 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded">
-            Token en memoria
-          </span>
+            );
+          })}
         </div>
       </div>
     </div>
