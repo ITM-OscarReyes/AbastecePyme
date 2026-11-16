@@ -28,12 +28,8 @@ import { ModalPerfilesAcceso } from './components/ModalPerfilesAcceso';
 import { PanelDetalleNodo, MensajeSinSeleccion } from './components/PanelDetalleNodo';
 import { useHistorialImpactos } from './hooks/useHistorialImpactos';
 import {
-  Box,
-  GitCommitHorizontal,
   AlertTriangle,
   RefreshCw,
-  Layers,
-  Sparkles,
   AlertOctagon
 } from 'lucide-react';
 
@@ -567,10 +563,6 @@ export const App: React.FC = () => {
 
   const nodoSeleccionado = grafo.elementos.find((elemento) => elemento.id === nodoSeleccionadoId);
   const elementoDetalle = grafo.elementos.find((elemento) => elemento.id === elementoDetalleId) ?? null;
-  const proveedoresCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PROVEEDOR').length;
-  const insumosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'INSUMO').length;
-  const procesosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PROCESO').length;
-  const productosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PRODUCTO').length;
   const suministrosEnAlerta = grafo.elementos.filter((elemento) => elemento.alertaStock);
   const puedeEscribir = Boolean(perfilActivo?.puedeEscribir);
 
@@ -644,49 +636,21 @@ export const App: React.FC = () => {
         )}
 
         {tabActiva !== 'tablero' && (
-          <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="foundry-panel p-3 sm:p-3.5 flex items-center justify-between gap-2 border border-slate-200 dark:border-white/[0.08]">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Proveedores</span>
-                <p className="text-xl sm:text-2xl font-mono font-black tabular-nums text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{proveedoresCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-tight mt-0.5">Suministro externo</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg border border-sky-500/20">
-                <Box className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
+          <div className="shrink-0 flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/[0.08]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider font-mono">
+                {tabActiva === 'red' && 'Red de Dependencias y Cadena de Suministro'}
+                {tabActiva === 'catalogo' && 'Catálogo Maestro de Componentes'}
+                {tabActiva === 'impacto' && 'Análisis de Impacto y Continuidad'}
+                {tabActiva === 'produccion' && 'Orden y Viabilidad de Producción'}
+              </h2>
             </div>
-
-            <div className="foundry-panel p-3 sm:p-3.5 flex items-center justify-between gap-2 border border-slate-200 dark:border-white/[0.08]">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Materias & Suministros</span>
-                <p className="text-xl sm:text-2xl font-mono font-black tabular-nums text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{insumosCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-medium leading-tight mt-0.5">Materiales base</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-500/20">
-                <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-            </div>
-
-            <div className="foundry-panel p-3 sm:p-3.5 flex items-center justify-between gap-2 border border-slate-200 dark:border-white/[0.08]">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Procesos de Planta</span>
-                <p className="text-xl sm:text-2xl font-mono font-black tabular-nums text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{procesosCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-purple-600 dark:text-purple-400 font-medium leading-tight mt-0.5">Estaciones de trabajo</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg border border-purple-500/20">
-                <GitCommitHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-            </div>
-
-            <div className="foundry-panel p-3 sm:p-3.5 flex items-center justify-between gap-2 border border-slate-200 dark:border-white/[0.08]">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Productos Finales</span>
-                <p className="text-xl sm:text-2xl font-mono font-black tabular-nums text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{productosCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight mt-0.5">Despacho a cliente</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
+            <div className="text-[10px] sm:text-[11px] font-mono text-slate-500 dark:text-slate-400">
+              {tabActiva === 'red' && `${grafo.elementos.length} elementos · ${grafo.dependencias.length} dependencias`}
+              {tabActiva === 'catalogo' && `${grafo.elementos.length} elementos registrados`}
+              {tabActiva === 'impacto' && 'Evaluación causal de fallas'}
+              {tabActiva === 'produccion' && 'Secuencia acíclica de manufactura'}
             </div>
           </div>
         )}
