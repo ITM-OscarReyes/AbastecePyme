@@ -80,9 +80,12 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
       const conformes = totalSKUs - cantAlertas;
       const pct = totalSKUs > 0 ? Math.round((conformes / totalSKUs) * 100) : 100;
       const esBajoMinimo = pct < 100;
-      const nombresAlerta = alertasInsumos.map(
-        (i) => `${i.nombre} (${i.stockDisponible}/${i.stockMinimo})`
-      );
+      const nombresAlerta = alertasInsumos.map((i) => {
+        const disp = i.stockDisponible ?? 0;
+        const min = i.stockMinimo ?? 0;
+        const faltan = min - disp;
+        return `${i.nombre}: ${disp}/${min} (faltan ${faltan})`;
+      });
 
       let rotuloCorto = 'Proveedor';
       if (prov.id.includes('MADERA')) rotuloCorto = 'Madera';
@@ -329,20 +332,26 @@ export const ProcurementOverviewChart: React.FC<ProcurementOverviewChartProps> =
 
         {/* Tooltip táctico flotante con datos 100% reales */}
         {puntoHover && (
-          <div className="absolute top-2 left-6 pointer-events-none px-2.5 py-1.5 rounded bg-[#030712]/95 border border-cyan-500/50 shadow-2xl backdrop-blur-md text-[10px] text-white flex flex-col gap-0.5 z-20 font-mono">
+          <div className="absolute top-2 left-6 pointer-events-none px-2.5 py-1.5 rounded bg-[#030712]/95 border border-cyan-500/50 shadow-2xl backdrop-blur-md text-[10px] text-white flex flex-col gap-1 z-20 font-mono">
             <div className="flex items-center gap-1.5 font-bold">
-              <Truck size={11} className="text-cyan-400" />
+              <Truck size={11} className="text-cyan-400 shrink-0" />
               <span className="text-cyan-300">{puntoHover.rotulo}:</span>
-              <span>{puntoHover.porcentaje}% Cumplimiento ({puntoHover.conformes}/{puntoHover.total} SKUs)</span>
+              <span>{puntoHover.porcentaje}% Cumplimiento ({puntoHover.conformes}/{puntoHover.total} insumos listos)</span>
             </div>
-            <div className="text-[9px] text-slate-300 font-mono">
-              Stock total en planta: {puntoHover.volumen} uds (Mínimo agrupado: {puntoHover.minimo} uds)
-            </div>
-            <div className={puntoHover.esBajoMinimo ? 'text-rose-400 font-bold text-[9px]' : 'text-emerald-400 font-bold text-[9px]'}>
-              {puntoHover.esBajoMinimo
-                ? `⚠ Déficit en ${puntoHover.alertas} insumo(s): ${puntoHover.nombresAlerta.join(', ')}`
-                : '✓ 100% Abastecido (Todos los SKUs conformes)'}
-            </div>
+            {puntoHover.esBajoMinimo ? (
+              <div className="text-rose-400 font-bold text-[9px] flex flex-col gap-0.5">
+                <span>⚠ Déficit en {puntoHover.alertas} insumo(s):</span>
+                {puntoHover.nombresAlerta.map((alertaStr, idx) => (
+                  <span key={idx} className="text-rose-300 font-mono pl-2">
+                    • {alertaStr}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-emerald-400 font-bold text-[9px]">
+                ✓ 100% Abastecido ({puntoHover.total}/{puntoHover.total} insumos sobre el stock mínimo)
+              </div>
+            )}
           </div>
         )}
       </div>
