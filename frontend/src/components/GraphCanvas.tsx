@@ -37,33 +37,36 @@ const encuadrarAlInicio = (cy: Core, padding: number): void => {
 };
 
 // Generador de iconos SVG vectoriales nítidos para el interior de los hubs circulares
-const generarIconoSvg = (tipo: string, color: string): string => {
+const generarIconoSvg = (tipo: string, color: string, esGrupo?: boolean): string => {
   let iconPath = '';
-  if (tipo === 'PROVEEDOR') {
+  if (esGrupo) {
+    // Suministros agrupados / multi-capa
+    iconPath = `<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  } else if (tipo === 'PROVEEDOR') {
     // Fábrica / Sede de Proveedor
-    iconPath = `<path d="M3 21h18M5 21V7l8-4v18M13 11l6-3v13M9 9h1M9 13h1M9 17h1M17 13h1M17 17h1" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+    iconPath = `<path d="M3 21h18M5 21V7l8-4v18M13 11l6-3v13M9 9h1M9 13h1M9 17h1M17 13h1M17 17h1" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
   } else if (tipo === 'INSUMO') {
     // Cubo / Paquete de Suministro
-    iconPath = `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><polyline points="3.29 7 12 12 20.71 7" stroke="${color}" stroke-width="2" fill="none"/><line x1="12" y1="22" x2="12" y2="12" stroke="${color}" stroke-width="2"/>`;
+    iconPath = `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><polyline points="3.29 7 12 12 20.71 7" stroke="${color}" stroke-width="2.2" fill="none"/><line x1="12" y1="22" x2="12" y2="12" stroke="${color}" stroke-width="2.2"/>`;
   } else if (tipo === 'PROCESO') {
     // Engranaje / Línea de Procesamiento
-    iconPath = `<circle cx="12" cy="12" r="3" stroke="${color}" stroke-width="2" fill="none"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="${color}" stroke-width="2" fill="none"/>`;
+    iconPath = `<circle cx="12" cy="12" r="3" stroke="${color}" stroke-width="2.2" fill="none"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="${color}" stroke-width="2.2" fill="none"/>`;
   } else {
     // Trofeo / Producto Terminado
-    iconPath = `<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34M7.8 4h8.4C17.2 4 18 4.8 18 5.8v4.4c0 3.2-2.6 5.8-5.8 5.8h-.4C8.6 16 6 13.4 6 10.2V5.8C6 4.8 6.8 4 7.8 4z" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+    iconPath = `<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34M7.8 4h8.4C17.2 4 18 4.8 18 5.8v4.4c0 3.2-2.6 5.8-5.8 5.8h-.4C8.6 16 6 13.4 6 10.2V5.8C6 4.8 6.8 4 7.8 4z" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">${iconPath}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24">${iconPath}</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
 // Generador de estilos y paleta de colorimetría quirúrgica adaptativa para los hubs circulares
-const obtenerEstiloNodoSegunTema = (tipo: string, alertaStock: boolean, esOscuro: boolean) => {
+const obtenerEstiloNodoSegunTema = (tipo: string, alertaStock: boolean, esOscuro: boolean, esGrupo?: boolean) => {
   let colorFondo = esOscuro ? '#061325' : '#F0F9FF';
   let colorBorde = esOscuro ? '#38BDF8' : '#0284C7';
   let haloColor = esOscuro ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.16)';
   let iconColor = esOscuro ? '#38BDF8' : '#0284C7';
   let borderWidth = 2.5;
-  const nodeSize = 54;
+  const nodeSize = esGrupo ? 66 : 60;
 
   if (tipo === 'PROVEEDOR') {
     colorFondo = esOscuro ? '#032015' : '#ECFDF5';
@@ -78,10 +81,11 @@ const obtenerEstiloNodoSegunTema = (tipo: string, alertaStock: boolean, esOscuro
       iconColor = esOscuro ? '#F43F5E' : '#B91C1C';
       borderWidth = 3;
     } else {
-      colorFondo = esOscuro ? '#071A2E' : '#F0F9FF';
-      colorBorde = esOscuro ? '#0284C7' : '#0284C7';
-      haloColor = esOscuro ? 'rgba(2, 132, 199, 0.35)' : 'rgba(2, 132, 199, 0.18)';
+      colorFondo = esOscuro ? (esGrupo ? '#0A2540' : '#071A2E') : (esGrupo ? '#E0F2FE' : '#F0F9FF');
+      colorBorde = esOscuro ? (esGrupo ? '#38BDF8' : '#0284C7') : (esGrupo ? '#0284C7' : '#0284C7');
+      haloColor = esOscuro ? 'rgba(2, 132, 199, 0.45)' : 'rgba(2, 132, 199, 0.22)';
       iconColor = esOscuro ? '#38BDF8' : '#0284C7';
+      if (esGrupo) borderWidth = 3.5;
     }
   } else if (tipo === 'PROCESO') {
     colorFondo = esOscuro ? '#170E2B' : '#FAF5FF';
@@ -126,6 +130,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [menuLineaAbierto, setMenuLineaAbierto] = useState<boolean>(false);
   const [busquedaLinea, setBusquedaLinea] = useState<string>('');
   const [layoutNombre, setLayoutNombre] = useState<'dagre' | 'concentric'>('dagre');
+  const [vistaSuministros, setVistaSuministros] = useState<'compacta' | 'detallada'>('compacta');
 
   // Callback estable para selección de nodo
   const onSelectNodeRef = useRef(onSelectNode);
@@ -179,41 +184,168 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       cyRef.current = null;
     }
 
-    // Nodos circulares tácticos adaptativos según modo claro/oscuro
-    const cyNodes = elementos.map((e) => {
-      const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
-        obtenerEstiloNodoSegunTema(e.tipo, Boolean(e.alertaStock), esModoOscuro);
+    // Generación de nodos y conexiones según modo de visualización (Compacta vs Detallada)
+    let cyNodes: any[] = [];
+    let cyEdges: any[] = [];
 
-      const sku = obtenerCodigoSku(e.id) || e.id;
-      const estadoTag = e.alertaStock ? '⚠️ BAJO' : '';
+    if (vistaSuministros === 'detallada') {
+      cyNodes = elementos.map((e) => {
+        const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
+          obtenerEstiloNodoSegunTema(e.tipo, Boolean(e.alertaStock), esModoOscuro, false);
 
-      return {
+        const sku = obtenerCodigoSku(e.id) || e.id;
+        const estadoTag = e.alertaStock ? '⚠️ BAJO' : '';
+
+        return {
+          data: {
+            id: e.id,
+            label: `${e.nombre}\n[${sku}] ${estadoTag}`,
+            tipo: e.tipo,
+            alertaStock: Boolean(e.alertaStock),
+            colorFondo,
+            colorBorde,
+            haloColor,
+            borderWidth,
+            nodeSize,
+            iconSvg: generarIconoSvg(e.tipo, iconColor, false),
+            esGrupo: false
+          }
+        };
+      });
+
+      cyEdges = dependencias.map((d, index) => ({
         data: {
-          id: e.id,
-          label: `${e.nombre}\n[${sku}] ${estadoTag}`,
-          tipo: e.tipo,
-          alertaStock: Boolean(e.alertaStock),
-          colorFondo,
-          colorBorde,
-          haloColor,
-          borderWidth,
-          nodeSize,
-          iconSvg: generarIconoSvg(e.tipo, iconColor)
+          id: `e-${index}-${d.origen}-${d.destino}`,
+          source: d.origen,
+          target: d.destino,
+          lineColor: '#0284C7',
+          arrowColor: '#38BDF8',
+          width: 2.2
         }
-      };
-    });
+      }));
+    } else {
+      // VISTA COMPACTA: Agrupación visual de suministros por proveedor y planta
+      const noInsumos = elementos.filter((e) => e.tipo !== 'INSUMO');
+      const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
 
-    // Conexiones dirigidas limpias
-    const cyEdges = dependencias.map((d, index) => ({
-      data: {
-        id: `e-${index}-${d.origen}-${d.destino}`,
-        source: d.origen,
-        target: d.destino,
-        lineColor: '#0284C7',
-        arrowColor: '#38BDF8',
-        width: 2
-      }
-    }));
+      const mapaInsumoAGrupo = new Map<string, string>();
+      const gruposMap = new Map<
+        string,
+        { key: string; titulo: string; insumos: Elemento[]; alertaStock: boolean }
+      >();
+
+      insumos.forEach((ins) => {
+        const padres = dependencias
+          .filter((d) => d.destino === ins.id)
+          .map((d) => elementos.find((e) => e.id === d.origen))
+          .filter(Boolean) as Elemento[];
+
+        const provPadres = padres.filter((p) => p.tipo === 'PROVEEDOR');
+        const procPadres = padres.filter((p) => p.tipo === 'PROCESO');
+
+        let claveGrupo = 'GRP_BASE';
+        let rotuloGrupo = 'Suministros generales';
+
+        if (procPadres.length > 0) {
+          claveGrupo = 'GRP_PLANTA';
+          rotuloGrupo = 'Producidos en planta';
+        } else if (provPadres.length === 1) {
+          const prov = provPadres[0];
+          claveGrupo = `GRP_PROV_${prov.id}`;
+          const rotuloProv =
+            prov.nombre.replace(/^Proveedor\s*(de)?\s*/i, '').trim() || prov.id;
+          rotuloGrupo = `Suministros [${rotuloProv}]`;
+        } else if (provPadres.length > 1) {
+          claveGrupo = 'GRP_MULTI_PROV';
+          rotuloGrupo = 'Varios proveedores';
+        }
+
+        mapaInsumoAGrupo.set(ins.id, claveGrupo);
+
+        if (!gruposMap.has(claveGrupo)) {
+          gruposMap.set(claveGrupo, {
+            key: claveGrupo,
+            titulo: rotuloGrupo,
+            insumos: [],
+            alertaStock: false
+          });
+        }
+        const g = gruposMap.get(claveGrupo)!;
+        g.insumos.push(ins);
+        if (ins.alertaStock) g.alertaStock = true;
+      });
+
+      const nodosNoInsumos = noInsumos.map((e) => {
+        const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
+          obtenerEstiloNodoSegunTema(e.tipo, Boolean(e.alertaStock), esModoOscuro, false);
+
+        const sku = obtenerCodigoSku(e.id) || e.id;
+        const estadoTag = e.alertaStock ? '⚠️ BAJO' : '';
+
+        return {
+          data: {
+            id: e.id,
+            label: `${e.nombre}\n[${sku}] ${estadoTag}`,
+            tipo: e.tipo,
+            alertaStock: Boolean(e.alertaStock),
+            colorFondo,
+            colorBorde,
+            haloColor,
+            borderWidth,
+            nodeSize,
+            iconSvg: generarIconoSvg(e.tipo, iconColor, false),
+            esGrupo: false
+          }
+        };
+      });
+
+      const nodosGrupos = Array.from(gruposMap.values()).map((g) => {
+        const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
+          obtenerEstiloNodoSegunTema('INSUMO', g.alertaStock, esModoOscuro, true);
+        const alertaTag = g.alertaStock ? '⚠️ ALERTA' : '';
+
+        return {
+          data: {
+            id: g.key,
+            label: `${g.titulo}\n[${g.insumos.length} suministros] ${alertaTag}`,
+            tipo: 'INSUMO',
+            alertaStock: g.alertaStock,
+            colorFondo,
+            colorBorde,
+            haloColor,
+            borderWidth,
+            nodeSize,
+            iconSvg: generarIconoSvg('INSUMO', iconColor, true),
+            esGrupo: true,
+            subIds: g.insumos.map((i) => i.id)
+          }
+        };
+      });
+
+      cyNodes = [...nodosNoInsumos, ...nodosGrupos];
+
+      // Aristas compactas únicas
+      const aristasVistas = new Set<string>();
+      dependencias.forEach((d, idx) => {
+        const fuente = mapaInsumoAGrupo.get(d.origen) || d.origen;
+        const sumidero = mapaInsumoAGrupo.get(d.destino) || d.destino;
+        if (fuente === sumidero) return;
+        const clave = `${fuente}-->${sumidero}`;
+        if (!aristasVistas.has(clave)) {
+          aristasVistas.add(clave);
+          cyEdges.push({
+            data: {
+              id: `ec-${idx}-${fuente}-${sumidero}`,
+              source: fuente,
+              target: sumidero,
+              lineColor: '#0284C7',
+              arrowColor: '#38BDF8',
+              width: 2.2
+            }
+          });
+        }
+      });
+    }
 
     try {
       const cy = cytoscape({
@@ -236,11 +368,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               'border-opacity': 0.95,
               'underlay-shape': 'ellipse',
               'underlay-color': 'data(haloColor)',
-              'underlay-padding': '8px',
+              'underlay-padding': '9px',
               'underlay-opacity': 0.65,
               'background-image': 'data(iconSvg)',
-              'background-width': '24px',
-              'background-height': '24px',
+              'background-width': '28px',
+              'background-height': '28px',
               'background-fit': 'none',
               'background-position-x': '50%',
               'background-position-y': '50%',
@@ -253,7 +385,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               'text-halign': 'center',
               'text-margin-y': 7,
               'text-wrap': 'wrap',
-              'text-max-width': '125px',
+              'text-max-width': '135px',
               'text-background-color': esModoOscuro ? '#060A12' : '#FFFFFF',
               'text-background-opacity': esModoOscuro ? 0.85 : 0.95,
               'text-background-padding': '4px',
@@ -299,7 +431,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
       cy.on('tap', 'node', (evt) => {
         const node: NodeSingular = evt.target;
-        onSelectNodeRef.current?.(node.id());
+        const subIds = node.data('subIds') as string[] | undefined;
+        if (subIds && subIds.length > 0) {
+          const insumoAlerta = subIds.find((id) => {
+            const el = elementos.find((e) => e.id === id);
+            return el?.alertaStock;
+          });
+          onSelectNodeRef.current?.(insumoAlerta || subIds[0]);
+        } else {
+          onSelectNodeRef.current?.(node.id());
+        }
       });
 
       cy.on('tap', (evt) => {
@@ -321,7 +462,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias]);
+  }, [elementos, dependencias, vistaSuministros]);
 
   // 2. ACTUALIZACIÓN LIGERA DE ESTILOS Y FILTRADO (Sin destruir el lienzo ni mover nodos)
   useEffect(() => {
@@ -332,20 +473,42 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       // Nodos
       cy.nodes().forEach((node) => {
         const id = node.id();
-        const pertenece = !nodosLineaFiltro || nodosLineaFiltro.has(id);
-        const esSeleccionado = nodoSeleccionadoId === id;
-        const esAfectado = nodosAfectadosIds.includes(id);
+        const subIds = node.data('subIds') as string[] | undefined;
+        const esGrupo = Boolean(node.data('esGrupo'));
+
+        const pertenece = esGrupo
+          ? !nodosLineaFiltro || (subIds ? subIds.some((sId) => nodosLineaFiltro.has(sId)) : true)
+          : !nodosLineaFiltro || nodosLineaFiltro.has(id);
+
+        const esSeleccionado = esGrupo
+          ? Boolean(subIds && nodoSeleccionadoId && subIds.includes(nodoSeleccionadoId)) ||
+            nodoSeleccionadoId === id
+          : nodoSeleccionadoId === id;
+
+        const esAfectado = esGrupo
+          ? Boolean(subIds && subIds.some((sId) => nodosAfectadosIds.includes(sId))) ||
+            nodosAfectadosIds.includes(id)
+          : nodosAfectadosIds.includes(id);
+
         const tipo = (node.data('tipo') as string) || '';
         const alertaStock = Boolean(node.data('alertaStock'));
-        const estilo = obtenerEstiloNodoSegunTema(tipo, alertaStock, esModoOscuro);
+        const estilo = obtenerEstiloNodoSegunTema(tipo, alertaStock, esModoOscuro, esGrupo);
 
         node.style({
           'opacity': pertenece ? 1 : 0.15,
           'background-color': estilo.colorFondo,
-          'background-image': generarIconoSvg(tipo, estilo.iconColor),
+          'background-image': generarIconoSvg(tipo, estilo.iconColor, esGrupo),
           'border-width': esSeleccionado ? 4.5 : esAfectado ? 3.5 : estilo.borderWidth,
           'border-color': esSeleccionado ? '#38BDF8' : esAfectado ? '#EF4444' : estilo.colorBorde,
-          'underlay-opacity': esSeleccionado ? 0.95 : esAfectado ? 0.8 : pertenece ? (esModoOscuro ? 0.65 : 0.4) : 0.08,
+          'underlay-opacity': esSeleccionado
+            ? 0.95
+            : esAfectado
+            ? 0.8
+            : pertenece
+            ? esModoOscuro
+              ? 0.65
+              : 0.4
+            : 0.08,
           'underlay-color': esSeleccionado ? '#38BDF8' : esAfectado ? '#EF4444' : estilo.haloColor,
           'color': esModoOscuro ? '#F1F5F9' : '#0F172A',
           'text-background-color': esModoOscuro ? '#060A12' : '#FFFFFF',
@@ -358,20 +521,53 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
       // Aristas
       cy.edges().forEach((edge) => {
-        const sourceId = edge.source().id();
-        const targetId = edge.target().id();
-        const pertenece =
-          !nodosLineaFiltro || (nodosLineaFiltro.has(sourceId) && nodosLineaFiltro.has(targetId));
+        const sourceNode = edge.source();
+        const targetNode = edge.target();
+        const sourceId = sourceNode.id();
+        const targetId = targetNode.id();
+        const sourceSubIds = sourceNode.data('subIds') as string[] | undefined;
+        const targetSubIds = targetNode.data('subIds') as string[] | undefined;
 
-        const esEnCadena =
-          (nodoSeleccionadoId === sourceId && nodosAfectadosIds.includes(targetId)) ||
-          (nodosAfectadosIds.includes(sourceId) && nodosAfectadosIds.includes(targetId));
+        const sourcePertenece = sourceSubIds
+          ? !nodosLineaFiltro || sourceSubIds.some((sId) => nodosLineaFiltro.has(sId))
+          : !nodosLineaFiltro || nodosLineaFiltro.has(sourceId);
+
+        const targetPertenece = targetSubIds
+          ? !nodosLineaFiltro || targetSubIds.some((sId) => nodosLineaFiltro.has(sId))
+          : !nodosLineaFiltro || nodosLineaFiltro.has(targetId);
+
+        const pertenece = sourcePertenece && targetPertenece;
+
+        const sourceEnCadena =
+          sourceId === nodoSeleccionadoId ||
+          nodosAfectadosIds.includes(sourceId) ||
+          Boolean(sourceSubIds && sourceSubIds.some((sId) => sId === nodoSeleccionadoId || nodosAfectadosIds.includes(sId)));
+
+        const targetEnCadena =
+          nodosAfectadosIds.includes(targetId) ||
+          Boolean(targetSubIds && targetSubIds.some((sId) => nodosAfectadosIds.includes(sId)));
+
+        const esEnCadena = sourceEnCadena && targetEnCadena;
 
         edge.style({
-          'opacity': pertenece ? (esEnCadena ? 1 : (esModoOscuro ? 0.85 : 0.75)) : 0.08,
+          'opacity': pertenece ? (esEnCadena ? 1 : esModoOscuro ? 0.85 : 0.75) : 0.08,
           'width': esEnCadena ? 3.5 : pertenece ? 2 : 1,
-          'line-color': esEnCadena ? '#EF4444' : pertenece ? '#0284C7' : (esModoOscuro ? '#334155' : '#CBD5E1'),
-          'target-arrow-color': esEnCadena ? '#F87171' : pertenece ? (esModoOscuro ? '#38BDF8' : '#0284C7') : (esModoOscuro ? '#475569' : '#CBD5E1')
+          'line-color': esEnCadena
+            ? '#EF4444'
+            : pertenece
+            ? '#0284C7'
+            : esModoOscuro
+            ? '#334155'
+            : '#CBD5E1',
+          'target-arrow-color': esEnCadena
+            ? '#F87171'
+            : pertenece
+            ? esModoOscuro
+              ? '#38BDF8'
+              : '#0284C7'
+            : esModoOscuro
+            ? '#475569'
+            : '#CBD5E1'
         });
       });
     });
@@ -544,6 +740,37 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             </button>
           )}
 
+          {/* Alternar Modo de Suministros: Compacta vs Detallada */}
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/[0.1] mx-0.5"></div>
+          <div className="flex items-center bg-slate-100 dark:bg-white/[0.04] p-0.5 rounded border border-slate-300 dark:border-white/[0.08] text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => setVistaSuministros('compacta')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 ${
+                vistaSuministros === 'compacta'
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Vista Compacta: agrupa visualmente los suministros por proveedor y planta (Recomendada)"
+            >
+              <Layers size={11} />
+              <span>Compacta</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setVistaSuministros('detallada')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 ${
+                vistaSuministros === 'detallada'
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Vista Detallada: muestra todos los suministros individuales con sus SKUs"
+            >
+              <Search size={11} />
+              <span>Detallada</span>
+            </button>
+          </div>
+
           {/* Alternar Disposición: Dagre vs Concéntrico */}
           <div className="h-4 w-px bg-slate-300 dark:bg-white/[0.1] mx-0.5"></div>
           <button
@@ -616,6 +843,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#0284C7] dark:bg-[#38BDF8] shadow-none dark:shadow-[0_0_8px_#38BDF8]"></span>
           <span className="text-slate-700 dark:text-slate-300 font-medium">Suministro</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0284C7] dark:bg-[#38BDF8] ring-2 ring-sky-400/50 shadow-none dark:shadow-[0_0_8px_#38BDF8]"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium">Grupo Suministros</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#9333EA] dark:bg-[#A855F7] shadow-none dark:shadow-[0_0_8px_#A855F7]"></span>
