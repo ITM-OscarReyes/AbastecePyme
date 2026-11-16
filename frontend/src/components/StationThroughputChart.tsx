@@ -11,17 +11,16 @@ interface PuntoEstacionReal {
   id: string;
   rotulo: string;
   nombreCompleto: string;
-  stockDisponible: number;
-  stockMinimo: number;
+  porcentajeCobertura: number;
+  insumosConformes: number;
+  totalInsumos: number;
   esBajoUmbral: boolean;
   insumosConAlerta: string[];
-  insumosEntrada: string[];
 }
 
 interface CoordenadaEstacion extends PuntoEstacionReal {
   x: number;
   y: number;
-  yUmbral: number;
 }
 
 export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
@@ -30,13 +29,13 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
 }) => {
   const [puntoHover, setPuntoHover] = useState<CoordenadaEstacion | null>(null);
 
-  // Calcula las métricas 100% reales de disponibilidad y umbrales mínimos por estación de proceso
-  const { datos, maximoValor, hayEstacionesBajoUmbral } = useMemo(() => {
+  // Calcula la tasa de cobertura operativa 100% real por estación de manufactura
+  const { datos, cantBajoUmbral } = useMemo(() => {
     const todosProcesos = elementos.filter((e) => e.tipo === 'PROCESO');
     const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
 
     if (todosProcesos.length === 0) {
-      return { datos: [], maximoValor: 200, hayEstacionesBajoUmbral: false };
+      return { datos: [], cantBajoUmbral: 0 };
     }
 
     // Ordenar las estaciones según el flujo real del proceso productivo
@@ -68,18 +67,16 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
               return false;
             });
 
-      const totalDisp = insumosEfectivos.reduce((acc, i) => acc + (i.stockDisponible ?? 0), 0);
-      const totalMin = insumosEfectivos.reduce((acc, i) => acc + (i.stockMinimo ?? 0), 0);
-
-      // REGLA MATEMÁTICA ESTRICTA: El punto está bajo el umbral ÚNICAMENTE si totalDisp < totalMin
-      const esBajoUmbral = totalDisp < totalMin;
-
-      // Insumos individuales que tienen déficit para avisar en el tooltip informativo
+      const totalInsumos = insumosEfectivos.length;
       const insumosConAlerta = insumosEfectivos
         .filter((i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0))
         .map((i) => `${i.nombre} (${i.stockDisponible}/${i.stockMinimo})`);
 
-      const nombresInsumos = insumosEfectivos.map((i) => i.nombre);
+      const insumosConformes = totalInsumos - insumosConAlerta.length;
+      const pct = totalInsumos > 0 ? Math.round((insumosConformes / totalInsumos) * 100) : 100;
+
+      // REGLA MATEMÁTICA ESTRICTA: El punto está bajo el umbral ÚNICAMENTE si porcentaje < 100%
+      const esBajoUmbral = pct < 100;
 
       // Rótulos claros y correctos para cada estación
       let rotulo = 'Estación';
@@ -96,24 +93,19 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
         id: proc.id,
         rotulo,
         nombreCompleto: proc.nombre,
-        stockDisponible: totalDisp,
-        stockMinimo: totalMin,
+        porcentajeCobertura: pct,
+        insumosConformes,
+        totalInsumos,
         esBajoUmbral,
-        insumosConAlerta,
-        insumosEntrada: nombresInsumos
+        insumosConAlerta
       };
     });
 
-    const maxVal = puntos.reduce(
-      (max, p) => Math.max(max, p.stockDisponible, p.stockMinimo),
-      100
-    );
-    const hayBajo = puntos.some((p) => p.esBajoUmbral);
+    const bajo = puntos.filter((p) => p.esBajoUmbral).length;
 
     return {
       datos: puntos,
-      maximoValor: Math.ceil(maxVal / 50) * 50,
-      hayEstacionesBajoUmbral: hayBajo
+      cantBajoUmbral: bajo
     };
   }, [elementos, dependencias]);
 
@@ -126,18 +118,20 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
 
   const chartW = svgWidth - padLeft - padRight;
   const chartH = svgHeight - padTop - padBottom;
-  const maxVal = maximoValor || 300;
+
+  // Escala fija estándar de 0% a 100%
+  const maxVal = 100;
+  const yUmbral100 = padTop; // 100% está en la parte superior del gráfico
 
   const coords: CoordenadaEstacion[] = useMemo(() => {
     if (datos.length === 0) return [];
     return datos.map((d, i) => {
       const divisor = datos.length > 1 ? datos.length - 1 : 1;
       const x = padLeft + (i / divisor) * chartW;
-      const y = padTop + chartH - (d.stockDisponible / maxVal) * chartH;
-      const yUmbral = padTop + chartH - (d.stockMinimo / maxVal) * chartH;
-      return { x, y, yUmbral, ...d };
+      const y = padTop + chartH - (d.porcentajeCobertura / maxVal) * chartH;
+      return { x, y, ...d };
     });
-  }, [datos, chartW, chartH, maxVal]);
+  }, [datos, chartW, chartH]);
 
   const pathD = useMemo(() => {
     if (coords.length === 0) return '';
@@ -146,16 +140,6 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
       const prev = arr[i - 1];
       const cx = (prev.x + curr.x) / 2;
       return `${acc} C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
-    }, '');
-  }, [coords]);
-
-  const pathUmbralD = useMemo(() => {
-    if (coords.length === 0) return '';
-    return coords.reduce((acc, curr, i, arr) => {
-      if (i === 0) return `M ${curr.x} ${curr.yUmbral}`;
-      const prev = arr[i - 1];
-      const cx = (prev.x + curr.x) / 2;
-      return `${acc} C ${cx} ${prev.yUmbral}, ${cx} ${curr.yUmbral}, ${curr.x} ${curr.yUmbral}`;
     }, '');
   }, [coords]);
 
@@ -172,19 +156,19 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
         <div className="flex items-center gap-1.5">
           <Layers size={12} className="text-sky-600 dark:text-sky-400" />
           <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-            Capacidad de Insumos por Estación
+            Cobertura Operativa por Estación
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {hayEstacionesBajoUmbral ? (
+          {cantBajoUmbral > 0 ? (
             <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 flex items-center gap-1 font-bold shrink-0">
               <AlertTriangle size={9} className="text-rose-600 dark:text-rose-400" />
-              Déficit en estación
+              {cantBajoUmbral} Estaciones con Déficit
             </span>
           ) : (
             <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1 font-bold shrink-0">
               <CheckCircle2 size={9} className="text-emerald-600 dark:text-emerald-400" />
-              Capacidad nominal
+              100% Cobertura Plena
             </span>
           )}
         </div>
@@ -209,8 +193,8 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
             </filter>
           </defs>
 
-          {/* Líneas horizontales de fondo */}
-          {[0, Math.round(maxVal / 3), Math.round((maxVal * 2) / 3), maxVal].map((val) => {
+          {/* Líneas horizontales de porcentaje de fondo (0%, 25%, 50%, 75%, 100%) */}
+          {[0, 25, 50, 75].map((val) => {
             const y = padTop + chartH - (val / maxVal) * chartH;
             return (
               <g key={val}>
@@ -230,27 +214,38 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
                   fontSize="7"
                   fontFamily="monospace"
                 >
-                  {val}
+                  {val}%
                 </text>
               </g>
             );
           })}
 
-          {/* Curva de Umbral Mínimo Requerido (Línea discontinua rosa) */}
-          {pathUmbralD && (
-            <path
-              d={pathUmbralD}
-              fill="none"
-              stroke="#F43F5E"
-              strokeWidth="1.2"
-              strokeDasharray="3 3"
-            />
-          )}
+          {/* Línea de Umbral de Capacidad Plena (Línea discontinua roja fija al 100%) */}
+          <line
+            x1={padLeft}
+            y1={yUmbral100}
+            x2={svgWidth - padRight}
+            y2={yUmbral100}
+            stroke="#F43F5E"
+            strokeWidth="1.2"
+            strokeDasharray="4 3"
+          />
+          <text
+            x={svgWidth - padRight - 2}
+            y={yUmbral100 - 3}
+            textAnchor="end"
+            fill="#F43F5E"
+            fontSize="7"
+            fontFamily="monospace"
+            fontWeight="bold"
+          >
+            Meta: 100% Insumos Listos
+          </text>
 
           {/* Área sombreada */}
           <path d={areaD} fill="url(#areaGlowThroughput)" />
 
-          {/* Línea de stock disponible */}
+          {/* Línea de cobertura de insumos */}
           <path
             d={pathD}
             fill="none"
@@ -274,7 +269,7 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
                 className={`transition-all hover:r-5.5 ${
                   pt.esBajoUmbral
                     ? 'fill-rose-500 stroke-rose-300 stroke-[1.8]'
-                    : 'fill-white dark:fill-[#0A0F1A] stroke-sky-600 dark:stroke-[#38BDF8] stroke-[1.8]'
+                    : 'fill-white dark:fill-[#0A0F1A] stroke-sky-400 stroke-[2]'
                 }`}
               />
               {/* Etiqueta de la estación en el eje X */}
@@ -295,25 +290,21 @@ export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
         {/* Tooltip interactivo flotante con regla matemática 100% coherente */}
         {puntoHover && (
           <div
-            className="absolute z-20 px-2 py-1 rounded bg-[#0A0F1A] border border-sky-500/40 text-[9px] font-mono text-white shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
+            className="absolute z-20 px-2.5 py-1.5 rounded bg-[#0A0F1A] border border-sky-500/40 text-[9px] font-mono text-white shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
             style={{
               left: `${(puntoHover.x / svgWidth) * 100}%`,
               top: `${(puntoHover.y / svgHeight) * 100 - 8}%`
             }}
           >
             <div className="font-bold text-sky-400">{puntoHover.nombreCompleto}</div>
-            <div>Disponible: {puntoHover.stockDisponible} uds</div>
-            <div className="text-slate-400">Umbral mín: {puntoHover.stockMinimo} uds</div>
+            <div className="font-bold mt-0.5">
+              Cobertura: {puntoHover.porcentajeCobertura}% ({puntoHover.insumosConformes}/{puntoHover.totalInsumos} insumos)
+            </div>
             <div className={puntoHover.esBajoUmbral ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
               {puntoHover.esBajoUmbral
-                ? `⚠ Bajo umbral mínimo (-${puntoHover.stockMinimo - puntoHover.stockDisponible} uds)`
-                : `✓ Stock conforme (+${puntoHover.stockDisponible - puntoHover.stockMinimo} uds sobre umbral)`}
+                ? `⚠ Déficit operativo (Faltan: ${puntoHover.insumosConAlerta.join(', ')})`
+                : '✓ 100% Plena capacidad (Insumos completos)'}
             </div>
-            {puntoHover.insumosConAlerta.length > 0 && !puntoHover.esBajoUmbral && (
-              <div className="text-amber-300 text-[8px] mt-0.5">
-                (Nota: {puntoHover.insumosConAlerta.length} insumo individual bajo mínimo)
-              </div>
-            )}
           </div>
         )}
       </div>
