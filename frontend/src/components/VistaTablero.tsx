@@ -396,7 +396,11 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
 
                     <div className="flex-1 flex flex-col justify-around py-0.5 space-y-1">
                       {/* Cabina de Acabado */}
-                      <div className="p-1.5 rounded bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 flex items-center justify-between text-[10px]">
+                      <div
+                        onClick={() => onConsultarElemento('PROC-ACABADO')}
+                        className="p-1.5 rounded bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 flex items-center justify-between text-[10px] cursor-pointer hover:border-rose-500 transition-colors"
+                        title="Consultar ficha de PROC-ACABADO"
+                      >
                         <div>
                           <div className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1">
                             <AlertTriangle size={10} className="text-rose-600 dark:text-rose-400" />
@@ -407,17 +411,25 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                         <span className="font-mono font-bold text-rose-600 dark:text-rose-400">35 min</span>
                       </div>
 
-                      {/* Mecanizado CNC */}
-                      <div className="p-1.5 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] flex items-center justify-between text-[10px]">
+                      {/* Ensamble de Mesa / Mecanizado */}
+                      <div
+                        onClick={() => onConsultarElemento('PROC-ENSAMBLE-MESA')}
+                        className="p-1.5 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] flex items-center justify-between text-[10px] cursor-pointer hover:border-sky-400 transition-colors"
+                        title="Consultar ficha de PROC-ENSAMBLE-MESA"
+                      >
                         <div>
-                          <div className="font-bold text-slate-800 dark:text-slate-200">Mecanizado CNC</div>
-                          <div className="text-[9px] text-slate-500 font-mono">Cambio de fresa</div>
+                          <div className="font-bold text-slate-800 dark:text-slate-200">Ensamble de Mesa</div>
+                          <div className="text-[9px] text-slate-500 font-mono">Estructura metálica</div>
                         </div>
                         <span className="font-mono font-bold text-amber-600 dark:text-amber-400">8 min</span>
                       </div>
 
                       {/* Taller de Corte */}
-                      <div className="p-1.5 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] flex items-center justify-between text-[10px]">
+                      <div
+                        onClick={() => onConsultarElemento('PROC-CORTE-MADERA')}
+                        className="p-1.5 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] flex items-center justify-between text-[10px] cursor-pointer hover:border-sky-400 transition-colors"
+                        title="Consultar ficha de PROC-CORTE-MADERA"
+                      >
                         <div>
                           <div className="font-bold text-slate-800 dark:text-slate-200">Taller de Corte</div>
                           <div className="text-[9px] text-slate-500 font-mono">Limpieza de viruta</div>
@@ -426,7 +438,11 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                       </div>
 
                       {/* Ensamble & Calidad */}
-                      <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 dark:text-slate-400 px-1">
+                      <div
+                        onClick={() => onConsultarElemento('PROC-ENSAMBLE-ESCRITORIO')}
+                        className="flex items-center justify-between text-[9px] font-mono text-slate-500 dark:text-slate-400 px-1 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
+                        title="Consultar ficha de PROC-ENSAMBLE-ESCRITORIO"
+                      >
                         <span>Ensamble & Calidad:</span>
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold">0 min (100% Activo)</span>
                       </div>

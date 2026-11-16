@@ -778,6 +778,7 @@ export const App: React.FC = () => {
         isOpen={modalElementoAbierto}
         elementos={grafo.elementos}
         elementoEditar={elementoEditar}
+        perfilActivo={perfilActivo}
         onClose={cerrarModalElemento}
         onSubmit={handleCrearElemento}
         onSolicitarGuardar={solicitarEditarElemento}

@@ -218,6 +218,18 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({
         </div>
       </div>
 
+      {/* Indicador contextual de filtrado */}
+      {(filtroTipo !== 'TODOS' || busqueda.trim().length > 0) && (
+        <div className="flex items-center justify-between text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/60 px-3 py-1.5 rounded-md border border-slate-200 dark:border-white/[0.05]">
+          <span>
+            Mostrando <strong className="text-slate-800 dark:text-slate-200">{elementosFiltrados.length}</strong> de <strong className="text-slate-800 dark:text-slate-200">{elementos.length}</strong> elementos en catálogo
+          </span>
+          {elementosFiltrados.length === 0 && (
+            <span className="text-amber-600 dark:text-amber-400 font-sans">Sin coincidencias para los criterios actuales</span>
+          )}
+        </div>
+      )}
+
       {modoVista === 'tabla' ? (
         <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
           <table className="w-full text-left border-collapse">

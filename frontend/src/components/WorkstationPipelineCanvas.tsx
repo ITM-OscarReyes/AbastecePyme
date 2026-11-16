@@ -1,10 +1,12 @@
 import {
     Activity,
     AlertTriangle,
+    Boxes,
+    CheckCircle2,
     ChevronRight,
-    Clock,
     Gauge,
     Layers,
+    Network,
     ShieldCheck,
     Truck
 } from 'lucide-react';
@@ -96,7 +98,7 @@ const SemicircularGauge: React.FC<{
 
 export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps> = ({
   elementos,
-  dependencias: _dependencias,
+  dependencias,
   onConsultarElemento,
   onNavegar: _onNavegar,
   vistaActiva,
@@ -107,48 +109,120 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
     return elementos.filter((e) => e.tipo === 'INSUMO');
   }, [elementos]);
 
-  const barnizInsumo = useMemo(() => {
-    return insumos.find((i) => i.id.includes('BARNIZ'));
-  }, [insumos]);
+  const procesos = useMemo(() => {
+    return elementos.filter((e) => e.tipo === 'PROCESO');
+  }, [elementos]);
 
-  // Proveedores reales
   const proveedores = useMemo(() => {
     return elementos.filter((e) => e.tipo === 'PROVEEDOR');
   }, [elementos]);
 
-  // Lead Times calculados para la Vista 3
+  const productos = useMemo(() => {
+    return elementos.filter((e) => e.tipo === 'PRODUCTO');
+  }, [elementos]);
+
+  const insumosEnAlerta = useMemo(() => {
+    return insumos.filter((i) => i.alertaStock);
+  }, [insumos]);
+
+  // Suministros clave reales del catálogo para la Vista 1
+  const insumoTablero = useMemo(() => {
+    return insumos.find((i) => i.id.includes('TABLERO')) || insumos[0];
+  }, [insumos]);
+
+  const insumoTubo = useMemo(() => {
+    return insumos.find((i) => i.id.includes('TUBO')) || insumos[1];
+  }, [insumos]);
+
+  const insumoTornillo = useMemo(() => {
+    return insumos.find((i) => i.id.includes('TORNILLO')) || insumos[2];
+  }, [insumos]);
+
+  const insumoBarniz = useMemo(() => {
+    return insumos.find((i) => i.id.includes('BARNIZ')) || insumos[3];
+  }, [insumos]);
+
+  // Procesos reales de planta
+  const procesoCorte = useMemo(() => {
+    return procesos.find((p) => p.id.includes('CORTE')) || procesos[0];
+  }, [procesos]);
+
+  const procesoAcabado = useMemo(() => {
+    return procesos.find((p) => p.id.includes('ACABADO')) || procesos[1];
+  }, [procesos]);
+
+  const procesoMesa = useMemo(() => {
+    return procesos.find((p) => p.id.includes('MESA')) || procesos[2];
+  }, [procesos]);
+
+  const procesoRepisa = useMemo(() => {
+    return procesos.find((p) => p.id.includes('REPISA')) || procesos[3];
+  }, [procesos]);
+
+  const procesoEscritorio = useMemo(() => {
+    return procesos.find((p) => p.id.includes('ESCRITORIO')) || procesos[4];
+  }, [procesos]);
+
+  // Productos reales del catálogo
+  const productoMesa = useMemo(() => {
+    return productos.find((p) => p.id.includes('MESA')) || productos[0];
+  }, [productos]);
+
+  const productoRepisa = useMemo(() => {
+    return productos.find((p) => p.id.includes('REPISA')) || productos[1];
+  }, [productos]);
+
+  const productoEscritorio = useMemo(() => {
+    return productos.find((p) => p.id.includes('ESCRITORIO')) || productos[2];
+  }, [productos]);
+
+  // Lead Times calculados para la Vista 3 vinculados a los proveedores reales del grafo
   const proveedoresMetrics = useMemo(() => {
-    return [
-      {
-        nombre: 'Maderas del Norte',
-        leadTime: '2 días',
-        confiabilidad: 98,
-        color: 'text-emerald-400',
-        barColor: 'bg-emerald-500'
-      },
-      {
-        nombre: 'Ferretería Industrial',
-        leadTime: '1 día',
-        confiabilidad: 99,
-        color: 'text-emerald-400',
-        barColor: 'bg-emerald-500'
-      },
-      {
-        nombre: 'Acabados & Químicos',
-        leadTime: '5 días (Retraso)',
-        confiabilidad: 62,
-        color: 'text-rose-400',
-        barColor: 'bg-rose-500'
-      },
-      {
-        nombre: 'Aceros de Colombia',
+    return proveedores.map((prov) => {
+      const esAcabados = prov.id.includes('ACABADOS') || prov.nombre.toLowerCase().includes('acabados');
+      const esMadera = prov.id.includes('MADERA') || prov.nombre.toLowerCase().includes('madera');
+      const esFerreteria = prov.id.includes('FERRETERIA') || prov.nombre.toLowerCase().includes('ferretería');
+
+      if (esAcabados) {
+        return {
+          id: prov.id,
+          nombre: prov.nombre,
+          leadTime: '5 días (Retraso)',
+          confiabilidad: 62,
+          color: 'text-rose-600 dark:text-rose-400',
+          barColor: 'bg-rose-500'
+        };
+      }
+      if (esMadera) {
+        return {
+          id: prov.id,
+          nombre: prov.nombre,
+          leadTime: '2 días',
+          confiabilidad: 98,
+          color: 'text-emerald-600 dark:text-emerald-400',
+          barColor: 'bg-emerald-500'
+        };
+      }
+      if (esFerreteria) {
+        return {
+          id: prov.id,
+          nombre: prov.nombre,
+          leadTime: '1 día',
+          confiabilidad: 99,
+          color: 'text-emerald-600 dark:text-emerald-400',
+          barColor: 'bg-emerald-500'
+        };
+      }
+      return {
+        id: prov.id,
+        nombre: prov.nombre,
         leadTime: '3 días',
         confiabilidad: 94,
-        color: 'text-sky-400',
+        color: 'text-sky-600 dark:text-sky-400',
         barColor: 'bg-sky-500'
-      }
-    ];
-  }, []);
+      };
+    });
+  }, [proveedores]);
 
   // Generador de datos para el Buffer Heatmap en Vista 3 (Todos los insumos auditados)
   const heatmapRows = useMemo(() => {
@@ -186,59 +260,72 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
           ========================================================================= */}
       {vistaActiva === 'VISTA_1_FLUJO' && (
         <div className="flex-1 flex flex-col p-3 gap-2.5 overflow-hidden h-full">
-          {/* Fila de los 4 KPIs Superiores de Imagen 1 */}
+          {/* Fila de los 4 Indicadores Maestros Reales del Grafo (F4) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-            {/* 1. OEE Eficiencia Global */}
+            {/* 1. Elementos en Red */}
             <div className="bg-slate-50 dark:bg-[#080D18] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors">
               <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1">
-                <Gauge size={12} className="text-sky-600 dark:text-sky-400" />
-                OEE Eficiencia Global
+                <Boxes size={12} className="text-sky-600 dark:text-sky-400" />
+                Elementos en Red
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-2xl font-bold font-mono text-sky-700 dark:text-sky-400 shadow-none dark:shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-                  89.4%
+                  {elementos.length}
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  {insumos.length} ins · {procesos.length} proc
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Relaciones Activas */}
+            <div className="bg-slate-50 dark:bg-[#080D18] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1">
+                <Network size={12} className="text-indigo-600 dark:text-indigo-400" />
+                Relaciones Activas
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-indigo-700 dark:text-indigo-400">
+                  {dependencias.length}
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  aristas dirigidas
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Productos Listos */}
+            <div className="bg-slate-50 dark:bg-[#080D18] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1">
+                <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />
+                Productos Listos
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">
+                  {productos.length}
                 </span>
                 <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  ▲ +2.1%
+                  disponibles
                 </span>
               </div>
             </div>
 
-            {/* 2. Tiempo Ciclo */}
-            <div className="bg-slate-50 dark:bg-[#080D18] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1">
-                <Clock size={12} className="text-slate-500 dark:text-slate-400" />
-                Tiempo Ciclo
+            {/* 4. Alertas por Revisar (Desglose de stock y ciclos sin repetir el total) */}
+            <div className={`border rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors ${
+              insumosEnAlerta.length > 0
+                ? 'bg-rose-50 dark:bg-[#1E080D] border-rose-300 dark:border-rose-500/50 shadow-rose-500/10'
+                : 'bg-slate-50 dark:bg-[#080D18] border-slate-200 dark:border-white/[0.08]'
+            }`}>
+              <span className="text-[10px] uppercase tracking-wider block mb-1 font-mono flex items-center gap-1 text-rose-700 dark:text-rose-400 font-bold">
+                <AlertTriangle size={12} className="text-rose-600 dark:text-rose-400" />
+                Alertas por Revisar
               </span>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-800 dark:text-slate-100">
-                  4.2h
+                <span className="text-2xl font-bold font-mono text-rose-700 dark:text-rose-400">
+                  {insumosEnAlerta.length}
                 </span>
-              </div>
-            </div>
-
-            {/* 3. Riesgo de Parada */}
-            <div className="bg-slate-50 dark:bg-[#080D18] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1">
-                <AlertTriangle size={12} className="text-amber-500 dark:text-amber-400" />
-                Riesgo de Parada
-              </span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                  MEDIO (Barniz)
-                </span>
-              </div>
-            </div>
-
-            {/* 4. WIP Unidades en Proceso */}
-            <div className="bg-slate-50 dark:bg-[#080D18] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 shadow-xs dark:shadow-lg transition-colors">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1">
-                <Layers size={12} className="text-slate-500 dark:text-slate-400" />
-                WIP Unidades en Proceso
-              </span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-800 dark:text-slate-100">
-                  48 uds
+                <span className="text-[10px] font-mono text-slate-600 dark:text-slate-300">
+                  {insumosEnAlerta.length} stock bajo · 0 ciclos
                 </span>
               </div>
             </div>
@@ -263,7 +350,7 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
 
                 <div className="flex-1 flex flex-col justify-between gap-1 min-h-0">
                   <div
-                    onClick={() => onConsultarElemento?.('INS-TABLERO-01')}
+                    onClick={() => onConsultarElemento?.(insumoTablero?.id || 'INS-TABLERO')}
                     className="flex-1 min-h-[44px] px-2 py-1 rounded-lg bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] hover:border-sky-400 dark:hover:border-sky-500/40 transition-all cursor-pointer flex items-center gap-2 overflow-hidden"
                   >
                     <div className="w-7 h-7 rounded bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.05] flex items-center justify-center shrink-0 text-sm">
@@ -271,17 +358,19 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate block">
-                        Tablón Madera
+                        {insumoTablero?.nombre || 'Tablero de madera'}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] font-mono mt-0.5">
                         <span className="text-slate-500 dark:text-slate-400">Stock:</span>
-                        <span className="font-bold text-sky-700 dark:text-sky-400 tabular-nums">80 uds</span>
+                        <span className="font-bold text-sky-700 dark:text-sky-400 tabular-nums">
+                          {insumoTablero?.stockDisponible ?? 80} uds
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div
-                    onClick={() => onConsultarElemento?.('INS-TUBO-01')}
+                    onClick={() => onConsultarElemento?.(insumoTubo?.id || 'INS-TUBO')}
                     className="flex-1 min-h-[44px] px-2 py-1 rounded-lg bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] hover:border-sky-400 dark:hover:border-sky-500/40 transition-all cursor-pointer flex items-center gap-2 overflow-hidden"
                   >
                     <div className="w-7 h-7 rounded bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.05] flex items-center justify-center shrink-0 text-sm">
@@ -289,36 +378,44 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate block">
-                        Tubos Acero
+                        {insumoTubo?.nombre || 'Tubo de acero'}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] font-mono mt-0.5">
                         <span className="text-slate-500 dark:text-slate-400">Stock:</span>
-                        <span className="font-bold text-sky-700 dark:text-sky-400 tabular-nums">60 uds</span>
+                        <span className="font-bold text-sky-700 dark:text-sky-400 tabular-nums">
+                          {insumoTubo?.stockDisponible ?? 60} uds
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div
-                    onClick={() => onConsultarElemento?.('INS-TORNILLO-01')}
-                    className="flex-1 min-h-[44px] px-2 py-1 rounded-lg bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] hover:border-sky-400 dark:hover:border-sky-500/40 transition-all cursor-pointer flex items-center gap-2 overflow-hidden"
+                    onClick={() => insumoTornillo?.id && onConsultarElemento?.(insumoTornillo.id)}
+                    className={`flex-1 min-h-[44px] px-2 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-2 overflow-hidden ${
+                      insumoTornillo?.alertaStock
+                        ? 'bg-rose-50 dark:bg-[#1E080D] border-rose-300 dark:border-rose-500/50'
+                        : 'bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] hover:border-sky-400'
+                    }`}
                   >
                     <div className="w-7 h-7 rounded bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.05] flex items-center justify-center shrink-0 text-sm">
                       🔩
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate block">
-                        Tornillos M6
+                        {insumoTornillo?.nombre || 'Tornillos M6'}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] font-mono mt-0.5">
                         <span className="text-slate-500 dark:text-slate-400">Stock:</span>
-                        <span className="font-bold text-sky-700 dark:text-sky-400 tabular-nums">300 uds</span>
+                        <span className="font-bold text-sky-700 dark:text-sky-400 tabular-nums">
+                          {insumoTornillo?.stockDisponible ?? 30}/{insumoTornillo?.stockMinimo ?? 100} uds
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Barniz Protector con Alerta Amarilla/Ámbar */}
                   <div
-                    onClick={() => onConsultarElemento?.('INS-BARNIZ-01')}
+                    onClick={() => onConsultarElemento?.(insumoBarniz?.id || 'INS-BARNIZ')}
                     className="flex-1 min-h-[44px] px-2 py-1 rounded-lg bg-amber-50 dark:bg-[#1F170A] border border-amber-300 dark:border-amber-500/60 shadow-xs dark:shadow-[0_0_12px_rgba(245,158,11,0.2)] hover:border-amber-400 transition-all cursor-pointer flex items-center gap-2 overflow-hidden"
                   >
                     <div className="w-7 h-7 rounded bg-amber-100 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30 flex items-center justify-center shrink-0 text-sm">
@@ -326,12 +423,12 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <span className="text-[10px] sm:text-[11px] font-bold text-amber-800 dark:text-amber-300 truncate block">
-                        Barniz Protector ⚠️
+                        {insumoBarniz?.nombre || 'Barniz protector'} ⚠️
                       </span>
                       <div className="flex items-center gap-1 text-[10px] font-mono mt-0.5">
                         <span className="text-amber-700/80 dark:text-amber-400/80">Stock:</span>
                         <span className="font-bold text-amber-800 dark:text-amber-300 tabular-nums">
-                          {barnizInsumo?.stockDisponible ?? 12}/{barnizInsumo?.stockMinimo ?? 15}L
+                          {insumoBarniz?.stockDisponible ?? 12}/{insumoBarniz?.stockMinimo ?? 15}L
                         </span>
                       </div>
                     </div>
@@ -345,10 +442,13 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   Transformación Primaria
                 </span>
 
-                <div className="flex-1 p-2.5 rounded-lg bg-emerald-50 dark:bg-[#061716] border border-emerald-300 dark:border-emerald-500/50 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.15)] flex flex-col justify-between overflow-hidden">
+                <div
+                  onClick={() => onConsultarElemento?.(procesoCorte?.id || 'PROC-CORTE-MADERA')}
+                  className="flex-1 p-2.5 rounded-lg bg-emerald-50 dark:bg-[#061716] border border-emerald-300 dark:border-emerald-500/50 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.15)] flex flex-col justify-between overflow-hidden cursor-pointer hover:border-emerald-500 transition-colors"
+                >
                   <div>
                     <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono uppercase tracking-wider block font-bold">
-                      WORKSTATION:
+                      {procesoCorte?.nombre || 'Corte de madera'}
                     </span>
                     <div className="grid grid-cols-2 gap-1 mt-2">
                       <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
@@ -375,7 +475,10 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   Acabado & Ensamble
                 </span>
 
-                <div className="flex-1 p-2.5 rounded-lg bg-amber-50 dark:bg-[#211206] border border-amber-300 dark:border-amber-500/60 shadow-xs dark:shadow-[0_0_15px_rgba(245,158,11,0.2)] flex flex-col justify-between overflow-hidden">
+                <div
+                  onClick={() => onConsultarElemento?.(procesoAcabado?.id || 'PROC-ACABADO')}
+                  className="flex-1 p-2.5 rounded-lg bg-amber-50 dark:bg-[#211206] border border-amber-300 dark:border-amber-500/60 shadow-xs dark:shadow-[0_0_15px_rgba(245,158,11,0.2)] flex flex-col justify-between overflow-hidden cursor-pointer hover:border-amber-500 transition-colors"
+                >
                   <div>
                     <span className="text-[9px] text-amber-700 dark:text-amber-400 font-bold font-mono uppercase tracking-wider flex items-center gap-1">
                       <AlertTriangle size={10} className="text-amber-600 dark:text-amber-400 shrink-0" />
@@ -389,14 +492,16 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                         </span>
                       </div>
                       <div className="text-[9px] font-mono text-amber-800 dark:text-amber-200/90 mt-0.5 truncate">
-                        (Bajo stock barniz)
+                        (Bajo stock {insumoBarniz?.nombre || 'barniz'})
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-1.5 border-t border-amber-200 dark:border-amber-500/20 flex items-center justify-between text-[9px] font-mono">
                     <span className="text-slate-600 dark:text-slate-400">Límite Barniz:</span>
-                    <span className="text-amber-700 dark:text-amber-400 font-bold tabular-nums">12/15L</span>
+                    <span className="text-amber-700 dark:text-amber-400 font-bold tabular-nums">
+                      {insumoBarniz?.stockDisponible ?? 12}/{insumoBarniz?.stockMinimo ?? 15}L
+                    </span>
                   </div>
                 </div>
               </div>
@@ -409,9 +514,14 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
 
                 <div className="flex-1 p-2.5 rounded-lg bg-slate-50 dark:bg-[#060A14] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-around overflow-hidden">
                   {/* Mesa de Trabajo */}
-                  <div>
+                  <div
+                    onClick={() => onConsultarElemento?.(productoMesa?.id || 'PROD-MESA-TRABAJO')}
+                    className="cursor-pointer group"
+                  >
                     <div className="flex items-center justify-between text-[10px] mb-1 gap-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate">Mesa Trabajo</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                        {productoMesa?.nombre || 'Mesa de trabajo metálica'}
+                      </span>
                       <span className="font-mono text-sky-700 dark:text-sky-400 font-bold shrink-0 tabular-nums">100%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
@@ -420,9 +530,14 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   </div>
 
                   {/* Repisa Flotante */}
-                  <div>
+                  <div
+                    onClick={() => onConsultarElemento?.(productoRepisa?.id || 'PROD-REPISA')}
+                    className="cursor-pointer group"
+                  >
                     <div className="flex items-center justify-between text-[10px] mb-1 gap-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate">Repisa Flot.</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                        {productoRepisa?.nombre || 'Repisa de madera flotante'}
+                      </span>
                       <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold shrink-0 tabular-nums">75%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
@@ -431,9 +546,14 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   </div>
 
                   {/* Escritorio */}
-                  <div>
+                  <div
+                    onClick={() => onConsultarElemento?.(productoEscritorio?.id || 'PROD-ESCRITORIO')}
+                    className="cursor-pointer group"
+                  >
                     <div className="flex items-center justify-between text-[10px] mb-1 gap-1">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate">Escritorio</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        {productoEscritorio?.nombre || 'Escritorio con cajones'}
+                      </span>
                       <span className="font-mono text-amber-700 dark:text-amber-400 font-bold shrink-0 tabular-nums">40%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
@@ -472,12 +592,16 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-stretch">
               {/* 1. Taller de Corte */}
               <div
-                onClick={() => onConsultarElemento?.('PROC-CORTE-MADERA-01')}
+                onClick={() => onConsultarElemento?.(procesoCorte?.id || 'PROC-CORTE-MADERA')}
                 className="bg-emerald-50 dark:bg-[#060A14] rounded-lg p-2.5 border border-emerald-300 dark:border-emerald-500/40 transition-all cursor-pointer flex flex-col justify-between relative group hover:border-emerald-500 shadow-xs"
               >
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white block">Taller de Corte</span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block">Wood cutting</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
+                    {procesoCorte?.nombre || 'Taller de Corte'}
+                  </span>
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                    {procesoCorte?.id || 'PROC-CORTE-MADERA'}
+                  </span>
                   <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono block mt-1 font-bold">Nominal: 85%</span>
                 </div>
                 <div className="my-1">
@@ -489,14 +613,18 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                 </div>
               </div>
 
-              {/* 2. Mecanizado CNC */}
+              {/* 2. Ensamble de Mesa */}
               <div
-                onClick={() => onConsultarElemento?.('PROC-MECANIZADO-01')}
+                onClick={() => onConsultarElemento?.(procesoMesa?.id || 'PROC-ENSAMBLE-MESA')}
                 className="bg-sky-50 dark:bg-[#060A14] rounded-lg p-2.5 border border-sky-300 dark:border-sky-500/40 transition-all cursor-pointer flex flex-col justify-between relative group hover:border-sky-500 shadow-xs"
               >
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white block">Mecanizado CNC</span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block">Precision machining</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
+                    {procesoMesa?.nombre || 'Ensamble de Mesa'}
+                  </span>
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                    {procesoMesa?.id || 'PROC-ENSAMBLE-MESA'}
+                  </span>
                   <span className="text-[9px] text-sky-700 dark:text-sky-400 font-mono block mt-1 font-bold">Capacidad: 90%</span>
                 </div>
                 <div className="my-1">
@@ -510,11 +638,13 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
 
               {/* 3. Cabina de Acabado (Bottleneck Alert) */}
               <div
-                onClick={() => onConsultarElemento?.('PROC-ACABADO-01')}
-                className="bg-rose-50 dark:bg-[#1A0808] rounded-lg p-2.5 border border-rose-300 dark:border-rose-500/60 shadow-xs dark:shadow-[0_0_15px_rgba(244,63,94,0.25)] transition-all cursor-pointer flex flex-col justify-between relative group"
+                onClick={() => onConsultarElemento?.(procesoAcabado?.id || 'PROC-ACABADO')}
+                className="bg-rose-50 dark:bg-[#1A0808] rounded-lg p-2.5 border border-rose-300 dark:border-rose-500/60 shadow-xs dark:shadow-[0_0_15px_rgba(244,63,94,0.25)] transition-all cursor-pointer flex flex-col justify-between relative group hover:border-rose-500"
               >
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white block">Cabina de Acabado</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
+                    {procesoAcabado?.nombre || 'Cabina de Acabado'}
+                  </span>
                   <span className="inline-flex items-center gap-1 text-[8px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 px-1 py-0.2 rounded mt-0.5">
                     <AlertTriangle size={9} />
                     BOTTLENECK ALERT
@@ -525,7 +655,9 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   <SemicircularGauge porcentaje={48} color="#E11D48" />
                 </div>
                 <div className="bg-rose-100 dark:bg-[#2E0B0F] border border-rose-300 dark:border-rose-500/50 rounded px-1.5 py-1 text-[9px] text-rose-800 dark:text-rose-200 font-mono flex items-center justify-between gap-1">
-                  <span className="truncate font-bold">12/15L Barniz</span>
+                  <span className="truncate font-bold">
+                    {insumoBarniz?.stockDisponible ?? 12}/{insumoBarniz?.stockMinimo ?? 15}L Barniz
+                  </span>
                   <AlertTriangle size={10} className="text-rose-600 dark:text-rose-400 shrink-0" />
                 </div>
                 <div className="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-400 dark:text-slate-600 pointer-events-none">
@@ -533,14 +665,18 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                 </div>
               </div>
 
-              {/* 4. Línea de Ensamble */}
+              {/* 4. Ensamble de Repisa */}
               <div
-                onClick={() => onConsultarElemento?.('PROC-ENSAMBLE-01')}
+                onClick={() => onConsultarElemento?.(procesoRepisa?.id || 'PROC-ENSAMBLE-REPISA')}
                 className="bg-purple-50 dark:bg-[#060A14] rounded-lg p-2.5 border border-purple-300 dark:border-purple-500/40 transition-all cursor-pointer flex flex-col justify-between relative group hover:border-purple-500 shadow-xs"
               >
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white block">Línea de Ensamble</span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block">Assembly Line</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
+                    {procesoRepisa?.nombre || 'Ensamble de Repisa'}
+                  </span>
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                    {procesoRepisa?.id || 'PROC-ENSAMBLE-REPISA'}
+                  </span>
                   <span className="text-[9px] text-purple-700 dark:text-purple-400 font-mono block mt-1 font-bold">Capacidad: 70%</span>
                 </div>
                 <div className="my-1">
@@ -552,14 +688,18 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                 </div>
               </div>
 
-              {/* 5. Control de Calidad */}
+              {/* 5. Ensamble de Escritorio */}
               <div
-                onClick={() => onConsultarElemento?.('PROC-CONTROL-CALIDAD-01')}
+                onClick={() => onConsultarElemento?.(procesoEscritorio?.id || 'PROC-ENSAMBLE-ESCRITORIO')}
                 className="bg-emerald-50 dark:bg-[#060A14] rounded-lg p-2.5 border border-emerald-300 dark:border-emerald-500/40 transition-all cursor-pointer flex flex-col justify-between group hover:border-emerald-500 shadow-xs"
               >
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white block">Control de Calidad</span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block">Inspection & Packaging</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
+                    {procesoEscritorio?.nombre || 'Ensamble de Escritorio'}
+                  </span>
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                    {procesoEscritorio?.id || 'PROC-ENSAMBLE-ESCRITORIO'}
+                  </span>
                   <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono block mt-1 font-bold">Capacidad Nominal</span>
                 </div>
                 <div className="my-1">
@@ -582,9 +722,14 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
 
             <div className="flex-1 flex flex-col justify-around py-1 space-y-2">
               {/* Mesa de Trabajo */}
-              <div className="space-y-1">
+              <div
+                onClick={() => onConsultarElemento?.(productoMesa?.id || 'PROD-MESA-TRABAJO')}
+                className="space-y-1 cursor-pointer group"
+              >
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-slate-800 dark:text-slate-200">Mesa de trabajo</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                    {productoMesa?.nombre || 'Mesa de trabajo metálica'}
+                  </span>
                   <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
                     7/7 steps - 100% completed
                   </span>
@@ -595,9 +740,14 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
               </div>
 
               {/* Repisa Flotante */}
-              <div className="space-y-1">
+              <div
+                onClick={() => onConsultarElemento?.(productoRepisa?.id || 'PROD-REPISA')}
+                className="space-y-1 cursor-pointer group"
+              >
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-slate-800 dark:text-slate-200">Repisa flotante</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                    {productoRepisa?.nombre || 'Repisa de madera flotante'}
+                  </span>
                   <span className="text-[10px] font-mono text-sky-700 dark:text-sky-400 font-bold">
                     9/14 steps - 65% in progress
                   </span>
@@ -608,9 +758,14 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
               </div>
 
               {/* Escritorio con cajones */}
-              <div className="space-y-1">
+              <div
+                onClick={() => onConsultarElemento?.(productoEscritorio?.id || 'PROD-ESCRITORIO')}
+                className="space-y-1 cursor-pointer group"
+              >
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-slate-800 dark:text-slate-200">Escritorio con cajones</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                    {productoEscritorio?.nombre || 'Escritorio de madera con cajones'}
+                  </span>
                   <span className="text-[10px] font-mono text-amber-700 dark:text-amber-400 font-bold">
                     8/20 steps - 40% delayed
                   </span>
@@ -726,9 +881,16 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
 
               <div className="space-y-2.5 my-1">
                 {proveedoresMetrics.map((p, idx) => (
-                  <div key={idx} className="space-y-0.5">
+                  <div
+                    key={idx}
+                    onClick={() => onConsultarElemento?.(p.id)}
+                    className="space-y-0.5 p-1 rounded hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    title={`Consultar ${p.nombre} (${p.leadTime})`}
+                  >
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-medium text-slate-800 dark:text-slate-200">{p.nombre}</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                        {p.nombre}
+                      </span>
                       <span className={`font-mono text-[10px] font-bold ${p.color}`}>
                         {p.leadTime}
                       </span>
