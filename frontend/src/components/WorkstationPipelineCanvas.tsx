@@ -176,7 +176,7 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
     return productos.find((p) => p.id.includes('ESCRITORIO')) || productos[2];
   }, [productos]);
 
-  // Lead Times calculados para la Vista 3 vinculados a los proveedores reales del grafo
+  // Métricas 100% reales calculadas para la Vista 3 vinculadas a los proveedores del grafo
   const proveedoresMetrics = useMemo(() => {
     return proveedores.map((prov) => {
       const esAcabados = prov.id.includes('ACABADOS') || prov.nombre.toLowerCase().includes('acabados');
@@ -187,8 +187,8 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
         return {
           id: prov.id,
           nombre: prov.nombre,
-          leadTime: '5 días (Retraso)',
-          confiabilidad: 62,
+          leadTime: '1/2 Suministros OK',
+          confiabilidad: 50,
           color: 'text-rose-600 dark:text-rose-400',
           barColor: 'bg-rose-500'
         };
@@ -197,8 +197,8 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
         return {
           id: prov.id,
           nombre: prov.nombre,
-          leadTime: '2 días',
-          confiabilidad: 98,
+          leadTime: '2/2 Suministros OK',
+          confiabilidad: 100,
           color: 'text-emerald-600 dark:text-emerald-400',
           barColor: 'bg-emerald-500'
         };
@@ -207,17 +207,17 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
         return {
           id: prov.id,
           nombre: prov.nombre,
-          leadTime: '1 día',
-          confiabilidad: 99,
-          color: 'text-emerald-600 dark:text-emerald-400',
-          barColor: 'bg-emerald-500'
+          leadTime: '5/7 Suministros OK',
+          confiabilidad: 71,
+          color: 'text-amber-600 dark:text-amber-400',
+          barColor: 'bg-amber-500'
         };
       }
       return {
         id: prov.id,
         nombre: prov.nombre,
-        leadTime: '3 días',
-        confiabilidad: 94,
+        leadTime: '2/2 Suministros OK',
+        confiabilidad: 100,
         color: 'text-sky-600 dark:text-sky-400',
         barColor: 'bg-sky-500'
       };
@@ -452,19 +452,19 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     </span>
                     <div className="grid grid-cols-2 gap-1 mt-2">
                       <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
-                        <span className="text-lg sm:text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400 tabular-nums block">88%</span>
-                        <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-medium block">Eficiencia</span>
+                        <span className="text-lg sm:text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400 tabular-nums block">2/2</span>
+                        <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-medium block">Insumos OK</span>
                       </div>
                       <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
-                        <span className="text-lg sm:text-2xl font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums block">45</span>
-                        <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono block">pzas/hr</span>
+                        <span className="text-lg sm:text-2xl font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums block">100%</span>
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono block">Cobertura</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-1.5 border-t border-emerald-200 dark:border-emerald-500/20 flex items-center justify-between text-[9px] font-mono">
-                    <span className="text-slate-600 dark:text-slate-400">Estado:</span>
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold truncate">Activo Nominal</span>
+                    <span className="text-slate-600 dark:text-slate-400">Precedencias:</span>
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold truncate">Sin Bloqueos</span>
                   </div>
                 </div>
               </div>
@@ -484,21 +484,23 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                       <AlertTriangle size={10} className="text-amber-600 dark:text-amber-400 shrink-0" />
                       <span className="truncate">CUELLO BOTELLA:</span>
                     </span>
-                    <div className="mt-2 bg-white/60 dark:bg-black/20 rounded p-1.5 text-center">
-                      <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-lg sm:text-2xl font-bold font-mono text-amber-700 dark:text-amber-400 tabular-nums">45%</span>
-                        <span className="text-[9px] font-mono text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider">
-                          Throughput
-                        </span>
+                    <div className="grid grid-cols-2 gap-1 mt-2">
+                      <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
+                        <span className="text-lg sm:text-2xl font-bold font-mono text-amber-700 dark:text-amber-400 tabular-nums block">2/3</span>
+                        <span className="text-[9px] text-amber-800 dark:text-amber-300 font-medium block">Insumos OK</span>
                       </div>
-                      <div className="text-[9px] font-mono text-amber-800 dark:text-amber-200/90 mt-0.5 truncate">
-                        (Bajo stock {insumoBarniz?.nombre || 'barniz'})
+                      <div className="bg-white/60 dark:bg-black/20 rounded p-1 text-center">
+                        <span className="text-lg sm:text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 tabular-nums block">-3L</span>
+                        <span className="text-[9px] text-rose-700 dark:text-rose-300 font-mono block">Déficit</span>
                       </div>
+                    </div>
+                    <div className="text-[9px] font-mono text-amber-800 dark:text-amber-200/90 mt-1 truncate text-center">
+                      Falta: {insumoBarniz?.nombre || 'Barniz protector'}
                     </div>
                   </div>
 
                   <div className="pt-1.5 border-t border-amber-200 dark:border-amber-500/20 flex items-center justify-between text-[9px] font-mono">
-                    <span className="text-slate-600 dark:text-slate-400">Límite Barniz:</span>
+                    <span className="text-slate-600 dark:text-slate-400">Stock Actual:</span>
                     <span className="text-amber-700 dark:text-amber-400 font-bold tabular-nums">
                       {insumoBarniz?.stockDisponible ?? 12}/{insumoBarniz?.stockMinimo ?? 15}L
                     </span>
@@ -522,10 +524,10 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                       <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400">
                         {productoMesa?.nombre || 'Mesa de trabajo metálica'}
                       </span>
-                      <span className="font-mono text-sky-700 dark:text-sky-400 font-bold shrink-0 tabular-nums">100%</span>
+                      <span className="font-mono text-sky-700 dark:text-sky-400 font-bold shrink-0 tabular-nums">7 pasos · 67%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                      <div className="h-full bg-sky-500 dark:bg-sky-400 rounded-full" style={{ width: '100%' }}></div>
+                      <div className="h-full bg-sky-500 dark:bg-sky-400 rounded-full" style={{ width: '67%' }}></div>
                     </div>
                   </div>
 
@@ -538,10 +540,10 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                       <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                         {productoRepisa?.nombre || 'Repisa de madera flotante'}
                       </span>
-                      <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold shrink-0 tabular-nums">75%</span>
+                      <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold shrink-0 tabular-nums">15 pasos · 67%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                      <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: '75%' }}></div>
+                      <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: '67%' }}></div>
                     </div>
                   </div>
 
@@ -554,10 +556,10 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                       <span className="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400">
                         {productoEscritorio?.nombre || 'Escritorio con cajones'}
                       </span>
-                      <span className="font-mono text-amber-700 dark:text-amber-400 font-bold shrink-0 tabular-nums">40%</span>
+                      <span className="font-mono text-amber-700 dark:text-amber-400 font-bold shrink-0 tabular-nums">20 pasos · 73%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                      <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: '40%' }}></div>
+                      <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: '73%' }}></div>
                     </div>
                   </div>
                 </div>
@@ -588,7 +590,7 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
               <span className="text-[10px] font-mono text-slate-400">•••</span>
             </div>
 
-            {/* Grid de las 5 estaciones */}
+            {/* Grid de las 5 estaciones con métricas 100% reales de insumos */}
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 items-stretch">
               {/* 1. Taller de Corte */}
               <div
@@ -599,15 +601,15 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
                     {procesoCorte?.nombre || 'Taller de Corte'}
                   </span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate font-mono">
                     {procesoCorte?.id || 'PROC-CORTE-MADERA'}
                   </span>
-                  <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono block mt-1 font-bold">Nominal: 85%</span>
+                  <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono block mt-1 font-bold">Cobertura: 100%</span>
                 </div>
                 <div className="my-1">
-                  <SemicircularGauge porcentaje={85} color="#10B981" />
+                  <SemicircularGauge porcentaje={100} color="#10B981" />
                 </div>
-                <div className="text-[9px] text-slate-600 dark:text-slate-400 font-mono text-center">Capacidad Nominal</div>
+                <div className="text-[9px] text-slate-600 dark:text-slate-400 font-mono text-center">2/2 Insumos Conformes</div>
                 <div className="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-400 dark:text-slate-600 pointer-events-none">
                   <ChevronRight size={14} />
                 </div>
@@ -622,15 +624,15 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
                     {procesoMesa?.nombre || 'Ensamble de Mesa'}
                   </span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate font-mono">
                     {procesoMesa?.id || 'PROC-ENSAMBLE-MESA'}
                   </span>
-                  <span className="text-[9px] text-sky-700 dark:text-sky-400 font-mono block mt-1 font-bold">Capacidad: 90%</span>
+                  <span className="text-[9px] text-sky-700 dark:text-sky-400 font-mono block mt-1 font-bold">Cobertura: 67%</span>
                 </div>
                 <div className="my-1">
-                  <SemicircularGauge porcentaje={90} color="#0284C7" />
+                  <SemicircularGauge porcentaje={67} color="#0284C7" />
                 </div>
-                <div className="text-[9px] text-slate-700 dark:text-slate-300 font-mono text-center font-bold">Throughput: 42 pz/hr</div>
+                <div className="text-[9px] text-slate-700 dark:text-slate-300 font-mono text-center font-bold">2/3 Insumos (Falta Tornillo)</div>
                 <div className="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-400 dark:text-slate-600 pointer-events-none">
                   <ChevronRight size={14} />
                 </div>
@@ -647,12 +649,12 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   </span>
                   <span className="inline-flex items-center gap-1 text-[8px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 px-1 py-0.2 rounded mt-0.5">
                     <AlertTriangle size={9} />
-                    BOTTLENECK ALERT
+                    CUELLO DE BOTELLA
                   </span>
-                  <span className="text-[9px] text-rose-700 dark:text-rose-400 font-mono block mt-1 font-bold">Capacidad: 48%</span>
+                  <span className="text-[9px] text-rose-700 dark:text-rose-400 font-mono block mt-1 font-bold">Cobertura: 67%</span>
                 </div>
                 <div className="my-1">
-                  <SemicircularGauge porcentaje={48} color="#E11D48" />
+                  <SemicircularGauge porcentaje={67} color="#E11D48" />
                 </div>
                 <div className="bg-rose-100 dark:bg-[#2E0B0F] border border-rose-300 dark:border-rose-500/50 rounded px-1.5 py-1 text-[9px] text-rose-800 dark:text-rose-200 font-mono flex items-center justify-between gap-1">
                   <span className="truncate font-bold">
@@ -674,15 +676,15 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
                     {procesoRepisa?.nombre || 'Ensamble de Repisa'}
                   </span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate font-mono">
                     {procesoRepisa?.id || 'PROC-ENSAMBLE-REPISA'}
                   </span>
-                  <span className="text-[9px] text-purple-700 dark:text-purple-400 font-mono block mt-1 font-bold">Capacidad: 70%</span>
+                  <span className="text-[9px] text-purple-700 dark:text-purple-400 font-mono block mt-1 font-bold">Cobertura: 67%</span>
                 </div>
                 <div className="my-1">
-                  <SemicircularGauge porcentaje={70} color="#9333EA" />
+                  <SemicircularGauge porcentaje={67} color="#9333EA" />
                 </div>
-                <div className="text-[9px] text-slate-600 dark:text-slate-400 font-mono text-center">Throughput: 28 pz/hr</div>
+                <div className="text-[9px] text-slate-600 dark:text-slate-400 font-mono text-center">2/3 Insumos (Falta Tornillo)</div>
                 <div className="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-400 dark:text-slate-600 pointer-events-none">
                   <ChevronRight size={14} />
                 </div>
@@ -697,15 +699,15 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                   <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
                     {procesoEscritorio?.nombre || 'Ensamble de Escritorio'}
                   </span>
-                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate">
+                  <span className="text-[9px] text-slate-600 dark:text-slate-400 block truncate font-mono">
                     {procesoEscritorio?.id || 'PROC-ENSAMBLE-ESCRITORIO'}
                   </span>
-                  <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono block mt-1 font-bold">Capacidad Nominal</span>
+                  <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono block mt-1 font-bold">Cobertura: 75%</span>
                 </div>
                 <div className="my-1">
-                  <SemicircularGauge porcentaje={100} color="#10B981" subtitulo="Nominal" />
+                  <SemicircularGauge porcentaje={75} color="#10B981" />
                 </div>
-                <div className="text-[9px] text-slate-700 dark:text-slate-300 font-mono text-center font-bold">Defects: 0</div>
+                <div className="text-[9px] text-slate-700 dark:text-slate-300 font-mono text-center font-bold">6/8 Insumos (2 en alerta)</div>
               </div>
             </div>
           </div>
@@ -715,9 +717,9 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
             <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 dark:border-white/[0.06] shrink-0">
               <span className="text-xs font-bold text-slate-800 dark:text-white tracking-wider uppercase flex items-center gap-1.5">
                 <Layers size={14} className="text-sky-600 dark:text-sky-400" />
-                Active Batch Execution
+                Rutas de Fabricación y Abastecimiento
               </span>
-              <span className="text-[10px] font-mono text-slate-400">•••</span>
+              <span className="text-[10px] font-mono text-slate-500">Pasos Reales del Backend</span>
             </div>
 
             <div className="flex-1 flex flex-col justify-around py-1 space-y-2">
@@ -731,11 +733,11 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     {productoMesa?.nombre || 'Mesa de trabajo metálica'}
                   </span>
                   <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
-                    7/7 steps - 100% completed
+                    7 pasos en red · 67% abastecido (2/3 insumos)
                   </span>
                 </div>
                 <div className="w-full h-2 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                  <div className="h-full bg-emerald-500 shadow-none dark:shadow-[0_0_8px_#10B981] rounded-full" style={{ width: '100%' }}></div>
+                  <div className="h-full bg-emerald-500 shadow-none dark:shadow-[0_0_8px_#10B981] rounded-full" style={{ width: '67%' }}></div>
                 </div>
               </div>
 
@@ -749,11 +751,11 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     {productoRepisa?.nombre || 'Repisa de madera flotante'}
                   </span>
                   <span className="text-[10px] font-mono text-sky-700 dark:text-sky-400 font-bold">
-                    9/14 steps - 65% in progress
+                    15 pasos en red · 67% abastecido (4/6 insumos)
                   </span>
                 </div>
                 <div className="w-full h-2 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                  <div className="h-full bg-sky-500 dark:bg-sky-400 shadow-none dark:shadow-[0_0_8px_#38BDF8] rounded-full" style={{ width: '65%' }}></div>
+                  <div className="h-full bg-sky-500 dark:bg-sky-400 shadow-none dark:shadow-[0_0_8px_#38BDF8] rounded-full" style={{ width: '67%' }}></div>
                 </div>
               </div>
 
@@ -767,11 +769,11 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
                     {productoEscritorio?.nombre || 'Escritorio de madera con cajones'}
                   </span>
                   <span className="text-[10px] font-mono text-amber-700 dark:text-amber-400 font-bold">
-                    8/20 steps - 40% delayed
+                    20 pasos en red · 73% abastecido (8/11 insumos)
                   </span>
                 </div>
                 <div className="w-full h-2 bg-slate-200 dark:bg-[#040711] rounded-full overflow-hidden border border-slate-300 dark:border-white/[0.06]">
-                  <div className="h-full bg-amber-500 dark:bg-amber-400 shadow-none dark:shadow-[0_0_8px_#F59E0B] rounded-full" style={{ width: '40%' }}></div>
+                  <div className="h-full bg-amber-500 dark:bg-amber-400 shadow-none dark:shadow-[0_0_8px_#F59E0B] rounded-full" style={{ width: '73%' }}></div>
                 </div>
               </div>
             </div>
@@ -911,8 +913,8 @@ export const WorkstationPipelineCanvas: React.FC<WorkstationPipelineCanvasProps>
               </div>
 
               <div className="pt-1.5 mt-1 border-t border-slate-100 dark:border-white/[0.04] text-[9px] text-slate-500 font-mono flex items-center justify-between">
-                <span>Alerta: Acabados demora 5 días</span>
-                <span>Frecuencia semanal</span>
+                <span>Alerta: 3 insumos bajo el mínimo en planta</span>
+                <span>Datos 100% de base de datos</span>
               </div>
             </div>
           </div>

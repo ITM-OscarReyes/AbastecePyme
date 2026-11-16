@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { MoreVertical, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, MoreVertical } from 'lucide-react';
 import type { Elemento } from '../types';
+import { obtenerCodigoSku } from '../utils/sku';
 
 interface ProductionOutputChartProps {
   elementos: Elemento[];
@@ -8,52 +9,53 @@ interface ProductionOutputChartProps {
   onFiltrarProducto?: (id: string) => void;
 }
 
-interface PuntoProduccion {
-  mes: string;
-  unidades: number;
-  umbral: number;
+interface PuntoSuministro {
+  id: string;
+  sku: string;
+  rotulo: string;
+  disponible: number;
+  minimo: number;
+  alerta: boolean;
 }
 
 export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
-  elementos,
-  productoSeleccionadoId
+  elementos
 }) => {
-  const [puntoHover, setPuntoHover] = useState<PuntoProduccion | null>(null);
+  const [puntoHover, setPuntoHover] = useState<PuntoSuministro | null>(null);
 
-  // Calcula la serie de producción real basada en los productos y procesos del catálogo
-  const { datos, umbralEfectivo } = useMemo(() => {
-    const productos = elementos.filter((e) => e.tipo === 'PRODUCTO');
-    const procesos = elementos.filter((e) => e.tipo === 'PROCESO');
-    const numProductos = productos.length || 3;
-    const factorCapacidad = Math.max(1, procesos.length / 4);
+  // Calcula la serie con los datos 100% reales de inventario de cada suministro del grafo
+  const { datos, maximoValor, umbralPromedio, totalEnAlerta } = useMemo(() => {
+    const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
 
-    // Si hay un producto seleccionado, calibramos para ese producto específico
-    let baseMultiplier = 1.0;
-    if (productoSeleccionadoId) {
-      if (productoSeleccionadoId.includes('ESCRITORIO')) baseMultiplier = 1.25;
-      else if (productoSeleccionadoId.includes('REPISA')) baseMultiplier = 0.95;
-      else baseMultiplier = 0.8;
-    }
+    const puntos: PuntoSuministro[] = insumos.map((i) => {
+      const disp = i.stockDisponible ?? 0;
+      const min = i.stockMinimo ?? 0;
+      const sku = obtenerCodigoSku(i.id) || i.id;
+      const bajoMin = Boolean(i.alertaStock || disp < min);
 
-    const umbral = Math.round(150 * baseMultiplier);
-
-    const meses = ['Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    // Variaciones operativas mensuales realistas
-    const factoresMensuales = [0.42, 0.68, 0.95, 0.78, 1.12, 0.88, 1.05];
-
-    const serie: PuntoProduccion[] = meses.map((mes, idx) => {
-      const unidades = Math.round(
-        (numProductos * 38 * factorCapacidad * baseMultiplier) * factoresMensuales[idx]
-      );
       return {
-        mes,
-        unidades: Math.min(200, Math.max(20, unidades)),
-        umbral
+        id: i.id,
+        sku,
+        rotulo: i.nombre,
+        disponible: disp,
+        minimo: min,
+        alerta: bajoMin
       };
     });
 
-    return { datos: serie, umbralEfectivo: umbral };
-  }, [elementos, productoSeleccionadoId]);
+    const maxDisp = puntos.reduce((max, p) => Math.max(max, p.disponible, p.minimo), 100);
+    const promMin = puntos.length > 0
+      ? Math.round(puntos.reduce((acc, p) => acc + p.minimo, 0) / puntos.length)
+      : 30;
+    const enAlerta = puntos.filter((p) => p.alerta).length;
+
+    return {
+      datos: puntos,
+      maximoValor: Math.ceil(maxDisp / 50) * 50,
+      umbralPromedio: promMin,
+      totalEnAlerta: enAlerta
+    };
+  }, [elementos]);
 
   // Dimensiones del SVG
   const svgWidth = 320;
@@ -65,18 +67,20 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
 
   const chartW = svgWidth - padLeft - padRight;
   const chartH = svgHeight - padTop - padBottom;
-  const maxVal = 200;
+  const maxVal = maximoValor || 300;
 
-  // Coordenadas de los puntos
+  // Coordenadas de los puntos reales
   const coordenadas = useMemo(() => {
+    if (datos.length === 0) return [];
     return datos.map((d, i) => {
-      const x = padLeft + (i / (datos.length - 1)) * chartW;
-      const y = padTop + chartH - (d.unidades / maxVal) * chartH;
+      const divisor = datos.length > 1 ? datos.length - 1 : 1;
+      const x = padLeft + (i / divisor) * chartW;
+      const y = padTop + chartH - (d.disponible / maxVal) * chartH;
       return { x, y, data: d };
     });
-  }, [datos, chartW, chartH, padLeft, padTop]);
+  }, [datos, chartW, chartH, padLeft, padTop, maxVal]);
 
-  // Generar curva suave y área
+  // Generar curva suave y área con datos reales
   const { pathD, areaD, yUmbral } = useMemo(() => {
     if (coordenadas.length === 0) return { pathD: '', areaD: '', yUmbral: 0 };
 
@@ -96,10 +100,10 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
     const yBase = padTop + chartH;
     const aD = `${d} L ${last.x} ${yBase} L ${first.x} ${yBase} Z`;
 
-    const yU = padTop + chartH - (umbralEfectivo / maxVal) * chartH;
+    const yU = padTop + chartH - (umbralPromedio / maxVal) * chartH;
 
     return { pathD: d, areaD: aD, yUmbral: yU };
-  }, [coordenadas, chartH, padTop, umbralEfectivo]);
+  }, [coordenadas, chartH, padTop, umbralPromedio, maxVal]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#080C14] border border-slate-200 dark:border-white/[0.08] rounded-lg p-2.5 overflow-hidden shadow-xs dark:shadow-lg select-none transition-colors">
@@ -108,14 +112,21 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400"></span>
           <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 tracking-wide">
-            Production Output
+            Inventario Real de Insumos
+          </span>
+          <span className="text-[9px] font-mono text-slate-500">
+            ({datos.length} SKUs)
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Badge Umbral estilo Foundry */}
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/40">
-            Threshold: {umbralEfectivo}
+          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+            totalEnAlerta > 0
+              ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border-rose-300 dark:border-rose-500/40'
+              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40'
+          }`}>
+            {totalEnAlerta > 0 ? `${totalEnAlerta} bajo mínimo` : 'Stock seguro'}
           </span>
           <button
             type="button"
@@ -135,19 +146,19 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
           preserveAspectRatio="none"
         >
           <defs>
-            <linearGradient id="prodCyanGrad" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="prodRealGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#38BDF8" stopOpacity={0.4} />
               <stop offset="60%" stopColor="#0284C7" stopOpacity={0.15} />
               <stop offset="100%" stopColor="#0284C7" stopOpacity={0.0} />
             </linearGradient>
-            <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="cyanGlowReal" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="2.5" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
 
-          {/* Líneas de cuadrícula horizontal y etiquetas de eje Y */}
-          {[200, 150, 100, 50, 0].map((val) => {
+          {/* Líneas de cuadrícula horizontal y etiquetas de eje Y con valores reales */}
+          {[maxVal, Math.round(maxVal * 0.66), Math.round(maxVal * 0.33), 0].map((val) => {
             const y = padTop + chartH - (val / maxVal) * chartH;
             return (
               <g key={val}>
@@ -174,7 +185,7 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             );
           })}
 
-          {/* Línea de Umbral (Roja discontinua) estilo Palantir Foundry */}
+          {/* Línea de Umbral Promedio Real */}
           <line
             x1={padLeft}
             y1={yUmbral}
@@ -193,13 +204,13 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             fontWeight="bold"
             letterSpacing="0.5"
           >
-            Threshold
+            Mín. Prom: {umbralPromedio}
           </text>
 
           {/* Relleno de Área con Gradiente */}
-          <path d={areaD} fill="url(#prodCyanGrad)" />
+          <path d={areaD} fill="url(#prodRealGrad)" />
 
-          {/* Trazo de Curva Resplandeciente */}
+          {/* Trazo de Curva Resplandeciente con datos reales */}
           <path
             d={pathD}
             fill="none"
@@ -207,7 +218,7 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            filter="url(#cyanGlow)"
+            filter="url(#cyanGlowReal)"
           />
 
           {/* Puntos interactivos con hover */}
@@ -221,43 +232,55 @@ export const ProductionOutputChart: React.FC<ProductionOutputChartProps> = ({
               <circle
                 cx={pt.x}
                 cy={pt.y}
-                r="3"
-                fill="#0F172A"
-                stroke="#38BDF8"
+                r={pt.data.alerta ? '4' : '3'}
+                fill={pt.data.alerta ? '#EF4444' : '#0F172A'}
+                stroke={pt.data.alerta ? '#F87171' : '#38BDF8'}
                 strokeWidth="1.8"
-                className="hover:r-4 transition-all"
+                className="hover:r-5 transition-all"
               />
             </g>
           ))}
 
-          {/* Etiquetas del eje X (Meses) */}
-          {coordenadas.map((pt, idx) => (
-            <text
-              key={idx}
-              x={pt.x}
-              y={svgHeight - 4}
-              textAnchor="middle"
-              fill="#64748B"
-              fontSize="8"
-              fontWeight="600"
-            >
-              {pt.data.mes}
-            </text>
-          ))}
+          {/* Etiquetas del eje X (SKU abreviado de cada insumo real) */}
+          {coordenadas.map((pt, idx) => {
+            // Mostrar etiqueta cada 2 o 3 puntos para legibilidad
+            if (idx % 2 !== 0 && idx !== coordenadas.length - 1) return null;
+            return (
+              <text
+                key={idx}
+                x={pt.x}
+                y={svgHeight - 4}
+                textAnchor="middle"
+                fill={pt.data.alerta ? '#EF4444' : '#64748B'}
+                fontSize="7"
+                fontFamily="monospace"
+                fontWeight="600"
+              >
+                {pt.data.sku.replace('INS-', '')}
+              </text>
+            );
+          })}
         </svg>
 
-        {/* Tooltip táctico flotante al hacer hover */}
+        {/* Tooltip táctico flotante con datos 100% reales de la base de datos */}
         {puntoHover && (
           <div className="absolute top-2 left-10 pointer-events-none px-2 py-1 rounded bg-[#030712]/95 border border-sky-500/50 shadow-2xl backdrop-blur-md text-[10px] text-white flex items-center gap-2 z-20">
-            <TrendingUp size={11} className="text-sky-400" />
-            <span className="font-bold text-sky-300">{puntoHover.mes}:</span>
-            <span>{puntoHover.unidades} uds</span>
+            {puntoHover.alerta ? (
+              <AlertTriangle size={11} className="text-rose-400" />
+            ) : (
+              <CheckCircle2 size={11} className="text-emerald-400" />
+            )}
+            <span className="font-mono text-sky-300 font-bold">{puntoHover.sku}:</span>
+            <span className="truncate max-w-[120px]">{puntoHover.rotulo}</span>
+            <span className="font-mono font-bold">
+              {puntoHover.disponible} / mín. {puntoHover.minimo} uds
+            </span>
             <span
               className={`text-[9px] font-bold ${
-                puntoHover.unidades >= puntoHover.umbral ? 'text-emerald-400' : 'text-slate-400'
+                puntoHover.alerta ? 'text-rose-400' : 'text-emerald-400'
               }`}
             >
-              ({puntoHover.unidades >= puntoHover.umbral ? '✓ Supera umbral' : 'Nominal'})
+              {puntoHover.alerta ? '(Bajo mínimo)' : '(Conforme)'}
             </span>
           </div>
         )}

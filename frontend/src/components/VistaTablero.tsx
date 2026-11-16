@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Activity,
   BarChart3,
+  CheckCircle2,
   Clock,
   ShieldCheck
 } from 'lucide-react';
@@ -97,6 +98,101 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
   const insumos = useMemo(() => {
     return grafo.elementos.filter((e) => e.tipo === 'INSUMO');
   }, [grafo.elementos]);
+
+  // Procesos reales de la planta de manufactura
+  const procesos = useMemo(() => {
+    return grafo.elementos.filter((e) => e.tipo === 'PROCESO');
+  }, [grafo.elementos]);
+
+  // Insumos bajo mínimo o con alerta de stock
+  const insumosEnAlerta = useMemo(() => {
+    return insumos.filter((i) => i.alertaStock || (i.stockDisponible ?? 50) < (i.stockMinimo ?? 20));
+  }, [insumos]);
+
+  // Métricas 100% reales de déficit y entradas para cada estación de proceso
+  const metricasProcesos = useMemo(() => {
+    const mapaInsumos = new Map<string, typeof insumos[0]>();
+    insumos.forEach((i) => mapaInsumos.set(i.id, i));
+
+    return procesos.map((proc) => {
+      const aristas = grafo.dependencias.filter((dep) => dep.destino === proc.id);
+      const entradas = aristas
+        .map((d) => mapaInsumos.get(d.origen))
+        .filter((ins): ins is typeof insumos[0] => Boolean(ins));
+
+      const conDeficit = entradas.filter(
+        (i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0)
+      );
+
+      const cantDeficit = conDeficit.length;
+      const cantEntradas = entradas.length;
+      const totalDeficit = conDeficit.reduce(
+        (acc, i) => acc + Math.max(0, (i.stockMinimo ?? 0) - (i.stockDisponible ?? 0)),
+        0
+      );
+
+      const rotuloInsumo = conDeficit.length > 0 ? conDeficit[0].nombre : '';
+      const detalle =
+        cantDeficit > 0
+          ? `${rotuloInsumo} (${conDeficit[0].stockDisponible}/${conDeficit[0].stockMinimo})`
+          : `${cantEntradas}/${cantEntradas} Insumos OK`;
+
+      return {
+        id: proc.id,
+        titulo: proc.nombre,
+        tieneDeficit: cantDeficit > 0,
+        totalDeficit,
+        detalle,
+        totalInsumos: cantEntradas,
+        conformes: cantEntradas - cantDeficit
+      };
+    });
+  }, [procesos, insumos, grafo.dependencias]);
+
+  // Conformidad 100% real por familia de suministros de la planta
+  const conformidadCategorias = useMemo(() => {
+    const categorias = [
+      {
+        etiqueta: 'Línea Madera',
+        filtro: (id: string) => id.includes('MADERA') || id.includes('TABLERO') || id.includes('LISTON')
+      },
+      {
+        etiqueta: 'Estructura Metálica',
+        filtro: (id: string) => id.includes('ACERO') || id.includes('METAL') || id.includes('TUBO') || id.includes('PANEL')
+      },
+      {
+        etiqueta: 'Acabados & Químicos',
+        filtro: (id: string) => id.includes('ACABADO') || id.includes('BARNIZ') || id.includes('LIJA')
+      },
+      {
+        etiqueta: 'Fijación & Ferretería',
+        filtro: (id: string) =>
+          id.includes('TORNILLO') ||
+          id.includes('TUERCA') ||
+          id.includes('ARANDELA') ||
+          id.includes('BISAGRA') ||
+          id.includes('CORREDERA') ||
+          id.includes('TIRADOR') ||
+          id.includes('COLA')
+      }
+    ];
+
+    return categorias.map((cat) => {
+      const items = insumos.filter((i) => cat.filtro(i.id));
+      const cantItems = items.length;
+      const cantConformes = items.filter(
+        (i) => !i.alertaStock && (i.stockDisponible ?? 0) >= (i.stockMinimo ?? 0)
+      ).length;
+      const pct = cantItems > 0 ? Math.round((cantConformes / cantItems) * 100) : 100;
+      return {
+        etiqueta: cat.etiqueta,
+        total: cantItems,
+        conformes: cantConformes,
+        porcentaje: pct,
+        alerta: cantConformes < cantItems
+      };
+    });
+  }, [insumos]);
 
   // Filtrado de la red según búsqueda
   const elementosFiltradosRed = useMemo(() => {
@@ -382,106 +478,97 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
               {/* CASO B: SI ESTAMOS EN "Capacidad de Estaciones", MOSTRAR MÉTRICAS DE MÁQUINAS Y RENDIMIENTO */}
               {vistaCentral === 'VISTA_2_CAPACIDAD' && (
                 <>
-                  {/* Card 1: Tiempo de Inactividad (Downtime por Estación) */}
+                  {/* Card 1: Déficit de Insumos por Estación de Proceso */}
                   <div className="flex-[1.2] min-h-0 bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 transition-colors">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
                       <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
                         <Clock size={12} className="text-amber-500 dark:text-amber-400" />
-                        Downtime por Estación
+                        Déficit por Estación
                       </span>
                       <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-500/25 text-[9px] font-mono">
-                        47 min Turno
+                        {insumosEnAlerta.length} Insumos en Alerta
                       </span>
                     </div>
 
                     <div className="flex-1 flex flex-col justify-around py-0.5 space-y-1">
-                      {/* Cabina de Acabado */}
-                      <div
-                        onClick={() => onConsultarElemento('PROC-ACABADO')}
-                        className="p-1.5 rounded bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 flex items-center justify-between text-[10px] cursor-pointer hover:border-rose-500 transition-colors"
-                        title="Consultar ficha de PROC-ACABADO"
-                      >
-                        <div>
-                          <div className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1">
-                            <AlertTriangle size={10} className="text-rose-600 dark:text-rose-400" />
-                            Cabina de Acabado
+                      {metricasProcesos.map((proc) => (
+                        <div
+                          key={proc.id}
+                          onClick={() => {
+                            onConsultarElemento(proc.id);
+                            void ejecutarImpacto(proc.id);
+                          }}
+                          className={`p-1.5 rounded border flex items-center justify-between text-[10px] cursor-pointer transition-colors ${
+                            proc.tieneDeficit
+                              ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/30 hover:border-rose-500'
+                              : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.05] hover:border-sky-400'
+                          }`}
+                          title={`Consultar ficha de ${proc.titulo}`}
+                        >
+                          <div>
+                            <div
+                              className={`font-bold flex items-center gap-1 ${
+                                proc.tieneDeficit
+                                  ? 'text-rose-700 dark:text-rose-300'
+                                  : 'text-slate-800 dark:text-slate-200'
+                              }`}
+                            >
+                              {proc.tieneDeficit ? (
+                                <AlertTriangle size={10} className="text-rose-600 dark:text-rose-400" />
+                              ) : (
+                                <CheckCircle2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+                              )}
+                              {proc.titulo}
+                            </div>
+                            <div className="text-[9px] text-slate-500 font-mono">{proc.detalle}</div>
                           </div>
-                          <div className="text-[9px] text-slate-600 dark:text-slate-400 font-mono">Falta Barniz (12/15L)</div>
+                          <span
+                            className={`font-mono font-bold ${
+                              proc.tieneDeficit
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {proc.tieneDeficit ? `-${proc.totalDeficit} déficit` : '0 déficit (OK)'}
+                          </span>
                         </div>
-                        <span className="font-mono font-bold text-rose-600 dark:text-rose-400">35 min</span>
-                      </div>
-
-                      {/* Ensamble de Mesa / Mecanizado */}
-                      <div
-                        onClick={() => onConsultarElemento('PROC-ENSAMBLE-MESA')}
-                        className="p-1.5 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] flex items-center justify-between text-[10px] cursor-pointer hover:border-sky-400 transition-colors"
-                        title="Consultar ficha de PROC-ENSAMBLE-MESA"
-                      >
-                        <div>
-                          <div className="font-bold text-slate-800 dark:text-slate-200">Ensamble de Mesa</div>
-                          <div className="text-[9px] text-slate-500 font-mono">Estructura metálica</div>
-                        </div>
-                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">8 min</span>
-                      </div>
-
-                      {/* Taller de Corte */}
-                      <div
-                        onClick={() => onConsultarElemento('PROC-CORTE-MADERA')}
-                        className="p-1.5 rounded bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] flex items-center justify-between text-[10px] cursor-pointer hover:border-sky-400 transition-colors"
-                        title="Consultar ficha de PROC-CORTE-MADERA"
-                      >
-                        <div>
-                          <div className="font-bold text-slate-800 dark:text-slate-200">Taller de Corte</div>
-                          <div className="text-[9px] text-slate-500 font-mono">Limpieza de viruta</div>
-                        </div>
-                        <span className="font-mono font-bold text-sky-600 dark:text-sky-400">4 min</span>
-                      </div>
-
-                      {/* Ensamble & Calidad */}
-                      <div
-                        onClick={() => onConsultarElemento('PROC-ENSAMBLE-ESCRITORIO')}
-                        className="flex items-center justify-between text-[9px] font-mono text-slate-500 dark:text-slate-400 px-1 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
-                        title="Consultar ficha de PROC-ENSAMBLE-ESCRITORIO"
-                      >
-                        <span>Ensamble & Calidad:</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">0 min (100% Activo)</span>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Card 2: Tasa de Calidad / Desperdicio */}
+                  {/* Card 2: Conformidad Real de Insumos por Familia */}
                   <div className="h-[135px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
                     <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
                       <span className="text-[11px] font-bold text-slate-800 dark:text-slate-300 uppercase flex items-center gap-1">
                         <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
-                        Calidad & Scrap
+                        Conformidad de Insumos
                       </span>
-                      <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">99.2% Conforme</span>
+                      <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                        {insumos.length - insumosEnAlerta.length} / {insumos.length} OK ({Math.round(((insumos.length - insumosEnAlerta.length) / (insumos.length || 1)) * 100)}%)
+                      </span>
                     </div>
 
                     <div className="flex-1 flex flex-col justify-around py-0.5 text-[10px]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-700 dark:text-slate-300">Taller de Corte:</span>
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">100.0% OK · 0% Def</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-700 dark:text-slate-300">Mecanizado CNC:</span>
-                        <span className="font-mono text-sky-600 dark:text-sky-400 font-bold">99.2% OK · 0.8% Retr</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-700 dark:text-slate-300">Cabina de Acabado:</span>
-                        <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">96.4% OK · 3.6% Secado</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-700 dark:text-slate-300">Línea de Ensamble:</span>
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">99.5% OK · 0.5% Scrap</span>
-                      </div>
+                      {conformidadCategorias.map((cat, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-slate-700 dark:text-slate-300">{cat.etiqueta}:</span>
+                          <span
+                            className={`font-mono font-bold ${
+                              cat.alerta
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {cat.porcentaje}.0% OK · {cat.conformes}/{cat.total}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Card 3: Horas de Turno vs Throughput (0h-3h con Critical Threshold: 1500) */}
+                  {/* Card 3: Capacidad de Insumos por Estación */}
                   <div className="flex-1 min-h-[160px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2 transition-colors">
-                    <StationThroughputChart />
+                    <StationThroughputChart elementos={grafo.elementos} dependencias={grafo.dependencias} />
                   </div>
                 </>
               )}

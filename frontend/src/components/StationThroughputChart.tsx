@@ -1,29 +1,100 @@
-import { Activity, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
+import type { Dependencia, Elemento } from '../types';
 
-interface PuntoThroughput {
-  hora: string;
-  throughput: number;
-  umbral: number;
+interface StationThroughputChartProps {
+  elementos?: Elemento[];
+  dependencias?: Dependencia[];
 }
 
-interface PuntoThroughputConCoords extends PuntoThroughput {
+interface PuntoEstacionReal {
+  id: string;
+  rotulo: string;
+  nombreCompleto: string;
+  stockDisponible: number;
+  stockMinimo: number;
+  alerta: boolean;
+  insumosEntrada: string[];
+}
+
+interface CoordenadaEstacion extends PuntoEstacionReal {
   x: number;
   y: number;
+  yUmbral: number;
 }
 
-export const StationThroughputChart: React.FC = () => {
-  const [puntoHover, setPuntoHover] = useState<PuntoThroughputConCoords | null>(null);
+export const StationThroughputChart: React.FC<StationThroughputChartProps> = ({
+  elementos = [],
+  dependencias = []
+}) => {
+  const [puntoHover, setPuntoHover] = useState<CoordenadaEstacion | null>(null);
 
-  // Serie de horas de turno coincidente con el mockup de referencia
-  const datos: PuntoThroughput[] = useMemo(() => [
-    { hora: '0h', throughput: 820, umbral: 1500 },
-    { hora: '0h', throughput: 1250, umbral: 1500 },
-    { hora: '0h', throughput: 940, umbral: 1500 },
-    { hora: '1h', throughput: 1680, umbral: 1500 },
-    { hora: '2h', throughput: 1310, umbral: 1500 },
-    { hora: '3h', throughput: 1580, umbral: 1500 }
-  ], []);
+  // Calcula las métricas 100% reales de disponibilidad y umbrales mínimos por estación de proceso
+  const { datos, maximoValor, hayAlertas } = useMemo(() => {
+    const procesos = elementos.filter((e) => e.tipo === 'PROCESO');
+    const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
+
+    if (procesos.length === 0) {
+      return { datos: [], maximoValor: 200, hayAlertas: false };
+    }
+
+    const mapaInsumos = new Map<string, Elemento>();
+    insumos.forEach((i) => mapaInsumos.set(i.id, i));
+
+    const puntos: PuntoEstacionReal[] = procesos.map((proc) => {
+      const aristasEntrada = dependencias.filter((dep) => dep.destino === proc.id);
+      const insumosEntrada = aristasEntrada
+        .map((dep) => mapaInsumos.get(dep.origen))
+        .filter((ins): ins is Elemento => Boolean(ins));
+
+      const insumosEfectivos =
+        insumosEntrada.length > 0
+          ? insumosEntrada
+          : insumos.filter((ins) => {
+              if (proc.id.includes('CORTE')) return ins.id.includes('TABLERO') || ins.id.includes('LISTON');
+              if (proc.id.includes('ACABADO')) return ins.id.includes('BARNIZ') || ins.id.includes('LIJA');
+              if (proc.id.includes('MESA')) return ins.id.includes('TUBO') || ins.id.includes('PANEL');
+              if (proc.id.includes('REPISA')) return ins.id.includes('COLA') || ins.id.includes('PIEZA');
+              if (proc.id.includes('ESCRITORIO')) return ins.id.includes('CORREDERA') || ins.id.includes('TIRADOR');
+              return false;
+            });
+
+      const totalDisp = insumosEfectivos.reduce((acc, i) => acc + (i.stockDisponible ?? 0), 0);
+      const totalMin = insumosEfectivos.reduce((acc, i) => acc + (i.stockMinimo ?? 0), 0);
+      const alerta = insumosEfectivos.some(
+        (i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0)
+      );
+
+      const nombresInsumos = insumosEfectivos.map((i) => i.nombre);
+      const rotulo = proc.nombre
+        .replace('Ensamble de ', '')
+        .replace('Corte de ', '')
+        .replace('Acabado de ', '')
+        .split(' ')[0];
+
+      return {
+        id: proc.id,
+        rotulo,
+        nombreCompleto: proc.nombre,
+        stockDisponible: totalDisp,
+        stockMinimo: totalMin,
+        alerta,
+        insumosEntrada: nombresInsumos
+      };
+    });
+
+    const maxVal = puntos.reduce(
+      (max, p) => Math.max(max, p.stockDisponible, p.stockMinimo),
+      100
+    );
+    const tieneAlerta = puntos.some((p) => p.alerta);
+
+    return {
+      datos: puntos,
+      maximoValor: Math.ceil(maxVal / 50) * 50,
+      hayAlertas: tieneAlerta
+    };
+  }, [elementos, dependencias]);
 
   const svgWidth = 330;
   const svgHeight = 115;
@@ -34,18 +105,18 @@ export const StationThroughputChart: React.FC = () => {
 
   const chartW = svgWidth - padLeft - padRight;
   const chartH = svgHeight - padTop - padBottom;
-  const maxVal = 2000;
-  const umbral = 1500;
+  const maxVal = maximoValor || 300;
 
-  const coords = useMemo(() => {
+  const coords: CoordenadaEstacion[] = useMemo(() => {
+    if (datos.length === 0) return [];
     return datos.map((d, i) => {
-      const x = padLeft + (i / (datos.length - 1)) * chartW;
-      const y = padTop + chartH - (d.throughput / maxVal) * chartH;
-      return { x, y, ...d };
+      const divisor = datos.length > 1 ? datos.length - 1 : 1;
+      const x = padLeft + (i / divisor) * chartW;
+      const y = padTop + chartH - (d.stockDisponible / maxVal) * chartH;
+      const yUmbral = padTop + chartH - (d.stockMinimo / maxVal) * chartH;
+      return { x, y, yUmbral, ...d };
     });
-  }, [datos, chartW, chartH]);
-
-  const umbralY = padTop + chartH - (umbral / maxVal) * chartH;
+  }, [datos, chartW, chartH, maxVal]);
 
   const pathD = useMemo(() => {
     if (coords.length === 0) return '';
@@ -54,6 +125,16 @@ export const StationThroughputChart: React.FC = () => {
       const prev = arr[i - 1];
       const cx = (prev.x + curr.x) / 2;
       return `${acc} C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
+    }, '');
+  }, [coords]);
+
+  const pathUmbralD = useMemo(() => {
+    if (coords.length === 0) return '';
+    return coords.reduce((acc, curr, i, arr) => {
+      if (i === 0) return `M ${curr.x} ${curr.yUmbral}`;
+      const prev = arr[i - 1];
+      const cx = (prev.x + curr.x) / 2;
+      return `${acc} C ${cx} ${prev.yUmbral}, ${cx} ${curr.yUmbral}, ${curr.x} ${curr.yUmbral}`;
     }, '');
   }, [coords]);
 
@@ -68,16 +149,23 @@ export const StationThroughputChart: React.FC = () => {
       {/* Header del gráfico */}
       <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
         <div className="flex items-center gap-1.5">
-          <Activity size={12} className="text-sky-600 dark:text-sky-400" />
+          <Layers size={12} className="text-sky-600 dark:text-sky-400" />
           <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-            Production Output vs Target
+            Capacidad de Insumos por Estación
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 flex items-center gap-1 font-bold shrink-0">
-            <AlertTriangle size={9} className="text-rose-600 dark:text-rose-400" />
-            Critical Threshold: 1500
-          </span>
+          {hayAlertas ? (
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 flex items-center gap-1 font-bold shrink-0">
+              <AlertTriangle size={9} className="text-rose-600 dark:text-rose-400" />
+              Déficit en estación
+            </span>
+          ) : (
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1 font-bold shrink-0">
+              <CheckCircle2 size={9} className="text-emerald-600 dark:text-emerald-400" />
+              Stock nominal
+            </span>
+          )}
         </div>
       </div>
 
@@ -101,7 +189,7 @@ export const StationThroughputChart: React.FC = () => {
           </defs>
 
           {/* Líneas horizontales de fondo */}
-          {[0, 500, 1000, 1500, 2000].map((val) => {
+          {[0, Math.round(maxVal / 3), Math.round((maxVal * 2) / 3), maxVal].map((val) => {
             const y = padTop + chartH - (val / maxVal) * chartH;
             return (
               <g key={val}>
@@ -127,32 +215,21 @@ export const StationThroughputChart: React.FC = () => {
             );
           })}
 
-          {/* Línea roja de Umbral Crítico (1500 pcs/hr) */}
-          <line
-            x1={padLeft}
-            y1={umbralY}
-            x2={svgWidth - padRight}
-            y2={umbralY}
-            stroke="#F43F5E"
-            strokeWidth="1.2"
-            strokeDasharray="4 3"
-          />
-          <text
-            x={svgWidth - padRight - 2}
-            y={umbralY - 4}
-            textAnchor="end"
-            fill="#F43F5E"
-            fontSize="7"
-            fontWeight="bold"
-            fontFamily="monospace"
-          >
-            Critical Threshold
-          </text>
+          {/* Curva de Umbral de Seguridad de Planta (Línea discontinua ámbar/rosa) */}
+          {pathUmbralD && (
+            <path
+              d={pathUmbralD}
+              fill="none"
+              stroke="#F43F5E"
+              strokeWidth="1.2"
+              strokeDasharray="3 3"
+            />
+          )}
 
           {/* Área sombreada */}
           <path d={areaD} fill="url(#areaGlowThroughput)" />
 
-          {/* Línea de throughput */}
+          {/* Línea de stock disponible */}
           <path
             d={pathD}
             fill="none"
@@ -161,7 +238,7 @@ export const StationThroughputChart: React.FC = () => {
             filter="url(#neonGlowLine)"
           />
 
-          {/* Puntos de datos */}
+          {/* Puntos de datos de cada estación */}
           {coords.map((pt, i) => (
             <g
               key={i}
@@ -173,9 +250,13 @@ export const StationThroughputChart: React.FC = () => {
                 cx={pt.x}
                 cy={pt.y}
                 r={4}
-                className="fill-white dark:fill-[#0A0F1A] stroke-sky-600 dark:stroke-[#38BDF8] stroke-[1.8] transition-all hover:r-5.5 hover:stroke-sky-400"
+                className={`transition-all hover:r-5.5 ${
+                  pt.alerta
+                    ? 'fill-rose-500 stroke-rose-300 stroke-[1.8]'
+                    : 'fill-white dark:fill-[#0A0F1A] stroke-sky-600 dark:stroke-[#38BDF8] stroke-[1.8]'
+                }`}
               />
-              {/* Etiqueta del eje X */}
+              {/* Etiqueta de la estación en el eje X */}
               <text
                 x={pt.x}
                 y={svgHeight - 4}
@@ -184,7 +265,7 @@ export const StationThroughputChart: React.FC = () => {
                 fontSize="8"
                 fontFamily="monospace"
               >
-                {pt.hora}
+                {pt.rotulo}
               </text>
             </g>
           ))}
@@ -199,10 +280,11 @@ export const StationThroughputChart: React.FC = () => {
               top: `${(puntoHover.y / svgHeight) * 100 - 8}%`
             }}
           >
-            <div className="font-bold text-sky-400">{puntoHover.hora}</div>
-            <div>{puntoHover.throughput} pcs/hr</div>
-            <div className={puntoHover.throughput >= 1500 ? 'text-emerald-400' : 'text-amber-400'}>
-              {puntoHover.throughput >= 1500 ? '✓ Sobre meta' : '⚠ Bajo meta'}
+            <div className="font-bold text-sky-400">{puntoHover.nombreCompleto}</div>
+            <div>Disponible: {puntoHover.stockDisponible} uds</div>
+            <div className="text-slate-400">Umbral mín: {puntoHover.stockMinimo} uds</div>
+            <div className={puntoHover.alerta ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+              {puntoHover.alerta ? '⚠ Insumo bajo mínimo' : '✓ Stock conforme'}
             </div>
           </div>
         )}
