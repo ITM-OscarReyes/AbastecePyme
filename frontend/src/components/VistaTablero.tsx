@@ -334,8 +334,8 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
               />
             </section>
 
-            {/* COLUMNA DERECHA COMPACTA (CALIBRADA) */}
-            <aside className="w-[350px] xl:w-[390px] shrink-0 flex flex-col gap-2.5 h-full overflow-hidden justify-between">
+            {/* COLUMNA DERECHA COMPACTA (CALIBRADA CON SCROLL SI EL VIEWPORT LO REQUIERE) */}
+            <aside className="w-[350px] xl:w-[390px] shrink-0 flex flex-col gap-2.5 h-full overflow-y-auto custom-scroll-visible pr-0.5">
               {/* CASO A: SI ESTAMOS EN "Flujo de Producción & OEE", MOSTRAR MONITOR DE SUMINISTROS */}
               {vistaCentral === 'VISTA_1_FLUJO' && (
                 <>
@@ -478,8 +478,8 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
               {/* CASO B: SI ESTAMOS EN "Capacidad de Estaciones", MOSTRAR MÉTRICAS DE MÁQUINAS Y RENDIMIENTO */}
               {vistaCentral === 'VISTA_2_CAPACIDAD' && (
                 <>
-                  {/* Card 1: Déficit de Insumos por Estación de Proceso */}
-                  <div className="flex-[1.2] min-h-0 bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 transition-colors">
+                  {/* Card 1: Déficit de Insumos por Estación de Proceso con scroll vertical */}
+                  <div className="min-h-[160px] max-h-[210px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
                       <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
                         <Clock size={12} className="text-amber-500 dark:text-amber-400" />
@@ -490,7 +490,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex-1 flex flex-col justify-around py-0.5 space-y-1">
+                    <div className="flex-1 min-h-0 pr-1.5 space-y-1.5 custom-scroll-visible overflow-y-auto">
                       {metricasProcesos.map((proc) => (
                         <div
                           key={proc.id}
@@ -537,7 +537,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                   </div>
 
                   {/* Card 2: Conformidad Real de Insumos por Familia */}
-                  <div className="h-[135px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
+                  <div className="h-[135px] min-h-[135px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
                     <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
                       <span className="text-[11px] font-bold text-slate-800 dark:text-slate-300 uppercase flex items-center gap-1">
                         <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
@@ -567,7 +567,7 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
                   </div>
 
                   {/* Card 3: Capacidad de Insumos por Estación */}
-                  <div className="flex-1 min-h-[160px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2 transition-colors">
+                  <div className="h-[165px] min-h-[165px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2 shrink-0 transition-colors">
                     <StationThroughputChart elementos={grafo.elementos} dependencias={grafo.dependencias} />
                   </div>
                 </>
