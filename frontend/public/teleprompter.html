@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guía de Sustentación & Teleprompter — AbastecePyme Foundry F4</title>
+  <style>
+    :root {
+      --bg: #070B14;
+      --card-bg: #0B1220;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #F1F5F9;
+      --text-muted: #94A3B8;
+      --cyan: #00E5FF;
+      --amber: #FF9F43;
+      --blue: #2563EB;
+      --emerald: #10B981;
+      --rose: #F43F5E;
+      --purple: #A855F7;
+    }
+
+    body.light-mode {
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --card-border: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --cyan: #0284C7;
+      --amber: #D97706;
+      --blue: #1D4ED8;
+      --emerald: #059669;
+      --rose: #E11D48;
+      --purple: #7E22CE;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      padding-bottom: 80px;
+    }
+
+    /* BARRA SUPERIOR FIJA DEL TELEPROMPTER */
+    header.teleprompter-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 18, 32, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    body.light-mode header.teleprompter-bar {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .brand-logo-badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-title span {
+      color: var(--cyan);
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255,255,255,0.12);
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: #FFF;
+      border-color: var(--blue);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.15);
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .container {
+      max-width: 960px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
+    .banner-intro {
+      background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(0,229,255,0.08));
+      border: 1px solid rgba(0,229,255,0.25);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+
+    .banner-intro h1 {
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      color: #FFF;
+    }
+
+    body.light-mode .banner-intro h1 {
+      color: #0F172A;
+    }
+
+    .banner-intro p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* SECCIONES Y TARJETAS */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+
+    .step-number {
+      background: var(--blue);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    /* CAJAS DE "QUÉ DECIR" (GUION) */
+    .speech-box {
+      background: rgba(0, 229, 255, 0.05);
+      border-left: 4px solid var(--cyan);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .speech-box strong {
+      color: var(--cyan);
+    }
+
+    /* BADGES Y ETIQUETAS */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-family: monospace;
+    }
+    .badge-cyan { background: rgba(0,229,255,0.15); color: var(--cyan); border: 1px solid var(--cyan); }
+    .badge-amber { background: rgba(255,159,67,0.15); color: var(--amber); border: 1px solid var(--amber); }
+    .badge-emerald { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid var(--emerald); }
+    .badge-rose { background: rgba(244,63,94,0.15); color: var(--rose); border: 1px solid var(--rose); }
+
+    /* GRID DE GRÁFICOS Y EXPLICACIONES */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    @media(min-width: 768px) {
+      .chart-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .chart-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .chart-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .chart-card-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .qa-box {
+      background: rgba(244,63,94,0.06);
+      border: 1px solid rgba(244,63,94,0.25);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    .qa-q {
+      font-weight: 800;
+      color: var(--rose);
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .qa-a {
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .highlight-rule {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid var(--emerald);
+      padding: 12px 16px;
+      margin: 12px 0;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+    }
+
+    .highlight-rule strong {
+      color: var(--emerald);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA DE CONTROL DEL TELEPROMPTER -->
+  <header class="teleprompter-bar">
+    <div class="brand-group">
+      <div class="brand-logo-badge">
+        <img src="/logo-abastecepyme.jpg" alt="Logo 3D">
+      </div>
+      <div class="brand-title">Abastece<span>Pyme</span> <small style="font-size: 11px; opacity: 0.7; font-weight: 400;">| Guía de Sustentación F4</small></div>
+    </div>
+    <div class="controls-group">
+      <button class="btn" id="btnToggleScroll" onclick="toggleTeleprompter()">▶ Iniciar Teleprompter</button>
+      <button class="btn" onclick="cambiarVelocidad(-1)">- Velocidad</button>
+      <button class="btn" onclick="cambiarVelocidad(1)">+ Velocidad</button>
+      <button class="btn" onclick="toggleTema()">🌓 Tema Claro/Oscuro</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- INTRODUCCIÓN GENERAL -->
+    <div class="banner-intro">
+      <h1>Guion Maestro para la Sustentación de AbastecePyme Foundry</h1>
+      <p>Esta guía interactiva contiene todo lo que debes decir, paso a paso, explicando cada métrica, gráfica y vista del programa. Fue diseñada para que la leas como un teleprompter mientras compartes pantalla o realizas la defensa técnica ante el evaluador.</p>
+    </div>
+
+    <!-- PASO 1: APERTURA Y CONCEPTO DE NEGOCIO EN PALABRAS SENCILLAS -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">1</div>
+        <div class="section-title">Apertura: ¿Qué es AbastecePyme en palabras cotidianas?</div>
+      </div>
+      <div class="speech-box">
+        🗣️ <strong>Qué decir (Lento, tranquilo y con seguridad):</strong><br>
+        <em>"Buenas tardes a todos. Les presento <strong>AbastecePyme</strong>.<br><br>
+        Imaginen una pequeña fábrica de muebles. Para hacer un escritorio necesitan madera, tornillos, tubos y barniz. Pero en las pymes pasa algo muy común: <strong>el proveedor del barniz no llega</strong>, y de repente la fábrica no sabe qué mesas sí se pueden seguir armando y cuáles quedan completamente paradas.<br><br>
+        AbastecePyme resuelve exactamente eso: es una <strong>torre de control visual</strong> que le dice a compras y a producción qué materiales faltan, a qué productos afecta la falta de un insumo, en qué orden exacto deben trabajar las máquinas para no perder tiempo, y les avisa si hay un error en la cadena."</em>
+      </div>
+    </div>
+
+    <!-- PASO 1.5: LOS DOS USUARIOS DEL PROGRAMA -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">2</div>
+        <div class="section-title">¿Quiénes usan el programa? (Los 2 Perfiles)</div>
+      </div>
+      <div class="speech-box">
+        🗣️ <strong>Qué decir:</strong><br>
+        <em>"El programa está pensado para dos personas en la empresa (pueden ver el botón de perfil arriba a la derecha):<br>
+        1. <strong>Responsable de Compras:</strong> Se encarga de registrar los proveedores y los insumos que entran a bodega, y vigila qué materiales están por agotarse.<br>
+        2. <strong>Coordinador de Producción:</strong> No compra nada, pero necesita saber qué estaciones de trabajo están activas, qué lote se está armando hoy y qué hacer si una máquina se detiene."</em>
+      </div>
+    </div>
+
+    <!-- PASO 2: EXPLICACIÓN DE CADA ELEMENTO EN PANTALLA SIN ENREDOS -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">3</div>
+        <div class="section-title">Paseo por la pantalla: ¿Qué es cada cosa que se ve?</div>
+      </div>
+      
+      <p style="font-size: 14px; margin-bottom: 12px;">Aquí explicas lo que tienes frente a los ojos, de arriba a abajo:</p>
+
+      <div class="speech-box">
+        🗣️ <strong>Qué decir mientras señalas la pantalla:</strong><br>
+        <em>"Miremos la pantalla principal:<br><br>
+        • <strong>Arriba a la izquierda:</strong> Tenemos nuestro logo oficial con sus tres piezas que representan el flujo continuo, y al lado un botón verde que dice <strong>SYSTEM NOMINAL</strong>. Eso significa que la fábrica está conectada y operando sin fallas críticas.<br>
+        • <strong>Arriba a la derecha:</strong> Tenemos el selector de <strong>Sol ☀️ / Luna 🌙</strong>. Si el supervisor está en la oficina de día pone el modo claro; si está en la planta o de noche pone el modo oscuro para no cansar la vista.<br>
+        • <strong>Las 4 tarjetas grandes superiores:</strong> Son los signos vitales de la fábrica:
+        &nbsp;&nbsp;- <strong>89.4% Eficiencia Global:</strong> Es el rendimiento de la planta.
+        &nbsp;&nbsp;- <strong>4.2 horas:</strong> Es lo que tarda en promedio un producto en salir armado.
+        &nbsp;&nbsp;- <strong>Riesgo MEDIO (Barniz):</strong> Nos avisa que el barniz protector está bajando de nivel.
+        &nbsp;&nbsp;- <strong>48 unidades en proceso:</strong> Lo que las máquinas están fabricando en este instante."</em>
+      </div>
+    </div>
+
+    <!-- PASO 3: LAS 4 COLUMNAS DEL FLUJO DE PRODUCCIÓN -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">4</div>
+        <div class="section-title">El Pipeline central: Las 4 Columnas del Proceso</div>
+      </div>
+      <div class="speech-box">
+        🗣️ <strong>Qué decir:</strong><br>
+        <em>"En el centro vemos el camino completo que recorre el material, de izquierda a derecha:<br><br>
+        1. <strong>Columna 1 (Insumos):</strong> Lo que tenemos en bodega. Vemos tablones (80), tubos de acero (60), tornillos (300) y en amarillo el <strong>Barniz en 12 litros de 15</strong>. El sistema ya lo marcó en alerta de bajo stock.<br>
+        2. <strong>Columna 2 (Corte CNC):</strong> La primera máquina de la fábrica cortando piezas. Va al 88% de velocidad, fabricando 45 piezas por hora sin problemas.<br>
+        3. <strong>Columna 3 (Cuello de Botella):</strong> ¡Aquí está el problema que el programa detectó! La cabina de pintura y barniz cayó al 45% de velocidad porque casi no le queda barniz. Esto le avisa al gerente antes de que la fábrica se pare del todo.<br>
+        4. <strong>Columna 4 (Lotes de Entrega):</strong> Cómo van los pedidos de los clientes. La Mesa de trabajo ya está al 100% lista para despachar, la Repisa va al 75% y el Escritorio va al 40%."</em>
+      </div>
+    </div>
+
+    <!-- PASO 4: EXPLICACIÓN DE CADA GRÁFICO (LENGUAJE SENCILLO) -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">5</div>
+        <div class="section-title">¿Qué significa cada gráfico? (Explicado fácil)</div>
+      </div>
+
+      <div class="chart-grid">
+        <!-- GRÁFICO 1 -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">1. Curva azul con línea roja (Production Output)</span>
+            <span class="badge badge-cyan">Producción Mensual</span>
+          </div>
+          <p style="font-size: 13px; line-height: 1.6;">
+            <strong>Cómo explicarlo:</strong> <em>"Esta gráfica azul muestra cuántos muebles terminamos cada mes. La línea roja punteada (150) es nuestra meta mínima. Cuando la curva está por encima de la línea roja, la empresa gana dinero; cuando cae por debajo (como en Junio), significa que faltaron materiales y no alcanzamos la meta."</em>
+          </p>
+        </div>
+
+        <!-- GRÁFICO 2 -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">2. Semáforo de cuadros (Buffer Heatmap B1 a B5)</span>
+            <span class="badge badge-amber">Semáforo de Bodega</span>
+          </div>
+          <p style="font-size: 13px; line-height: 1.6;">
+            <strong>Cómo explicarlo:</strong> <em>"Esto es un semáforo de inventario para nuestros 15 materiales. Las columnas B1 a B5 son los 5 estantes de la bodega. Verde significa que hay suficiente material; amarillo significa que queda poco; y rojo significa peligro inmediato. Fíjense que el Barniz tiene cuadros rojos: por eso la planta está en alerta."</em>
+          </p>
+        </div>
+
+        <!-- GRÁFICO 3 -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">3. Barras de Proveedores (Lead Time)</span>
+            <span class="badge badge-rose">Cumplimiento Proveedores</span>
+          </div>
+          <p style="font-size: 13px; line-height: 1.6;">
+            <strong>Cómo explicarlo:</strong> <em>"Aquí calificamos a los 4 proveedores que nos venden materiales. Maderas del Norte tarda solo 2 días y cumple al 98% (barra verde). Pero miren la barra roja abajo: Acabados & Químicos tiene 5 días de retraso y solo cumple al 62%. El programa nos demuestra con datos quién nos está haciendo quedar mal."</em>
+          </p>
+        </div>
+
+        <!-- GRÁFICO 4 -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">4. Los Relojes / Tacómetros (Vista 2)</span>
+            <span class="badge badge-emerald">Capacidad de Máquinas</span>
+          </div>
+          <p style="font-size: 13px; line-height: 1.6;">
+            <strong>Cómo explicarlo:</strong> <em>"En la pestaña 'Capacidad de Estaciones' vemos 5 medidores tipo tacómetro, uno por cada máquina física de la planta. Corte al 85%, CNC al 90%, Ensamble al 70% y Calidad al 100%. Solo la Cabina de Barniz está en rojo al 48% por la falta de insumo."</em>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 5: LA RED DE CONEXIONES Y LAS DEMÁS PESTAÑAS -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">6</div>
+        <div class="section-title">Las demás pestañas del menú lateral</div>
+      </div>
+
+      <div class="speech-box">
+        🗣️ <strong>Qué decir:</strong><br>
+        <em>"En el menú de la izquierda tenemos las herramientas completas de la fábrica:<br><br>
+        • <strong>Supply Network (Red de Conexiones):</strong> Es el mapa visual de la fábrica con 27 elementos y 26 conexiones. Verde son proveedores, azul materias primas, morado procesos internos y amarillo productos terminados. Pusimos un buscador arriba para aislar solo un producto, por ejemplo 'Escritorio', y ver únicamente su ruta.<br>
+        • <strong>Materials & Stock (Catálogo):</strong> Es el inventario ordenado donde se pueden buscar materiales y crear nuevos insumos.<br>
+        • <strong>Impact Analysis (Análisis de Continuidad):</strong> Aquí simulamos qué pasa si un proveedor quiebra o una máquina se rompe. El sistema calcula en segundos qué productos quedan paralizados sin tener que adivinar.<br>
+        • <strong>Production Order (Orden de Producción):</strong> Nos da la lista numerada paso a paso de qué armar primero (Paso 1, Paso 2, etc.) y nos garantiza que no haya contradicciones circulares imposibles."</em>
+      </div>
+    </div>
+
+    <!-- PASO 6: RESPUESTAS RÁPIDAS A PREGUNTAS TÍPICAS (CHULETA / MEMORIA) -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">7</div>
+        <div class="section-title">Respuestas cortas para memorizar en 10 segundos</div>
+      </div>
+
+      <div class="qa-box">
+        <div class="qa-q">❓ ¿Usaron alguna librería de grafos como NetworkX para hacer los cálculos?</div>
+        <div class="qa-a">
+          💬 <strong>Tu respuesta:</strong> <em>"No, para nada. Los cálculos de recorrido, impacto y orden los programamos nosotros mismos en Python puro en el servidor, siguiendo las reglas del proyecto. Las librerías visuales solo se encargan de pintar los colores en pantalla."</em>
+        </div>
+      </div>
+
+      <div class="qa-box">
+        <div class="qa-q">❓ ¿Por qué la dirección del grafo es 'hacia adelante'?</div>
+        <div class="qa-a">
+          💬 <strong>Tu respuesta:</strong> <em>"Porque en manufactura el flujo natural es de causa a efecto: el Proveedor habilita el Insumo, el Insumo habilita la Máquina, y la Máquina entrega el Producto Terminado. Así, si algo falla al principio, sabemos de inmediato qué se afecta al final."</em>
+        </div>
+      </div>
+
+      <div class="qa-box">
+        <div class="qa-q">❓ ¿Qué pasa si alguien crea una dependencia circular (ej. A necesita B y B necesita A)?</div>
+        <div class="qa-a">
+          💬 <strong>Tu respuesta:</strong> <em>"El backend detecta el ciclo inmediatamente, no devuelve un orden falso y le muestra una alerta roja al usuario explicándole qué elementos forman la contradicción para que la corrija."</em>
+        </div>
+      </div>
+    </div>
+
+      <div class="highlight-rule">
+        ✅ <strong>Garantía de Entrega:</strong> El proyecto corre en dos procesos desacoplados: backend FastAPI en <code>http://127.0.0.1:8000</code> y frontend Vite en <code>http://localhost:3000</code> (o 3001), 100% verificado y listo para defender.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let intervalId = null;
+    let scrolling = false;
+    let speed = 1.2;
+
+    function toggleTeleprompter() {
+      const btn = document.getElementById('btnToggleScroll');
+      if (scrolling) {
+        clearInterval(intervalId);
+        scrolling = false;
+        btn.innerText = '▶ Iniciar Teleprompter';
+        btn.classList.remove('btn-primary');
+      } else {
+        scrolling = true;
+        btn.innerText = '⏸ Pausar Teleprompter';
+        btn.classList.add('btn-primary');
+        intervalId = setInterval(() => {
+          window.scrollBy({ top: speed, behavior: 'auto' });
+          if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+            toggleTeleprompter();
+          }
+        }, 30);
+      }
+    }
+
+    function cambiarVelocidad(delta) {
+      speed = Math.max(0.5, Math.min(5, speed + delta * 0.4));
+    }
+
+    function toggleTema() {
+      document.body.classList.toggle('light-mode');
+    }
+  </script>
+</body>
+</html>

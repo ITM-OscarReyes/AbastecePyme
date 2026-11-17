@@ -2,12 +2,8 @@ import type { Core, NodeSingular } from 'cytoscape';
 import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import {
-  Check,
   ChevronDown,
-  Crosshair,
   Download,
-  History,
-  Layers,
   Maximize2,
   Minimize2,
   RefreshCw,
@@ -15,12 +11,13 @@ import {
   Workflow,
   X,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type { Dependencia, Elemento } from '../types';
-import { etiquetaTipo } from '../utils/etiquetas';
 import { obtenerCodigoSku } from '../utils/sku';
 
 try {
@@ -29,30 +26,81 @@ try {
   // Plugin ya cargado
 }
 
-interface LineaReciente {
-  id: string;
-  nombre: string;
-}
-
-const CLAVE_HISTORIAL_LINEAS = 'abastecepyme.historialLineasGrafo';
-
-/**
- * Encuadra los elementos contra la esquina superior izquierda del lienzo, en vez de centrarlos.
- * `fit` deja la red en la mitad del área de vista; al cargar la página debe aparecer en el
- * principio. Si el grafo es más grande que el lienzo, la vista queda anclada en su esquina
- * superior izquierda y el resto se alcanza desplazándose.
- */
 const encuadrarAlInicio = (cy: Core, padding: number): void => {
   if (cy.width() <= 0 || cy.height() <= 0 || cy.elements().length === 0) return;
-
   cy.fit(undefined, padding);
-
   const caja = cy.elements().boundingBox();
   const zoom = cy.zoom();
   const posX = padding - caja.x1 * zoom;
   const posY = padding - caja.y1 * zoom;
-
   cy.pan({ x: posX, y: posY });
+};
+
+// Generador de iconos SVG vectoriales nítidos para el interior de los hubs circulares
+const generarIconoSvg = (tipo: string, color: string, esGrupo?: boolean): string => {
+  let iconPath = '';
+  if (esGrupo) {
+    // Suministros agrupados / multi-capa
+    iconPath = `<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  } else if (tipo === 'PROVEEDOR') {
+    // Fábrica / Sede de Proveedor
+    iconPath = `<path d="M3 21h18M5 21V7l8-4v18M13 11l6-3v13M9 9h1M9 13h1M9 17h1M17 13h1M17 17h1" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  } else if (tipo === 'INSUMO') {
+    // Cubo / Paquete de Suministro
+    iconPath = `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><polyline points="3.29 7 12 12 20.71 7" stroke="${color}" stroke-width="2.2" fill="none"/><line x1="12" y1="22" x2="12" y2="12" stroke="${color}" stroke-width="2.2"/>`;
+  } else if (tipo === 'PROCESO') {
+    // Engranaje / Línea de Procesamiento
+    iconPath = `<circle cx="12" cy="12" r="3" stroke="${color}" stroke-width="2.2" fill="none"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="${color}" stroke-width="2.2" fill="none"/>`;
+  } else {
+    // Trofeo / Producto Terminado
+    iconPath = `<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34M7.8 4h8.4C17.2 4 18 4.8 18 5.8v4.4c0 3.2-2.6 5.8-5.8 5.8h-.4C8.6 16 6 13.4 6 10.2V5.8C6 4.8 6.8 4 7.8 4z" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24">${iconPath}</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+// Generador de estilos y paleta de colorimetría quirúrgica adaptativa para los hubs circulares
+const obtenerEstiloNodoSegunTema = (tipo: string, alertaStock: boolean, esOscuro: boolean, esGrupo?: boolean) => {
+  let colorFondo = esOscuro ? '#061325' : '#F0F9FF';
+  let colorBorde = esOscuro ? '#38BDF8' : '#0284C7';
+  let haloColor = esOscuro ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.16)';
+  let iconColor = esOscuro ? '#38BDF8' : '#0284C7';
+  let borderWidth = 2.5;
+  const nodeSize = esGrupo ? 66 : 60;
+
+  if (tipo === 'PROVEEDOR') {
+    colorFondo = esOscuro ? '#032015' : '#ECFDF5';
+    colorBorde = esOscuro ? '#10B981' : '#059669';
+    haloColor = esOscuro ? 'rgba(16, 185, 129, 0.4)' : 'rgba(5, 150, 105, 0.2)';
+    iconColor = esOscuro ? '#10B981' : '#047857';
+  } else if (tipo === 'INSUMO') {
+    if (alertaStock) {
+      colorFondo = esOscuro ? '#2E060D' : '#FEF2F2';
+      colorBorde = esOscuro ? '#F43F5E' : '#DC2626';
+      haloColor = esOscuro ? 'rgba(244, 63, 94, 0.6)' : 'rgba(220, 38, 38, 0.28)';
+      iconColor = esOscuro ? '#F43F5E' : '#B91C1C';
+      borderWidth = 3;
+    } else {
+      colorFondo = esOscuro ? (esGrupo ? '#0A2540' : '#071A2E') : (esGrupo ? '#E0F2FE' : '#F0F9FF');
+      colorBorde = esOscuro ? (esGrupo ? '#38BDF8' : '#0284C7') : (esGrupo ? '#0284C7' : '#0284C7');
+      haloColor = esOscuro ? 'rgba(2, 132, 199, 0.45)' : 'rgba(2, 132, 199, 0.22)';
+      iconColor = esOscuro ? '#38BDF8' : '#0284C7';
+      if (esGrupo) borderWidth = 3.5;
+    }
+  } else if (tipo === 'PROCESO') {
+    colorFondo = esOscuro ? '#170E2B' : '#FAF5FF';
+    colorBorde = esOscuro ? '#A855F7' : '#9333EA';
+    haloColor = esOscuro ? 'rgba(168, 85, 247, 0.4)' : 'rgba(147, 51, 234, 0.2)';
+    iconColor = esOscuro ? '#C084FC' : '#7E22CE';
+  } else if (tipo === 'PRODUCTO') {
+    colorFondo = esOscuro ? '#281702' : '#FFFBEB';
+    colorBorde = esOscuro ? '#F59E0B' : '#D97706';
+    haloColor = esOscuro ? 'rgba(245, 158, 11, 0.5)' : 'rgba(217, 119, 6, 0.25)';
+    iconColor = esOscuro ? '#FBBF24' : '#B45309';
+    borderWidth = 3;
+  }
+
+  return { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize };
 };
 
 interface GraphCanvasProps {
@@ -69,381 +117,344 @@ interface GraphCanvasProps {
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   elementos,
   dependencias,
-  nodoSeleccionadoId,
+  nodoSeleccionadoId = null,
   nodosAfectadosIds = [],
   onSelectNode,
   esModoOscuro = true,
-  filtroProductoId: filtroProductoIdProp,
+  filtroProductoId = 'TODOS',
   onCambiarFiltroProducto
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
-  const [esPantallaCompleta, setEsPantallaCompleta] = useState<boolean>(false);
-  const [filtroProductoInterno, setFiltroProductoInterno] = useState<string>('TODOS');
-  const filtroProductoActivo = filtroProductoIdProp !== undefined ? filtroProductoIdProp : filtroProductoInterno;
-  const [aislarCadena, setAislarCadena] = useState<boolean>(true);
-
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [menuLineaAbierto, setMenuLineaAbierto] = useState<boolean>(false);
   const [busquedaLinea, setBusquedaLinea] = useState<string>('');
-  const contenedorSelectorRef = useRef<HTMLDivElement>(null);
+  const [layoutNombre, setLayoutNombre] = useState<'dagre' | 'concentric'>('dagre');
+  const [vistaSuministros, setVistaSuministros] = useState<'compacta' | 'detallada'>('compacta');
 
-  // Obtener productos disponibles para el filtro interactivo
-  const productosDisponibles = useMemo(
-    () => elementos.filter((e) => e.tipo === 'PRODUCTO'),
-    [elementos]
-  );
-
-  // Historial de líneas recientes (máximo 5)
-  const [lineasRecientes, setLineasRecientes] = useState<LineaReciente[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const guardado = window.localStorage.getItem(CLAVE_HISTORIAL_LINEAS);
-      return guardado ? JSON.parse(guardado) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const registrarLineaReciente = useCallback((prod: Elemento) => {
-    setLineasRecientes((prev) => {
-      const filtrado = prev.filter((item) => item.id !== prod.id);
-      const actualizado = [{ id: prod.id, nombre: prod.nombre }, ...filtrado].slice(0, 5);
-      try {
-        window.localStorage.setItem(CLAVE_HISTORIAL_LINEAS, JSON.stringify(actualizado));
-      } catch {
-        // Ignorar fallo de almacenamiento
-      }
-      return actualizado;
-    });
-  }, []);
-
-  const cambiarFiltro = useCallback((nuevoId: string) => {
-    setFiltroProductoInterno(nuevoId);
-    onCambiarFiltroProducto?.(nuevoId);
-    setMenuLineaAbierto(false);
-    setBusquedaLinea('');
-    if (nuevoId !== 'TODOS') {
-      const prod = elementos.find((e) => e.id === nuevoId);
-      if (prod) {
-        registrarLineaReciente(prod);
-      }
-    }
-  }, [elementos, onCambiarFiltroProducto, registrarLineaReciente]);
-
+  // Callback estable para selección de nodo
+  const onSelectNodeRef = useRef(onSelectNode);
   useEffect(() => {
-    if (filtroProductoIdProp && filtroProductoIdProp !== 'TODOS') {
-      const prod = elementos.find((e) => e.id === filtroProductoIdProp);
-      if (prod) {
-        registrarLineaReciente(prod);
-      }
-    }
-  }, [filtroProductoIdProp, elementos, registrarLineaReciente]);
+    onSelectNodeRef.current = onSelectNode;
+  }, [onSelectNode]);
 
-  useEffect(() => {
-    const clickAfuera = (event: MouseEvent) => {
-      if (
-        contenedorSelectorRef.current &&
-        !contenedorSelectorRef.current.contains(event.target as Node)
-      ) {
-        setMenuLineaAbierto(false);
-      }
-    };
-    document.addEventListener('mousedown', clickAfuera);
-    return () => document.removeEventListener('mousedown', clickAfuera);
-  }, []);
-
-  const lineasFiltradas = useMemo(() => {
-    const q = busquedaLinea.trim().toLowerCase();
-    if (!q) return productosDisponibles;
-    return productosDisponibles.filter((p) => {
-      const coincideNombre = p.nombre.toLowerCase().includes(q);
-      const coincideSku = obtenerCodigoSku(p.id).toLowerCase().includes(q);
-      const coincideId = p.id.toLowerCase().includes(q);
-      return coincideNombre || coincideSku || coincideId;
-    });
-  }, [productosDisponibles, busquedaLinea]);
+  // Productos disponibles
+  const productos = useMemo(() => {
+    return elementos.filter((e) => e.tipo === 'PRODUCTO');
+  }, [elementos]);
 
   const productoActivo = useMemo(() => {
-    if (filtroProductoActivo === 'TODOS') return null;
-    return elementos.find((e) => e.id === filtroProductoActivo) ?? null;
-  }, [elementos, filtroProductoActivo]);
+    if (!filtroProductoId || filtroProductoId === 'TODOS') return null;
+    return productos.find((p) => p.id === filtroProductoId) || null;
+  }, [filtroProductoId, productos]);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // Cálculo de cadena de dependencias del producto seleccionado
+  const nodosLineaFiltro = useMemo(() => {
+    if (!filtroProductoId || filtroProductoId === 'TODOS') return null;
+    const alcanzables = new Set<string>();
+    const cola = [filtroProductoId];
+    alcanzables.add(filtroProductoId);
 
-    // Calcular qué nodos pertenecen a la línea del producto seleccionado si hay filtro activo
-    let nodosLineaFiltro: Set<string> | null = null;
-    if (filtroProductoActivo !== 'TODOS') {
-      nodosLineaFiltro = new Set([filtroProductoActivo]);
-      let huboCambios = true;
-      while (huboCambios) {
-        huboCambios = false;
-        for (const dep of dependencias) {
-          if (nodosLineaFiltro.has(dep.destino) && !nodosLineaFiltro.has(dep.origen)) {
-            nodosLineaFiltro.add(dep.origen);
-            huboCambios = true;
-          }
+    const adjInversa = new Map<string, string[]>();
+    dependencias.forEach((d) => {
+      if (!adjInversa.has(d.destino)) adjInversa.set(d.destino, []);
+      adjInversa.get(d.destino)!.push(d.origen);
+    });
+
+    while (cola.length > 0) {
+      const actual = cola.shift()!;
+      const predecesores = adjInversa.get(actual) || [];
+      for (const pred of predecesores) {
+        if (!alcanzables.has(pred)) {
+          alcanzables.add(pred);
+          cola.push(pred);
         }
       }
     }
+    return alcanzables;
+  }, [filtroProductoId, dependencias]);
 
-    // Clasificación de prioridad de carril (Línea Metal arriba, Ferretería común centro, Línea Madera abajo)
-    const obtenerPrioridadFamilia = (id: string): number => {
-      // Prioridad 1 (arriba): Línea Acero / Metalmecánica
-      if (id.includes('ACERO') || id.includes('METAL') || id.includes('TUBO') || id.includes('MESA')) return 1;
-      // Prioridad 2 (centro): Ferretería común transversal
-      if (id.includes('FERRETERIA') || id.includes('TORNILLO') || id.includes('TUERCA') || id.includes('ARANDELA')) return 2;
-      // Prioridad 3 (abajo): Línea Madera y Carpintería
-      if (id.includes('MADERA') || id.includes('TABLERO') || id.includes('LISTON') || id.includes('ACABADO') || id.includes('LIJA') || id.includes('BARNIZ') || id.includes('PIEZA') || id.includes('ESCRITORIO') || id.includes('REPISA') || id.includes('COLA') || id.includes('BISAGRA') || id.includes('CORREDERA') || id.includes('TIRADOR')) return 3;
-      return 4;
-    };
-
-    // Ordenar elementos respetando familias afines para que Dagre no mezcle las ramas
-    const elementosOrdenados = [...elementos].sort((a, b) => {
-      const famA = obtenerPrioridadFamilia(a.id);
-      const famB = obtenerPrioridadFamilia(b.id);
-      if (famA !== famB) return famA - famB;
-      return a.id.localeCompare(b.id);
-    });
-
-    const elementosFinales =
-      aislarCadena && nodosLineaFiltro
-        ? elementosOrdenados.filter((e) => nodosLineaFiltro.has(e.id))
-        : elementosOrdenados;
-
-    const dependenciasFinales =
-      aislarCadena && nodosLineaFiltro
-        ? dependencias.filter(
-            (d) => nodosLineaFiltro.has(d.origen) && nodosLineaFiltro.has(d.destino)
-          )
-        : dependencias;
-
-    // Paleta visual empresarial de alto contraste calibrada para Modo Claro y Modo Oscuro
-    const cyNodes = elementosFinales.map((e) => {
-      let colorFondo: string;
-      let colorBorde: string;
-      let colorTexto: string;
-      let borderWidth = 2;
-      const icono = e.tipo === 'PROVEEDOR' ? '🏢' : e.tipo === 'INSUMO' ? '📦' : e.tipo === 'PROCESO' ? '⚙️' : '🏆';
-
-      if (esModoOscuro) {
-        // MODO OSCURO: Fondos profundos con bordes brillantes y tipografía blanca
-        colorFondo = '#1e3a8a'; // Azul cobalto
-        colorBorde = '#60a5fa';
-        colorTexto = '#ffffff';
-
-        if (e.tipo === 'INSUMO') {
-          colorFondo = '#92400e'; // Ámbar intenso
-          colorBorde = '#fbbf24';
-        } else if (e.tipo === 'PROCESO') {
-          colorFondo = '#5b21b6'; // Púrpura eléctrico
-          colorBorde = '#c084fc';
-        } else if (e.tipo === 'PRODUCTO') {
-          colorFondo = '#065f46'; // Esmeralda profundo
-          colorBorde = '#34d399';
-        }
-      } else {
-        // MODO CLARO: Fondos suaves tintados, bordes saturados nítidos y texto oscuro legible (WCAG AAA)
-        colorFondo = '#eff6ff'; // Azul pastel limpio (blue-50)
-        colorBorde = '#2563eb'; // Borde azul cobalto (blue-600)
-        colorTexto = '#1e3a8a'; // Azul marino legible (blue-900)
-
-        if (e.tipo === 'INSUMO') {
-          colorFondo = '#fffbeb'; // Ámbar pastel (amber-50)
-          colorBorde = '#d97706'; // Borde ámbar (amber-600)
-          colorTexto = '#78350f'; // Ámbar oscuro legible (amber-900)
-        } else if (e.tipo === 'PROCESO') {
-          colorFondo = '#faf5ff'; // Púrpura pastel (purple-50)
-          colorBorde = '#9333ea'; // Borde púrpura (purple-600)
-          colorTexto = '#581c87'; // Púrpura oscuro legible (purple-900)
-        } else if (e.tipo === 'PRODUCTO') {
-          colorFondo = '#ecfdf5'; // Esmeralda pastel (emerald-50)
-          colorBorde = '#059669'; // Borde esmeralda (emerald-600)
-          colorTexto = '#064e3b'; // Esmeralda oscuro legible (emerald-900)
-        }
-      }
-
-      const esSeleccionado = nodoSeleccionadoId === e.id;
-      const esAfectado = nodosAfectadosIds.includes(e.id);
-      const perteneceAlFiltro = !nodosLineaFiltro || nodosLineaFiltro.has(e.id);
-      const opacidad = perteneceAlFiltro ? 1 : (esModoOscuro ? 0.2 : 0.25);
-
-      if (esSeleccionado) {
-        colorBorde = esModoOscuro ? '#38bdf8' : '#0284c7';
-        borderWidth = 4;
-      } else if (esAfectado) {
-        colorFondo = esModoOscuro ? '#7f1d1d' : '#fef2f2'; // Rojo suave en claro, rojo oscuro en oscuro
-        colorBorde = esModoOscuro ? '#ef4444' : '#dc2626'; // Borde rojo vivo
-        colorTexto = esModoOscuro ? '#ffffff' : '#7f1d1d'; // Texto rojo carmesí
-        borderWidth = 3;
-      } else if (e.alertaStock) {
-        colorBorde = esModoOscuro ? '#ef4444' : '#dc2626'; // Rojo de alerta de stock
-        borderWidth = 3;
-      }
-
-      const avisoStock = e.alertaStock ? '\n⚠ Stock bajo' : '';
-
-      return {
-        data: {
-          id: e.id,
-          label: `${esAfectado ? '⚠️ ' : ''}${icono} ${e.nombre}\n[${obtenerCodigoSku(e.id)}] • ${etiquetaTipo(e.tipo)}${avisoStock}`,
-          tipo: e.tipo,
-          colorFondo,
-          colorBorde,
-          colorTexto,
-          borderWidth,
-          opacidad
-        }
-      };
-    });
-
-    // Modelado de aristas dirigidas de abastecimiento con pesos calibrados
-    const cyEdges = dependenciasFinales.map((d, index) => {
-      const aristaEnCadenaImpacto =
-        (nodoSeleccionadoId === d.origen && nodosAfectadosIds.includes(d.destino)) ||
-        (nodosAfectadosIds.includes(d.origen) && nodosAfectadosIds.includes(d.destino));
-
-      const perteneceAlFiltro =
-        !nodosLineaFiltro || (nodosLineaFiltro.has(d.origen) && nodosLineaFiltro.has(d.destino));
-      const opacidad = perteneceAlFiltro ? 1 : (esModoOscuro ? 0.15 : 0.2);
-
-      // Asignar menor peso a aristas de ferretería común para que no jalen nodos principales al medio
-      const esFerreteriaComun = d.origen.includes('FERRETERIA') || d.origen.includes('TORNILLO');
-      const pesoArista = esFerreteriaComun ? 1 : 10;
-
-      return {
-        data: {
-          id: `e_${d.origen}_${d.destino}_${index}`,
-          source: d.origen,
-          target: d.destino,
-          label: 'habilita',
-          weight: pesoArista,
-          opacidad,
-          lineColor: aristaEnCadenaImpacto
-            ? '#ef4444'
-            : esModoOscuro
-            ? '#475569'
-            : '#94a3b8',
-          arrowColor: aristaEnCadenaImpacto
-            ? '#f87171'
-            : esModoOscuro
-            ? '#64748b'
-            : '#64748b',
-          width: aristaEnCadenaImpacto ? 3.5 : 2.5
-        }
-      };
-    });
+  // 1. INICIALIZACIÓN ÚNICA DEL LIENZO: ESTÁTICA Y PRECISA (Zero Jitter, Zero Infinite Loops)
+  useEffect(() => {
+    if (!containerRef.current) return;
+    if (elementos.length === 0) return;
 
     if (cyRef.current) {
       cyRef.current.destroy();
+      cyRef.current = null;
     }
 
-    // Inicializar Cytoscape con restricciones de zoom y tipografía óptima
-    const cy = cytoscape({
-      container: containerRef.current,
-      elements: [...cyNodes, ...cyEdges],
-      minZoom: 0.6,
-      maxZoom: 2.2,
-      style: [
-        {
-          selector: 'node',
-          style: {
-            'background-color': 'data(colorFondo)',
-            'label': 'data(label)',
-            'color': 'data(colorTexto)',
-            'font-size': '11px',
-            'font-weight': 700,
-            'text-valign': 'center',
-            'text-halign': 'center',
-            'text-wrap': 'wrap',
-            'text-max-width': '155px',
-            'width': '175px',
-            'height': '68px',
-            'shape': 'round-rectangle',
-            'border-color': 'data(colorBorde)',
-            'border-width': 'data(borderWidth)',
-            'opacity': 'data(opacidad)' as unknown as number,
-            'overlay-padding': '4px',
-            'transition-property': 'background-color, border-color, border-width, opacity, width, height',
-            'transition-duration': 0.25
+    // Generación de nodos y conexiones según modo de visualización (Compacta vs Detallada)
+    let cyNodes: any[] = [];
+    let cyEdges: any[] = [];
+
+    if (vistaSuministros === 'detallada') {
+      cyNodes = elementos.map((e) => {
+        const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
+          obtenerEstiloNodoSegunTema(e.tipo, Boolean(e.alertaStock), esModoOscuro, false);
+
+        const sku = obtenerCodigoSku(e.id) || e.id;
+        const estadoTag = e.alertaStock ? '⚠️ BAJO' : '';
+
+        return {
+          data: {
+            id: e.id,
+            label: `${e.nombre}\n[${sku}] ${estadoTag}`,
+            tipo: e.tipo,
+            alertaStock: Boolean(e.alertaStock),
+            colorFondo,
+            colorBorde,
+            haloColor,
+            borderWidth,
+            nodeSize,
+            iconSvg: generarIconoSvg(e.tipo, iconColor, false),
+            esGrupo: false
           }
-        },
-        {
-          selector: 'edge',
-          style: {
-            'width': 'data(width)',
-            'line-color': 'data(lineColor)',
-            'target-arrow-color': 'data(arrowColor)',
-            'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier',
-            'arrow-scale': 1.4,
-            'label': 'habilita',
-            'font-size': '10px',
-            'font-weight': 600,
-            'color': esModoOscuro ? '#94a3b8' : '#475569',
-            'opacity': 'data(opacidad)' as unknown as number,
-            'text-background-color': esModoOscuro ? '#090d16' : '#ffffff',
-            'text-background-opacity': esModoOscuro ? 0.9 : 0.95,
-            'text-background-padding': '3px',
-            'text-background-shape': 'roundrectangle',
-            'text-border-color': esModoOscuro ? '#1e293b' : '#cbd5e1',
-            'text-border-width': 1,
-            'text-border-opacity': 0.8,
-            'text-rotation': 'autorotate',
-            'text-margin-y': -8
-          }
-        },
-        {
-          selector: ':selected',
-          style: {
-            'border-color': esModoOscuro ? '#38bdf8' : '#0284c7',
-            'border-width': 4,
-            'overlay-color': '#0284c7',
-            'overlay-opacity': 0.15
-          }
+        };
+      });
+
+      cyEdges = dependencias.map((d, index) => ({
+        data: {
+          id: `e-${index}-${d.origen}-${d.destino}`,
+          source: d.origen,
+          target: d.destino,
+          lineColor: '#0284C7',
+          arrowColor: '#38BDF8',
+          width: 2.2
         }
-      ],
-      layout: {
-        name: 'dagre',
-        rankDir: 'LR',
-        nodeSep: 60,
-        rankSep: 110,
-        padding: 50,
-        animate: true,
-        animationDuration: 400
-      } as any
-    });
+      }));
+    } else {
+      // VISTA COMPACTA: Agrupación visual de suministros por proveedor y planta
+      const noInsumos = elementos.filter((e) => e.tipo !== 'INSUMO');
+      const insumos = elementos.filter((e) => e.tipo === 'INSUMO');
 
-    cy.on('tap', 'node', (evt) => {
-      const node: NodeSingular = evt.target;
-      const id = node.id();
-      const el = elementos.find((item) => item.id === id);
-      if (el?.tipo === 'PRODUCTO') {
-        cambiarFiltro(id);
-      }
-      onSelectNode?.(id);
-    });
+      const mapaInsumoAGrupo = new Map<string, string>();
+      const gruposMap = new Map<
+        string,
+        { key: string; titulo: string; insumos: Elemento[]; alertaStock: boolean }
+      >();
 
-    cy.on('tap', (evt) => {
-      if (evt.target === cy) {
-        cambiarFiltro('TODOS');
-        onSelectNode?.(null);
-      }
-    });
+      insumos.forEach((ins) => {
+        const padres = dependencias
+          .filter((d) => d.destino === ins.id)
+          .map((d) => elementos.find((e) => e.id === d.origen))
+          .filter(Boolean) as Elemento[];
 
-    // Ajuste inicial contra la esquina superior izquierda del lienzo (Decisión 15)
-    cy.ready(() => {
-      if (nodoSeleccionadoId) {
-        const nodo = cy.getElementById(nodoSeleccionadoId);
-        if (nodo && nodo.length > 0) {
-          cy.center(nodo);
-          return;
+        const provPadres = padres.filter((p) => p.tipo === 'PROVEEDOR');
+        const procPadres = padres.filter((p) => p.tipo === 'PROCESO');
+
+        let claveGrupo = 'GRP_BASE';
+        let rotuloGrupo = 'Suministros generales';
+
+        if (procPadres.length > 0) {
+          claveGrupo = 'GRP_PLANTA';
+          rotuloGrupo = 'Producidos en planta';
+        } else if (provPadres.length === 1) {
+          const prov = provPadres[0];
+          claveGrupo = `GRP_PROV_${prov.id}`;
+          const rotuloProv =
+            prov.nombre.replace(/^Proveedor\s*(de)?\s*/i, '').trim() || prov.id;
+          rotuloGrupo = `Suministros [${rotuloProv}]`;
+        } else if (provPadres.length > 1) {
+          claveGrupo = 'GRP_MULTI_PROV';
+          rotuloGrupo = 'Varios proveedores';
         }
-      }
-      encuadrarAlInicio(cy, 40);
-    });
 
-    cyRef.current = cy;
+        mapaInsumoAGrupo.set(ins.id, claveGrupo);
+
+        if (!gruposMap.has(claveGrupo)) {
+          gruposMap.set(claveGrupo, {
+            key: claveGrupo,
+            titulo: rotuloGrupo,
+            insumos: [],
+            alertaStock: false
+          });
+        }
+        const g = gruposMap.get(claveGrupo)!;
+        g.insumos.push(ins);
+        if (ins.alertaStock) g.alertaStock = true;
+      });
+
+      const nodosNoInsumos = noInsumos.map((e) => {
+        const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
+          obtenerEstiloNodoSegunTema(e.tipo, Boolean(e.alertaStock), esModoOscuro, false);
+
+        const sku = obtenerCodigoSku(e.id) || e.id;
+        const estadoTag = e.alertaStock ? '⚠️ BAJO' : '';
+
+        return {
+          data: {
+            id: e.id,
+            label: `${e.nombre}\n[${sku}] ${estadoTag}`,
+            tipo: e.tipo,
+            alertaStock: Boolean(e.alertaStock),
+            colorFondo,
+            colorBorde,
+            haloColor,
+            borderWidth,
+            nodeSize,
+            iconSvg: generarIconoSvg(e.tipo, iconColor, false),
+            esGrupo: false
+          }
+        };
+      });
+
+      const nodosGrupos = Array.from(gruposMap.values()).map((g) => {
+        const { colorFondo, colorBorde, haloColor, iconColor, borderWidth, nodeSize } =
+          obtenerEstiloNodoSegunTema('INSUMO', g.alertaStock, esModoOscuro, true);
+        const alertaTag = g.alertaStock ? '⚠️ ALERTA' : '';
+
+        return {
+          data: {
+            id: g.key,
+            label: `${g.titulo}\n[${g.insumos.length} suministros] ${alertaTag}`,
+            tipo: 'INSUMO',
+            alertaStock: g.alertaStock,
+            colorFondo,
+            colorBorde,
+            haloColor,
+            borderWidth,
+            nodeSize,
+            iconSvg: generarIconoSvg('INSUMO', iconColor, true),
+            esGrupo: true,
+            subIds: g.insumos.map((i) => i.id)
+          }
+        };
+      });
+
+      cyNodes = [...nodosNoInsumos, ...nodosGrupos];
+
+      // Aristas compactas únicas
+      const aristasVistas = new Set<string>();
+      dependencias.forEach((d, idx) => {
+        const fuente = mapaInsumoAGrupo.get(d.origen) || d.origen;
+        const sumidero = mapaInsumoAGrupo.get(d.destino) || d.destino;
+        if (fuente === sumidero) return;
+        const clave = `${fuente}-->${sumidero}`;
+        if (!aristasVistas.has(clave)) {
+          aristasVistas.add(clave);
+          cyEdges.push({
+            data: {
+              id: `ec-${idx}-${fuente}-${sumidero}`,
+              source: fuente,
+              target: sumidero,
+              lineColor: '#0284C7',
+              arrowColor: '#38BDF8',
+              width: 2.2
+            }
+          });
+        }
+      });
+    }
+
+    try {
+      const cy = cytoscape({
+        container: containerRef.current,
+        elements: [...cyNodes, ...cyEdges],
+        boxSelectionEnabled: false,
+        autounselectify: false,
+        minZoom: 0.3,
+        maxZoom: 2.8,
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'shape': 'ellipse',
+              'width': 'data(nodeSize)',
+              'height': 'data(nodeSize)',
+              'background-color': 'data(colorFondo)',
+              'border-color': 'data(colorBorde)',
+              'border-width': 'data(borderWidth)',
+              'border-opacity': 0.95,
+              'underlay-shape': 'ellipse',
+              'underlay-color': 'data(haloColor)',
+              'underlay-padding': '9px',
+              'underlay-opacity': 0.65,
+              'background-image': 'data(iconSvg)',
+              'background-width': '28px',
+              'background-height': '28px',
+              'background-fit': 'none',
+              'background-position-x': '50%',
+              'background-position-y': '50%',
+              'label': 'data(label)',
+              'color': esModoOscuro ? '#F1F5F9' : '#0F172A',
+              'font-size': '10px',
+              'font-family': 'JetBrains Mono, monospace, sans-serif',
+              'font-weight': 700,
+              'text-valign': 'bottom',
+              'text-halign': 'center',
+              'text-margin-y': 7,
+              'text-wrap': 'wrap',
+              'text-max-width': '135px',
+              'text-background-color': esModoOscuro ? '#060A12' : '#FFFFFF',
+              'text-background-opacity': esModoOscuro ? 0.85 : 0.95,
+              'text-background-padding': '4px',
+              'text-background-shape': 'roundrectangle',
+              'text-border-color': esModoOscuro ? 'rgba(255,255,255,0.1)' : '#CBD5E1',
+              'text-border-width': 1,
+              'text-border-opacity': 0.85
+            }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 'data(width)',
+              'line-color': 'data(lineColor)',
+              'target-arrow-color': 'data(arrowColor)',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'arrow-scale': 1.25,
+              'opacity': 0.85
+            }
+          },
+          {
+            selector: ':selected',
+            style: {
+              'border-color': '#38BDF8',
+              'border-width': 4.5,
+              'underlay-padding': '11px',
+              'underlay-color': 'rgba(56, 189, 248, 0.95)',
+              'underlay-opacity': 0.85
+            }
+          }
+        ],
+        // LAYOUT SINCRÓNICO: Ubica los nodos instantáneamente sin animaciones infinitas
+        layout: {
+          name: 'dagre',
+          rankDir: 'LR',
+          nodeSep: 60,
+          rankSep: 130,
+          padding: 50,
+          animate: false
+        } as any
+      });
+
+      cy.on('tap', 'node', (evt) => {
+        const node: NodeSingular = evt.target;
+        const subIds = node.data('subIds') as string[] | undefined;
+        if (subIds && subIds.length > 0) {
+          const insumoAlerta = subIds.find((id) => {
+            const el = elementos.find((e) => e.id === id);
+            return el?.alertaStock;
+          });
+          onSelectNodeRef.current?.(insumoAlerta || subIds[0]);
+        } else {
+          onSelectNodeRef.current?.(node.id());
+        }
+      });
+
+      cy.on('tap', (evt) => {
+        if (evt.target === cy) {
+          onSelectNodeRef.current?.(null);
+        }
+      });
+
+      // Encuadre inicial exacto en reposo
+      encuadrarAlInicio(cy, 50);
+      cyRef.current = cy;
+    } catch (err) {
+      console.error('Error inicializando Cytoscape:', err);
+    }
 
     return () => {
       if (cyRef.current) {
@@ -451,365 +462,405 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elementos, dependencias, nodoSeleccionadoId, nodosAfectadosIds, onSelectNode, esModoOscuro, filtroProductoActivo, aislarCadena, cambiarFiltro]);
+  }, [elementos, dependencias, vistaSuministros]);
 
-  const handleZoomIn = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 1.25, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
-  const handleZoomOut = () => cyRef.current?.zoom({ level: cyRef.current.zoom() * 0.8, renderedPosition: { x: containerRef.current!.clientWidth / 2, y: containerRef.current!.clientHeight / 2 } });
-  const handleFit = () => {
-    if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
-  };
-  const handleCentrarSeleccion = () => {
-    if (!cyRef.current || !nodoSeleccionadoId) return;
-    const nodo = cyRef.current.getElementById(nodoSeleccionadoId);
-    if (nodo && nodo.length > 0) {
-      cyRef.current.animate({
-        center: { eles: nodo },
-        zoom: Math.max(cyRef.current.zoom(), 1.25),
-        duration: 350
+  // 2. ACTUALIZACIÓN LIGERA DE ESTILOS Y FILTRADO (Sin destruir el lienzo ni mover nodos)
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    cy.batch(() => {
+      // Nodos
+      cy.nodes().forEach((node) => {
+        const id = node.id();
+        const subIds = node.data('subIds') as string[] | undefined;
+        const esGrupo = Boolean(node.data('esGrupo'));
+
+        const pertenece = esGrupo
+          ? !nodosLineaFiltro || (subIds ? subIds.some((sId) => nodosLineaFiltro.has(sId)) : true)
+          : !nodosLineaFiltro || nodosLineaFiltro.has(id);
+
+        const esSeleccionado = esGrupo
+          ? Boolean(subIds && nodoSeleccionadoId && subIds.includes(nodoSeleccionadoId)) ||
+            nodoSeleccionadoId === id
+          : nodoSeleccionadoId === id;
+
+        const esAfectado = esGrupo
+          ? Boolean(subIds && subIds.some((sId) => nodosAfectadosIds.includes(sId))) ||
+            nodosAfectadosIds.includes(id)
+          : nodosAfectadosIds.includes(id);
+
+        const tipo = (node.data('tipo') as string) || '';
+        const alertaStock = Boolean(node.data('alertaStock'));
+        const estilo = obtenerEstiloNodoSegunTema(tipo, alertaStock, esModoOscuro, esGrupo);
+
+        node.style({
+          'opacity': pertenece ? 1 : 0.15,
+          'background-color': estilo.colorFondo,
+          'background-image': generarIconoSvg(tipo, estilo.iconColor, esGrupo),
+          'border-width': esSeleccionado ? 4.5 : esAfectado ? 3.5 : estilo.borderWidth,
+          'border-color': esSeleccionado ? '#38BDF8' : esAfectado ? '#EF4444' : estilo.colorBorde,
+          'underlay-opacity': esSeleccionado
+            ? 0.95
+            : esAfectado
+            ? 0.8
+            : pertenece
+            ? esModoOscuro
+              ? 0.65
+              : 0.4
+            : 0.08,
+          'underlay-color': esSeleccionado ? '#38BDF8' : esAfectado ? '#EF4444' : estilo.haloColor,
+          'color': esModoOscuro ? '#F1F5F9' : '#0F172A',
+          'text-background-color': esModoOscuro ? '#060A12' : '#FFFFFF',
+          'text-background-opacity': esModoOscuro ? 0.85 : 0.95,
+          'text-border-color': esModoOscuro ? 'rgba(255,255,255,0.1)' : '#CBD5E1',
+          'text-border-width': 1,
+          'text-border-opacity': 0.85
+        });
       });
+
+      // Aristas
+      cy.edges().forEach((edge) => {
+        const sourceNode = edge.source();
+        const targetNode = edge.target();
+        const sourceId = sourceNode.id();
+        const targetId = targetNode.id();
+        const sourceSubIds = sourceNode.data('subIds') as string[] | undefined;
+        const targetSubIds = targetNode.data('subIds') as string[] | undefined;
+
+        const sourcePertenece = sourceSubIds
+          ? !nodosLineaFiltro || sourceSubIds.some((sId) => nodosLineaFiltro.has(sId))
+          : !nodosLineaFiltro || nodosLineaFiltro.has(sourceId);
+
+        const targetPertenece = targetSubIds
+          ? !nodosLineaFiltro || targetSubIds.some((sId) => nodosLineaFiltro.has(sId))
+          : !nodosLineaFiltro || nodosLineaFiltro.has(targetId);
+
+        const pertenece = sourcePertenece && targetPertenece;
+
+        const sourceEnCadena =
+          sourceId === nodoSeleccionadoId ||
+          nodosAfectadosIds.includes(sourceId) ||
+          Boolean(sourceSubIds && sourceSubIds.some((sId) => sId === nodoSeleccionadoId || nodosAfectadosIds.includes(sId)));
+
+        const targetEnCadena =
+          nodosAfectadosIds.includes(targetId) ||
+          Boolean(targetSubIds && targetSubIds.some((sId) => nodosAfectadosIds.includes(sId)));
+
+        const esEnCadena = sourceEnCadena && targetEnCadena;
+
+        edge.style({
+          'opacity': pertenece ? (esEnCadena ? 1 : esModoOscuro ? 0.85 : 0.75) : 0.08,
+          'width': esEnCadena ? 3.5 : pertenece ? 2 : 1,
+          'line-color': esEnCadena
+            ? '#EF4444'
+            : pertenece
+            ? '#0284C7'
+            : esModoOscuro
+            ? '#334155'
+            : '#CBD5E1',
+          'target-arrow-color': esEnCadena
+            ? '#F87171'
+            : pertenece
+            ? esModoOscuro
+              ? '#38BDF8'
+              : '#0284C7'
+            : esModoOscuro
+            ? '#475569'
+            : '#CBD5E1'
+        });
+      });
+    });
+  }, [nodoSeleccionadoId, nodosAfectadosIds, nodosLineaFiltro, esModoOscuro]);
+
+  // 3. CAMBIO DE DISPOSICIÓN CONTROLADO (Sólo cuando el usuario presiona el botón)
+  const alternarLayout = () => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const nuevoLayout = layoutNombre === 'dagre' ? 'concentric' : 'dagre';
+    setLayoutNombre(nuevoLayout);
+
+    if (nuevoLayout === 'concentric') {
+      cy.layout({
+        name: 'concentric',
+        concentric: (node: any) => {
+          const tipo = node.data('tipo');
+          if (tipo === 'PRODUCTO') return 4;
+          if (tipo === 'PROCESO') return 3;
+          if (tipo === 'INSUMO') return 2;
+          return 1;
+        },
+        levelWidth: () => 1,
+        padding: 50,
+        animate: true,
+        animationDuration: 400
+      } as any).run();
+    } else {
+      cy.layout({
+        name: 'dagre',
+        rankDir: 'LR',
+        nodeSep: 60,
+        rankSep: 130,
+        padding: 50,
+        animate: true,
+        animationDuration: 400
+      } as any).run();
     }
   };
 
-  // Al cambiar pantalla completa, esperar a que el DOM aplique las clases de posicionamiento
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (cyRef.current) {
-        cyRef.current.resize();
-        if (nodoSeleccionadoId) {
-          const nodo = cyRef.current.getElementById(nodoSeleccionadoId);
-          if (nodo && nodo.length > 0) {
-            cyRef.current.center(nodo);
-            return;
-          }
-        }
-        encuadrarAlInicio(cyRef.current, 45);
-      }
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [esPantallaCompleta, nodoSeleccionadoId]);
-
-  // Cytoscape no reajusta su viewport cuando cambia el tamaño del contenedor. Como el lienzo ahora
-  // ocupa el espacio restante del viewport, hay que reajustarlo al redimensionar la ventana; si no,
-  // el grafo queda con la medida anterior.
-  useEffect(() => {
-    const reajustarAlRedimensionar = () => {
-      cyRef.current?.resize();
-      if (cyRef.current) encuadrarAlInicio(cyRef.current, 45);
-    };
-    window.addEventListener('resize', reajustarAlRedimensionar);
-    return () => window.removeEventListener('resize', reajustarAlRedimensionar);
-  }, []);
-
-  useEffect(() => {
-    const salirConEscape = (evento: KeyboardEvent) => {
-      if (evento.key === 'Escape') {
-        setEsPantallaCompleta(false);
-      }
-    };
-    window.addEventListener('keydown', salirConEscape);
-    return () => window.removeEventListener('keydown', salirConEscape);
-  }, []);
-
-  // Al alternar entre `relative` y `fixed` se desactiva cualquier transición de tamaño
-  // para evitar que el motor gráfico mida un contenedor con dimensiones intermedias o erróneas.
-  const estiloContenedor: CSSProperties = {
-    transition: 'none'
+  const handleZoomIn = () => {
+    if (cyRef.current) cyRef.current.zoom(cyRef.current.zoom() * 1.25);
   };
 
-  const handleRelayout = () => {
-    cyRef.current?.layout({
-      name: 'dagre',
-      rankDir: 'LR',
-      nodeSep: 60,
-      rankSep: 110,
-      padding: 50,
-      animate: true,
-      animationDuration: 400
-    } as any).run();
+  const handleZoomOut = () => {
+    if (cyRef.current) cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+  };
+
+  const handleResetZoom = () => {
+    if (cyRef.current) encuadrarAlInicio(cyRef.current, 50);
   };
 
   const handleExportarPNG = () => {
     if (!cyRef.current) return;
-    const uri = cyRef.current.png({ full: true, scale: 2, bg: esModoOscuro ? '#020617' : '#ffffff' });
+    const uri = cyRef.current.png({ full: true, scale: 2, bg: '#030712' });
     const a = document.createElement('a');
     a.href = uri;
     a.download = `abastecepyme-red-${new Date().toISOString().slice(0, 10)}.png`;
     a.click();
   };
 
-  // En pantalla completa el ancho y la altura los fijan los insets: ocupa el viewport menos el
-  // margen, sin desbordar. En modo normal el lienzo se estira al alto disponible y puede encogerse
-  // (`min-h-0`), en vez de imponer una altura fija que empujaría el borde inferior fuera del viewport.
-  const clasePosicion = esPantallaCompleta
-    ? 'fixed inset-4 z-50 shadow-2xl border-sky-500/50'
+  const productosFiltrados = useMemo(() => {
+    if (!busquedaLinea.trim()) return productos;
+    return productos.filter((p) => p.nombre.toLowerCase().includes(busquedaLinea.toLowerCase().trim()));
+  }, [productos, busquedaLinea]);
+
+  const clasePosicion = isFullscreen
+    ? 'fixed inset-3 z-50 shadow-2xl border-sky-500/50'
     : 'relative w-full h-full min-h-0';
 
+  const estiloContenedor: CSSProperties = {
+    transition: 'none'
+  };
+
   return (
-    <div
-      style={estiloContenedor}
-      className={`rounded-2xl overflow-hidden glass-card ${clasePosicion}`}
-    >
-      {/* Fondo Blueprint */}
+    <div style={estiloContenedor} className={`overflow-hidden ${clasePosicion}`}>
+      {/* Contenedor del Lienzo Cytoscape con Fondo Blueprint Táctico */}
       <div ref={containerRef} className="w-full h-full absolute inset-0 graph-canvas-bg" />
 
-      {/* Leyenda y Selector de Línea de Producto */}
-      <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-2">
-        <div className="bg-white/95 dark:bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex flex-wrap items-center gap-3 shadow-md dark:shadow-xl">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-blue-100 dark:bg-blue-600 border border-blue-600 dark:border-blue-400 inline-block shadow-sm"></span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proveedor</span>
+      {/* BARRA SUPERIOR TÁCTICA: SELECTOR DE LÍNEA DE PRODUCTO (Sin solapamientos) */}
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+        <div className="bg-white/95 dark:bg-[#080D18]/90 border border-slate-200 dark:border-white/[0.1] rounded-lg p-1 flex items-center gap-2 shadow-lg dark:shadow-2xl backdrop-blur-md transition-colors">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+            <Workflow size={13} className="text-sky-600 dark:text-sky-400" />
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Línea:</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-amber-100 dark:bg-amber-600 border border-amber-600 dark:border-amber-400 inline-block shadow-sm"></span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Suministro</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-purple-100 dark:bg-purple-600 border border-purple-600 dark:border-purple-400 inline-block shadow-sm"></span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Proceso</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-emerald-100 dark:bg-emerald-600 border border-emerald-600 dark:border-emerald-400 inline-block shadow-sm"></span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Producto</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-white dark:bg-slate-800 border-2 border-red-500 inline-block shadow-sm"></span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold text-[11px]">Stock bajo</span>
-          </div>
-        </div>
 
-        {productosDisponibles.length > 0 && (
-          <div ref={contenedorSelectorRef} className="relative">
-            <div className="bg-white/95 dark:bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex items-center gap-2 shadow-md dark:shadow-xl">
-              <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <Workflow size={13} className="text-sky-500" />
-                <span>Línea:</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuLineaAbierto((prev) => !prev)}
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#0C1424] dark:hover:bg-[#111C33] border border-slate-300 dark:border-white/[0.1] text-slate-800 dark:text-white text-xs font-semibold rounded px-2.5 py-1 transition-all cursor-pointer max-w-[220px]"
+            >
+              <span className="truncate">
+                {productoActivo ? productoActivo.nombre : 'Todas las líneas'}
               </span>
+              <ChevronDown
+                size={12}
+                className={`text-slate-500 dark:text-slate-400 transition-transform ${menuLineaAbierto ? 'rotate-180' : ''}`}
+              />
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setMenuLineaAbierto((prev) => !prev)}
-                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1 transition-colors cursor-pointer max-w-[200px]"
-                title={productoActivo ? `Línea activa: ${productoActivo.nombre}` : 'Filtrar por línea de producto'}
-              >
-                <span className="truncate">
-                  {productoActivo ? productoActivo.nombre : 'Todas las líneas'}
-                </span>
-                <ChevronDown size={13} className={`shrink-0 transition-transform ${menuLineaAbierto ? 'rotate-180' : ''}`} />
-              </button>
-
-              {filtroProductoActivo !== 'TODOS' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setAislarCadena((prev) => !prev)}
-                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer border ${
-                      aislarCadena
-                        ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300'
-                        : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                    title={
-                      aislarCadena
-                        ? 'Mostrando solo los componentes de este producto. Clic para ver toda la planta.'
-                        : 'Mostrando en contexto de toda la planta. Clic para aislar solo esta cadena.'
-                    }
-                  >
-                    {aislarCadena ? 'Cadena aislada' : 'Red completa'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cambiarFiltro('TODOS')}
-                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    title="Restablecer a todas las líneas"
-                  >
-                    <X size={13} />
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Menú desplegable con buscador y los 5 más recientes */}
+            {/* Menú Desplegable de Selección de Línea (Calibrado para Modo Claro y Oscuro) */}
             {menuLineaAbierto && (
-              <div className="absolute top-full left-0 mt-1.5 w-80 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-30 overflow-hidden text-xs">
-                {/* Buscador de línea */}
-                <div className="p-2.5 border-b border-slate-100 dark:border-slate-800">
+              <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-[#0A101D] border border-slate-200 dark:border-white/[0.15] rounded-lg shadow-2xl z-30 overflow-hidden text-xs transition-colors">
+                <div className="p-2 border-b border-slate-100 dark:border-white/[0.08]">
                   <div className="relative flex items-center">
-                    <Search size={14} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+                    <Search size={12} className="absolute left-2 text-slate-400 pointer-events-none" />
                     <input
                       type="text"
-                      autoFocus
+                      placeholder="Buscar producto final..."
                       value={busquedaLinea}
                       onChange={(e) => setBusquedaLinea(e.target.value)}
-                      placeholder="Buscar línea por producto o SKU..."
-                      className="w-full pl-8 pr-7 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      className="w-full bg-slate-50 dark:bg-[#050811] border border-slate-200 dark:border-white/[0.1] rounded pl-6 pr-2 py-1 text-[11px] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500"
                     />
-                    {busquedaLinea && (
-                      <button
-                        type="button"
-                        onClick={() => setBusquedaLinea('')}
-                        className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
                   </div>
                 </div>
 
-                {/* Opción Red Completa */}
-                <div className="p-1">
+                <div className="max-h-48 overflow-y-auto p-1 space-y-0.5">
                   <button
                     type="button"
-                    onClick={() => cambiarFiltro('TODOS')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
-                      filtroProductoActivo === 'TODOS'
-                        ? 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 font-bold'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
+                    onClick={() => {
+                      onCambiarFiltroProducto?.('TODOS');
+                      setMenuLineaAbierto(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded transition-colors flex items-center justify-between cursor-pointer ${
+                      filtroProductoId === 'TODOS'
+                        ? 'bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
                     }`}
                   >
-                    <span>Todas las líneas (red completa)</span>
-                    {filtroProductoActivo === 'TODOS' && <Check size={14} className="text-sky-600 dark:text-sky-400" />}
+                    <span>Todas las líneas (Red completa)</span>
+                    <span className="text-[10px] text-slate-500 font-mono">27 nodos</span>
                   </button>
+
+                  {productosFiltrados.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        onCambiarFiltroProducto?.(p.id);
+                        setMenuLineaAbierto(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-1.5 rounded transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                        filtroProductoId === p.id
+                          ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <span className="truncate min-w-0 flex-1">{p.nombre}</span>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold shrink-0 whitespace-nowrap">
+                        {obtenerCodigoSku(p.id)}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-
-                {/* Historial de las 5 líneas más recientes (cuando no hay búsqueda activa) */}
-                {!busquedaLinea && (
-                  <div className="border-t border-slate-100 dark:border-slate-800 py-1">
-                    <div className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      <History size={11} className="text-slate-400" />
-                      <span>Líneas recientes (máx. 5)</span>
-                    </div>
-                    {lineasRecientes.length > 0 ? (
-                      lineasRecientes.map((item) => (
-                        <button
-                          key={`reciente-${item.id}`}
-                          type="button"
-                          onClick={() => cambiarFiltro(item.id)}
-                          className={`w-full flex items-center justify-between px-3 py-1.5 text-left transition-colors cursor-pointer ${
-                            filtroProductoActivo === item.id
-                              ? 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 font-bold'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
-                          }`}
-                        >
-                          <div className="min-w-0 pr-2">
-                            <p className="truncate text-xs font-semibold">{item.nombre}</p>
-                            <p className="text-[10px] text-slate-400 font-mono">
-                              {item.id} {obtenerCodigoSku(item.id) ? `• ${obtenerCodigoSku(item.id)}` : ''}
-                            </p>
-                          </div>
-                          {filtroProductoActivo === item.id && <Check size={14} className="text-sky-600 dark:text-sky-400 shrink-0" />}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-3 text-center text-slate-400 text-xs">
-                        Selecciona un producto en el mapa o búscalo arriba para ver su línea.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Resultados de búsqueda en tiempo real (solo cuando el usuario escribe) */}
-                {busquedaLinea.trim().length > 0 && (
-                  <div className="border-t border-slate-100 dark:border-slate-800 py-1">
-                    <div className="flex items-center justify-between px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      <span>Coincidencias ({lineasFiltradas.length})</span>
-                    </div>
-                    <div className="max-h-48 overflow-y-auto">
-                      {lineasFiltradas.length > 0 ? (
-                        lineasFiltradas.map((prod) => (
-                          <button
-                            key={prod.id}
-                            type="button"
-                            onClick={() => cambiarFiltro(prod.id)}
-                            className={`w-full flex items-center justify-between px-3 py-1.5 text-left transition-colors cursor-pointer ${
-                              filtroProductoActivo === prod.id
-                                ? 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 font-bold'
-                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
-                            }`}
-                          >
-                            <div className="min-w-0 pr-2">
-                              <p className="truncate text-xs font-semibold">{prod.nombre}</p>
-                              <p className="text-[10px] text-slate-400 font-mono">
-                                {prod.id} {obtenerCodigoSku(prod.id) ? `• ${obtenerCodigoSku(prod.id)}` : ''}
-                              </p>
-                            </div>
-                            {filtroProductoActivo === prod.id && <Check size={14} className="text-sky-600 dark:text-sky-400 shrink-0" />}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-4 text-center text-slate-400 text-xs">
-                          No se encontraron líneas para «{busquedaLinea}».
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Controles de Vista y Pantalla Completa */}
-      <div className="absolute bottom-3 right-3 z-10 bg-white/95 dark:bg-slate-950/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1 shadow-md dark:shadow-2xl">
-        <button
-          onClick={handleZoomIn}
-          title="Acercar (+)"
-          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
-        >
-          <ZoomIn size={17} />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          title="Alejar (-)"
-          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
-        >
-          <ZoomOut size={17} />
-        </button>
-        {nodoSeleccionadoId && (
+          {/* Botón para reiniciar filtro si hay uno activo */}
+          {filtroProductoId !== 'TODOS' && (
+            <button
+              type="button"
+              onClick={() => onCambiarFiltroProducto?.('TODOS')}
+              className="p-1 text-slate-400 hover:text-white rounded hover:bg-white/[0.08] transition-colors cursor-pointer"
+              title="Restablecer a todas las líneas"
+            >
+              <X size={13} />
+            </button>
+          )}
+
+          {/* Alternar Modo de Suministros: Compacta vs Detallada */}
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/[0.1] mx-0.5"></div>
+          <div className="flex items-center bg-slate-100 dark:bg-white/[0.04] p-0.5 rounded border border-slate-300 dark:border-white/[0.08] text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => setVistaSuministros('compacta')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 ${
+                vistaSuministros === 'compacta'
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Vista Compacta: agrupa visualmente los suministros por proveedor y planta (Recomendada)"
+            >
+              <Layers size={11} />
+              <span>Compacta</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setVistaSuministros('detallada')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 ${
+                vistaSuministros === 'detallada'
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Vista Detallada: muestra todos los suministros individuales con sus SKUs"
+            >
+              <Search size={11} />
+              <span>Detallada</span>
+            </button>
+          </div>
+
+          {/* Alternar Disposición: Dagre vs Concéntrico */}
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/[0.1] mx-0.5"></div>
           <button
-            onClick={handleCentrarSeleccion}
-            title="Centrar vista en componente seleccionado"
-            className="p-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-white dark:hover:bg-sky-500/20 rounded-lg transition-colors active:scale-95 cursor-pointer"
+            type="button"
+            onClick={alternarLayout}
+            className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+              layoutNombre === 'concentric'
+                ? 'bg-purple-100 text-purple-800 border border-purple-300 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:text-white border border-slate-300 dark:border-white/[0.06]'
+            }`}
+            title="Alternar vista jerárquica / concéntrica radial"
           >
-            <Crosshair size={17} />
+            {layoutNombre === 'concentric' ? <Sparkles size={11} /> : <Layers size={11} />}
+            <span>{layoutNombre === 'concentric' ? 'Radial' : 'Jerárquico'}</span>
           </button>
-        )}
+        </div>
+      </div>
+
+      {/* DOCK FLOTANTE INFERIOR IZQUIERDO: CONTROLES DE ZOOM Y CÁMARA */}
+      <div className="absolute bottom-3 left-3 z-20 flex flex-col items-center gap-1 bg-white/95 dark:bg-[#080D18]/90 border border-slate-300 dark:border-white/[0.1] p-1 rounded-lg shadow-lg dark:shadow-2xl backdrop-blur-md transition-colors">
         <button
-          onClick={handleFit}
-          title="Ajustar vista"
-          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
+          type="button"
+          onClick={handleZoomIn}
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.08] rounded transition-colors cursor-pointer"
+          title="Acercar (+)"
         >
-          <Layers size={17} />
+          <ZoomIn size={14} />
         </button>
         <button
-          onClick={handleRelayout}
-          title="Reorganizar Grafo (LR)"
-          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
+          type="button"
+          onClick={handleZoomOut}
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.08] rounded transition-colors cursor-pointer"
+          title="Alejar (-)"
         >
-          <RefreshCw size={17} />
+          <ZoomOut size={14} />
         </button>
         <button
+          type="button"
+          onClick={handleResetZoom}
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.08] rounded transition-colors cursor-pointer"
+          title="Centrar y encuadrar"
+        >
+          <RefreshCw size={14} />
+        </button>
+        <button
+          type="button"
           onClick={handleExportarPNG}
-          title="Exportar diagrama en imagen (PNG)"
-          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/80 rounded-lg transition-colors active:scale-95 cursor-pointer"
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.08] rounded transition-colors cursor-pointer"
+          title="Exportar imagen PNG de alta resolución"
         >
-          <Download size={17} />
+          <Download size={14} />
         </button>
-        <div className="w-[1px] h-5 bg-slate-200 dark:bg-slate-800 mx-0.5" />
+        <div className="w-full h-px bg-slate-200 dark:bg-white/[0.1] my-0.5"></div>
         <button
-          onClick={() => setEsPantallaCompleta(!esPantallaCompleta)}
-          title={esPantallaCompleta ? "Salir de Pantalla Completa" : "Pantalla Completa"}
-          className="p-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-500/10 rounded-lg transition-colors active:scale-95 cursor-pointer"
+          type="button"
+          onClick={() => setIsFullscreen((prev) => !prev)}
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.08] rounded transition-colors cursor-pointer"
+          title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
         >
-          {esPantallaCompleta ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </button>
       </div>
 
-      {elementos.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm z-20">
-          <p className="text-slate-600 dark:text-slate-400 font-medium text-sm">El catálogo está vacío. Agrega elementos para visualizar la red.</p>
+      {/* LEYENDA TÁCTICA INFERIOR DERECHA */}
+      <div className="absolute bottom-3 right-3 z-20 hidden md:flex items-center gap-3 bg-white/95 dark:bg-[#080D18]/90 border border-slate-300 dark:border-white/[0.1] px-3 py-1.5 rounded-lg shadow-lg dark:shadow-2xl backdrop-blur-md text-[10px] transition-colors">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] shadow-none dark:shadow-[0_0_8px_#10B981]"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium">Proveedor</span>
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0284C7] dark:bg-[#38BDF8] shadow-none dark:shadow-[0_0_8px_#38BDF8]"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium">Suministro</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0284C7] dark:bg-[#38BDF8] ring-2 ring-sky-400/50 shadow-none dark:shadow-[0_0_8px_#38BDF8]"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium">Grupo Suministros</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#9333EA] dark:bg-[#A855F7] shadow-none dark:shadow-[0_0_8px_#A855F7]"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium">Proceso</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#F59E0B] shadow-none dark:shadow-[0_0_8px_#F59E0B]"></span>
+          <span className="text-slate-700 dark:text-slate-300 font-medium">Producto</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] dark:bg-[#F43F5E] shadow-none dark:shadow-[0_0_8px_#F43F5E] animate-pulse"></span>
+          <span className="text-rose-700 dark:text-rose-300 font-bold">Stock bajo</span>
+        </div>
+      </div>
     </div>
   );
 };

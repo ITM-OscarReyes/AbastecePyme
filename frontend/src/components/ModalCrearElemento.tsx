@@ -3,6 +3,7 @@ import type {
   ActualizarElementoDto,
   CrearElementoDto,
   Elemento,
+  Perfil,
   TipoElemento
 } from '../types';
 import { AlertCircle, Boxes, Pencil, PlusCircle, X } from 'lucide-react';
@@ -12,6 +13,7 @@ interface ModalCrearElementoProps {
   isOpen: boolean;
   elementos?: Elemento[];
   elementoEditar?: Elemento | null;
+  perfilActivo?: Perfil | null;
   onClose: () => void;
   onSubmit: (dto: CrearElementoDto) => Promise<void>;
   onSolicitarGuardar?: (dto: ActualizarElementoDto) => void;
@@ -32,12 +34,21 @@ export const ModalCrearElemento: React.FC<ModalCrearElementoProps> = (props) => 
 const FormularioElemento: React.FC<ModalCrearElementoProps> = ({
   elementos,
   elementoEditar,
+  perfilActivo,
   onClose,
   onSubmit,
   onSolicitarGuardar
 }) => {
+  const tipoInicial = (): TipoElemento => {
+    if (elementoEditar?.tipo) return elementoEditar.tipo;
+    if (perfilActivo?.id === 'COMPRAS') return 'INSUMO';
+    if (perfilActivo?.id === 'PRODUCCION') return 'PROCESO';
+    if (perfilActivo?.id === 'VENTAS') return 'PRODUCTO';
+    return 'INSUMO';
+  };
+
   const [id, setId] = useState(elementoEditar?.id ?? '');
-  const [tipo, setTipo] = useState<TipoElemento>(elementoEditar?.tipo ?? 'INSUMO');
+  const [tipo, setTipo] = useState<TipoElemento>(tipoInicial());
   const [nombre, setNombre] = useState(elementoEditar?.nombre ?? '');
   const [descripcion, setDescripcion] = useState(elementoEditar?.descripcion ?? '');
   const [stockDisponible, setStockDisponible] = useState(

@@ -77,13 +77,21 @@ Sin embargo, el gerente de planta y el responsable de compras tenían que navega
   * Almacenamiento del token de sesión en memoria (`tokenSesionActual`).
   * Interceptor Axios para inyectar automáticamente `Authorization: Bearer <token>` en todas las peticiones salientes.
   * Métodos `obtenerPerfiles()`, `crearSesion()`, `obtenerSesion()`, `cerrarSesion()`.
+* **Evolución y Normalización de Gráficos Industriales (Palantir Foundry)**:
+  * **Erradicación de Datos Simulados**: Todos los gráficos se alimentan 100% de `elementos` y `dependencias` reales de `GET /api/v1/grafo`.
+  * **Inventario Real de Insumos (`ProductionOutputChart.tsx`)**: Eliminación del choque de etiquetas en el eje X; marcas sutiles (*ticks*) en insumos conformes y rotulado destacado en rojo y negrita únicamente en los 3 insumos bajo umbral (`Barniz`, `Corredera`, `Tornillo`).
+  * **Cobertura Operativa por Estación (`StationThroughputChart.tsx`)**: Normalización a escala porcentual de \(0\%\) a \(100\%\) con línea de meta en \(100\%\). Las estaciones con déficit (`Acabado`, `Mesa`, `Repisa` al \(67\%\) y `Escritorio` al \(75\%\)) se ubican física y visualmente por debajo de la línea roja.
+  * **Cumplimiento por Proveedor (`ProcurementOverviewChart.tsx`)**: Se eliminó la suma engañosa de piezas heterogéneas (`642 uds vs 342 uds`) que ocultaba faltantes de tornillos tras excesos de arandelas. Se adoptó la **Tasa de Cumplimiento OTIF (\(0-100\%\))**, donde Ferretería pasa al \(71\%\) y Acabados al \(50\%\), desglosando los faltantes exactos en el tooltip (`Tornillo M6: faltan 70`, `Corredera: faltan 2`, `Barniz: faltan 3`).
+  * **Convención Visual Unificada**: En todos los gráficos, **Azul continuo** = Dato real en planta; **Rojo discontinuo** = Umbral mínimo requerido o meta de capacidad plena (\(100\%\)).
 * **Nueva Vista: `VistaTablero.tsx` (`src/components/VistaTablero.tsx`)**:
+  * 3 Vistas operativas: `Flujo de Producción & OEE`, `Capacidad de Estaciones` (con scroll vertical `custom-scroll-visible`) y `Telemetría & Gráficos` (a pantalla completa).
   * 5 Tarjetas KPI principales (Proveedores, Insumos con alertas de stock, Procesos, Productos, Conexiones).
   * Bloque de Continuidad Operativa (muestra estado DAG de planta o alerta de ciclos bloqueantes).
   * Bloque de Plan de Entrega Rápido (selección de productos finales y visualización secuencial).
   * Bloque de Alertas de Suministros Críticos (insumos bajo stock mínimo).
   * Módulo In-Situ de Análisis de Impacto (evalúa la cascada de afectación sin cambiar de pantalla).
-  * Sección de Escenarios de Demostración Operativa.
+* **Herramienta Interactiva de Sustentación**:
+  * Documento web interactivo standalone `docs/entrega/sustentacion_f4.html` listo para proyectar y exponer en clase.
 * **Barra de Navegación (`src/components/HeaderNavbar.tsx`)**:
   * Pestaña *"Tablero"* como primera opción (atajo de teclado `0`).
   * Selector desplegable de Perfiles (`COMPRAS` vs `PRODUCCION`) con indicador visual de modo ("Edición permitida" vs "Solo consulta").

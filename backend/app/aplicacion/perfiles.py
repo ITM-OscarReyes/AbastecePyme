@@ -19,8 +19,10 @@ class Perfil:
 
 #: Perfiles disponibles para la sesión de demostración de F4.
 PERFILES_DISPONIBLES: tuple[Perfil, ...] = (
+    Perfil(id="ADMINISTRADOR", nombre="Administrador", puede_escribir=True),
     Perfil(id="COMPRAS", nombre="Responsable de compras", puede_escribir=True),
-    Perfil(id="PRODUCCION", nombre="Coordinador de producción", puede_escribir=False),
+    Perfil(id="PRODUCCION", nombre="Coordinador de producción", puede_escribir=True),
+    Perfil(id="VENTAS", nombre="Asesor de ventas", puede_escribir=False),
 )
 
 

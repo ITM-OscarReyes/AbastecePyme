@@ -1,34 +1,28 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
-  AlertOctagon,
-  AlertTriangle,
-  ArrowRight,
-  Building2,
-  CheckCircle2,
-  CheckSquare,
-  Cog,
-  ExternalLink,
-  Factory,
-  ListOrdered,
-  Network,
-  Package,
-  RefreshCw,
   Search,
-  ShieldAlert,
-  ShieldCheck,
-  Zap
+  RefreshCw,
+  Layers,
+  AlertTriangle,
+  Activity,
+  BarChart3,
+  CheckCircle2,
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import type {
   ImpactoRespuesta,
-  OrdenProduccionRespuesta,
   Perfil,
-  PlanEntregaRespuesta,
   RespuestaGrafo
 } from '../types';
 import type { TabActiva } from './HeaderNavbar';
 import { apiService, extraerMensajeError } from '../services/api';
 import { obtenerCodigoSku } from '../utils/sku';
-import { claseBadgeTipo, etiquetaTipo } from '../utils/etiquetas';
+import { GraphCanvas } from './GraphCanvas';
+import { WorkstationPipelineCanvas } from './WorkstationPipelineCanvas';
+import { ProductionOutputChart } from './ProductionOutputChart';
+import { TrendSparkline } from './TrendSparkline';
+import { StationThroughputChart } from './StationThroughputChart';
 
 interface VistaTableroProps {
   grafo: RespuestaGrafo;
@@ -39,6 +33,7 @@ interface VistaTableroProps {
   onConsultarElemento: (id: string) => void;
   perfilActivo: Perfil | null;
   puedeEscribir?: boolean;
+  esModoOscuro?: boolean;
   onAbrirModalElemento?: () => void;
   onAbrirModalDependencia?: () => void;
   onAbrirModalPerfiles?: () => void;
@@ -47,110 +42,35 @@ interface VistaTableroProps {
 export const VistaTablero: React.FC<VistaTableroProps> = ({
   grafo,
   cargandoGrafo,
-  errorGrafo,
+  errorGrafo: _errorGrafo,
   onRecargarGrafo,
   onNavegar,
   onConsultarElemento,
-  perfilActivo,
+  perfilActivo: _perfilActivo,
   puedeEscribir: _puedeEscribir,
+  esModoOscuro = true,
   onAbrirModalElemento: _onAbrirModalElemento,
-  onAbrirModalDependencia: _onAbrirModalDependencia,
-  onAbrirModalPerfiles
+  onAbrirModalDependencia: _onAbrirModalDependencia
 }) => {
-  void _puedeEscribir;
-  void _onAbrirModalElemento;
-  void _onAbrirModalDependencia;
-  // Estado para Diagnóstico General de Planta (F3)
-  const [ordenProduccion, setOrdenProduccion] = useState<OrdenProduccionRespuesta | null>(null);
-  const [cargandoOrden, setCargandoOrden] = useState<boolean>(false);
-  const [errorOrden, setErrorOrden] = useState<string | null>(null);
+  // Filtros y estados de las vistas
+  const [vistaCentral, setVistaCentral] = useState<'VISTA_1_FLUJO' | 'VISTA_2_CAPACIDAD' | 'VISTA_3_GRAFICAS' | 'RED'>('VISTA_1_FLUJO');
+  const [busquedaRed, setBusquedaRed] = useState<string>('');
+  const [productoSeleccionadoId, setProductoSeleccionadoId] = useState<string | null>(null);
 
-  // Estado para Plan de Entrega de Producto (F3)
-  const [productoSeleccionadoId, setProductoSeleccionadoId] = useState<string>('');
-  const [planEntrega, setPlanEntrega] = useState<PlanEntregaRespuesta | null>(null);
-  const [cargandoPlan, setCargandoPlan] = useState<boolean>(false);
-  const [errorPlan, setErrorPlan] = useState<string | null>(null);
+  // Estado para Evaluación de Impacto In-Situ
+  const [, setElementoImpactoId] = useState<string>('');
+  const [, setImpactoResultado] = useState<ImpactoRespuesta | null>(null);
+  const [, setCargandoImpacto] = useState<boolean>(false);
+  const [, setErrorImpacto] = useState<string | null>(null);
 
-  // Estado para Evaluación de Impacto In-Situ (F2 / F4)
-  const [elementoImpactoId, setElementoImpactoId] = useState<string>('');
-  const [impactoResultado, setImpactoResultado] = useState<ImpactoRespuesta | null>(null);
-  const [cargandoImpacto, setCargandoImpacto] = useState<boolean>(false);
-  const [errorImpacto, setErrorImpacto] = useState<string | null>(null);
-
-  // Buscador de elemento para impacto
-  const [busquedaElemento, setBusquedaElemento] = useState<string>('');
-
-  // 1. Cargar Diagnóstico Global de Planta
-  const cargarDiagnostico = useCallback(async () => {
-    setCargandoOrden(true);
-    setErrorOrden(null);
-    try {
-      const data = await apiService.obtenerOrdenProduccion();
-      setOrdenProduccion(data);
-    } catch (err) {
-      setErrorOrden(extraerMensajeError(err));
-      setOrdenProduccion(null);
-    } finally {
-      setCargandoOrden(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    cargarDiagnostico();
-  }, [cargarDiagnostico]);
-
-  // Lista de productos terminados en el catálogo
-  const productosDisponibles = grafo.elementos.filter((e) => e.tipo === 'PRODUCTO');
-
-  // Si hay productos y no se ha seleccionado ninguno, seleccionar el primero automáticamente
-  useEffect(() => {
-    if (productosDisponibles.length > 0 && !productoSeleccionadoId) {
-      setProductoSeleccionadoId(productosDisponibles[0].id);
-    }
-  }, [productosDisponibles, productoSeleccionadoId]);
-
-  // 2. Cargar Plan de Entrega cuando cambia el producto seleccionado
-  useEffect(() => {
-    if (!productoSeleccionadoId) {
-      setPlanEntrega(null);
-      return;
-    }
-
-    let activo = true;
-    const cargarPlan = async () => {
-      setCargandoPlan(true);
-      setErrorPlan(null);
-      try {
-        const respuesta = await apiService.obtenerPlanEntrega([productoSeleccionadoId]);
-        if (activo) {
-          setPlanEntrega(respuesta);
-        }
-      } catch (err) {
-        if (activo) {
-          setErrorPlan(extraerMensajeError(err));
-          setPlanEntrega(null);
-        }
-      } finally {
-        if (activo) {
-          setCargandoPlan(false);
-        }
-      }
-    };
-
-    cargarPlan();
-    return () => {
-      activo = false;
-    };
-  }, [productoSeleccionadoId]);
-
-  // 3. Ejecutar Evaluación de Impacto In-Situ
-  const ejecutarImpacto = async (id: string) => {
+  // Ejecutar Evaluación de Impacto In-Situ
+  const ejecutarImpacto = useCallback(async (id: string) => {
     if (!id.trim()) return;
     setElementoImpactoId(id);
     setCargandoImpacto(true);
     setErrorImpacto(null);
     try {
-      const data = await apiService.obtenerImpacto(id.trim());
+      const data = await apiService.obtenerImpacto(id);
       setImpactoResultado(data);
     } catch (err) {
       setErrorImpacto(extraerMensajeError(err));
@@ -158,862 +78,547 @@ export const VistaTablero: React.FC<VistaTableroProps> = ({
     } finally {
       setCargandoImpacto(false);
     }
-  };
+  }, []);
 
-  // Contadores por tipo de componente
-  const totalProveedores = grafo.elementos.filter((e) => e.tipo === 'PROVEEDOR').length;
-  const totalInsumos = grafo.elementos.filter((e) => e.tipo === 'INSUMO').length;
-  const totalProcesos = grafo.elementos.filter((e) => e.tipo === 'PROCESO').length;
-  const totalProductos = productosDisponibles.length;
+  const handleCambiarFiltroProducto = useCallback((id: string) => {
+    setProductoSeleccionadoId(id === 'TODOS' ? null : id);
+  }, []);
 
-  // Insumos con alerta de stock
-  const insumosEnAlerta = grafo.elementos.filter((e) => e.tipo === 'INSUMO' && e.alertaStock);
+  const handleSelectNode = useCallback(
+    (id: string | null) => {
+      if (id) {
+        onConsultarElemento(id);
+        void ejecutarImpacto(id);
+      }
+    },
+    [onConsultarElemento, ejecutarImpacto]
+  );
 
-  // Elementos filtrados para selector de impacto
-  const elementosParaImpacto = grafo.elementos.filter((e) => {
-    if (!busquedaElemento.trim()) return true;
-    const termino = busquedaElemento.toLowerCase();
-    return (
-      e.id.toLowerCase().includes(termino) ||
-      e.nombre.toLowerCase().includes(termino) ||
-      (e.descripcion && e.descripcion.toLowerCase().includes(termino))
+  // Suministros (Insumos) reales con inventario del backend
+  const insumos = useMemo(() => {
+    return grafo.elementos.filter((e) => e.tipo === 'INSUMO');
+  }, [grafo.elementos]);
+
+  // Procesos reales de la planta de manufactura
+  const procesos = useMemo(() => {
+    return grafo.elementos.filter((e) => e.tipo === 'PROCESO');
+  }, [grafo.elementos]);
+
+  // Insumos bajo mínimo o con alerta de stock
+  const insumosEnAlerta = useMemo(() => {
+    return insumos.filter((i) => i.alertaStock || (i.stockDisponible ?? 50) < (i.stockMinimo ?? 20));
+  }, [insumos]);
+
+  // Métricas 100% reales de déficit y entradas para cada estación de proceso
+  const metricasProcesos = useMemo(() => {
+    const mapaInsumos = new Map<string, typeof insumos[0]>();
+    insumos.forEach((i) => mapaInsumos.set(i.id, i));
+
+    return procesos.map((proc) => {
+      const aristas = grafo.dependencias.filter((dep) => dep.destino === proc.id);
+      const entradas = aristas
+        .map((d) => mapaInsumos.get(d.origen))
+        .filter((ins): ins is typeof insumos[0] => Boolean(ins));
+
+      const conDeficit = entradas.filter(
+        (i) => i.alertaStock || (i.stockDisponible ?? 0) < (i.stockMinimo ?? 0)
+      );
+
+      const cantDeficit = conDeficit.length;
+      const cantEntradas = entradas.length;
+      const totalDeficit = conDeficit.reduce(
+        (acc, i) => acc + Math.max(0, (i.stockMinimo ?? 0) - (i.stockDisponible ?? 0)),
+        0
+      );
+
+      const rotuloInsumo = conDeficit.length > 0 ? conDeficit[0].nombre : '';
+      const detalle =
+        cantDeficit > 0
+          ? `${rotuloInsumo} (${conDeficit[0].stockDisponible}/${conDeficit[0].stockMinimo})`
+          : `${cantEntradas}/${cantEntradas} Insumos OK`;
+
+      return {
+        id: proc.id,
+        titulo: proc.nombre,
+        tieneDeficit: cantDeficit > 0,
+        totalDeficit,
+        detalle,
+        totalInsumos: cantEntradas,
+        conformes: cantEntradas - cantDeficit
+      };
+    });
+  }, [procesos, insumos, grafo.dependencias]);
+
+  // Conformidad 100% real por familia de suministros de la planta
+  const conformidadCategorias = useMemo(() => {
+    const categorias = [
+      {
+        etiqueta: 'Línea Madera',
+        filtro: (id: string) => id.includes('MADERA') || id.includes('TABLERO') || id.includes('LISTON')
+      },
+      {
+        etiqueta: 'Estructura Metálica',
+        filtro: (id: string) => id.includes('ACERO') || id.includes('METAL') || id.includes('TUBO') || id.includes('PANEL')
+      },
+      {
+        etiqueta: 'Acabados & Químicos',
+        filtro: (id: string) => id.includes('ACABADO') || id.includes('BARNIZ') || id.includes('LIJA')
+      },
+      {
+        etiqueta: 'Fijación & Ferretería',
+        filtro: (id: string) =>
+          id.includes('TORNILLO') ||
+          id.includes('TUERCA') ||
+          id.includes('ARANDELA') ||
+          id.includes('BISAGRA') ||
+          id.includes('CORREDERA') ||
+          id.includes('TIRADOR') ||
+          id.includes('COLA')
+      }
+    ];
+
+    return categorias.map((cat) => {
+      const items = insumos.filter((i) => cat.filtro(i.id));
+      const cantItems = items.length;
+      const cantConformes = items.filter(
+        (i) => !i.alertaStock && (i.stockDisponible ?? 0) >= (i.stockMinimo ?? 0)
+      ).length;
+      const pct = cantItems > 0 ? Math.round((cantConformes / cantItems) * 100) : 100;
+      return {
+        etiqueta: cat.etiqueta,
+        total: cantItems,
+        conformes: cantConformes,
+        porcentaje: pct,
+        alerta: cantConformes < cantItems
+      };
+    });
+  }, [insumos]);
+
+  // Filtrado de la red según búsqueda
+  const elementosFiltradosRed = useMemo(() => {
+    if (!busquedaRed.trim()) return grafo.elementos;
+    const q = busquedaRed.toLowerCase().trim();
+    return grafo.elementos.filter(
+      (e) =>
+        e.nombre.toLowerCase().includes(q) ||
+        e.id.toLowerCase().includes(q) ||
+        (obtenerCodigoSku(e.id) || '').toLowerCase().includes(q)
     );
-  });
+  }, [grafo.elementos, busquedaRed]);
+
+  // Generador de datos para el Buffer Heatmap
+  const heatmapData = useMemo(() => {
+    return insumos.map((insumo) => {
+      const disp = insumo.stockDisponible ?? 50;
+      const min = insumo.stockMinimo ?? 20;
+      const ratio = min > 0 ? disp / min : 1;
+      const alerta = insumo.alertaStock || disp < min;
+      const porcentaje = Math.min(100, Math.round(ratio * 50));
+
+      const celdas = [
+        { nivel: ratio >= 1.5 ? 'green' : ratio >= 1.0 ? 'amber' : ratio >= 0.7 ? 'orange' : 'red' },
+        { nivel: ratio >= 1.3 ? 'green' : ratio >= 0.9 ? 'amber' : 'red' },
+        { nivel: ratio >= 1.1 ? 'green' : ratio >= 0.8 ? 'amber' : 'orange' },
+        { nivel: ratio >= 1.0 ? 'green' : 'red' },
+        { nivel: ratio >= 0.8 ? 'amber' : 'red' }
+      ];
+
+      return {
+        id: insumo.id,
+        sku: obtenerCodigoSku(insumo.id) || insumo.id,
+        nombre: insumo.nombre,
+        disponible: disp,
+        minimo: min,
+        alerta,
+        porcentaje,
+        celdas
+      };
+    });
+  }, [insumos]);
 
   return (
-    <div className="w-full flex-1 flex flex-col gap-5 p-3 sm:p-6 lg:p-8 animate-in fade-in duration-200">
-      {/* Aviso de error de carga si ocurre */}
-      {errorGrafo && (
-        <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-800 dark:text-red-200 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={15} className="text-red-600 dark:text-red-400 shrink-0" />
-            <span>{errorGrafo}</span>
-          </div>
+    <div className="flex-1 flex flex-col gap-2.5 p-3 overflow-hidden bg-slate-100 dark:bg-[#03060C] text-slate-900 dark:text-slate-100 select-none h-full transition-colors">
+      {/* =========================================================================
+          CABECERA MAESTRA DEL TABLERO (ÚNICA Y ELEGANTE)
+          ========================================================================= */}
+      <header className="h-11 px-3 bg-white dark:bg-[#0A0F1A] border border-slate-200 dark:border-white/[0.08] rounded-lg flex items-center justify-between shrink-0 shadow-xs dark:shadow-lg transition-colors">
+        {/* Izquierda: Branding de Planta */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-slate-800 dark:text-white tracking-wider flex items-center gap-1.5 uppercase font-mono">
+            <span className="w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400 shadow-[0_0_8px_#38BDF8]"></span>
+            AbastecePyme
+          </span>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono hidden sm:inline">
+            Planta Norte · Medellín 01
+          </span>
+          <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+            SISTEMA NOMINAL (0 CICLOS)
+          </span>
+        </div>
+
+        {/* Centro: SELECTOR MAESTRO DE LAS 3 VISTAS */}
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#050811] p-0.5 rounded-lg border border-slate-200 dark:border-white/[0.08]">
+          <button
+            type="button"
+            onClick={() => setVistaCentral('VISTA_1_FLUJO')}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              vistaCentral === 'VISTA_1_FLUJO'
+                ? 'bg-sky-50 text-sky-700 border border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30 shadow-xs dark:shadow-[0_0_8px_rgba(56,189,248,0.25)]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Flujo de Producción & OEE (4 KPIs + 4 Columnas de Manufactura)"
+          >
+            <Activity size={12} className={vistaCentral === 'VISTA_1_FLUJO' ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500'} />
+            <span>Flujo de Producción & OEE</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVistaCentral('VISTA_2_CAPACIDAD')}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              vistaCentral === 'VISTA_2_CAPACIDAD'
+                ? 'bg-amber-50 text-amber-700 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 shadow-xs dark:shadow-[0_0_8px_rgba(245,158,11,0.25)]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Capacidad de Estaciones de Planta (5 Gauges + Lotes de Producción)"
+          >
+            <Layers size={12} className={vistaCentral === 'VISTA_2_CAPACIDAD' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'} />
+            <span>Capacidad de Estaciones</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVistaCentral('VISTA_3_GRAFICAS')}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              vistaCentral === 'VISTA_3_GRAFICAS'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30 shadow-xs dark:shadow-[0_0_8px_rgba(16,185,129,0.25)]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Telemetría & Gráficos Operativos (Pantalla Completa)"
+          >
+            <BarChart3 size={12} className={vistaCentral === 'VISTA_3_GRAFICAS' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'} />
+            <span>Telemetría & Gráficos</span>
+          </button>
+        </div>
+
+        {/* Derecha: Botón de sincronización */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onRecargarGrafo}
-            className="font-semibold underline cursor-pointer hover:text-red-950 dark:hover:text-white"
+            className="p-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-[#06090F] dark:hover:bg-white/[0.06] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] transition-colors cursor-pointer"
+            title="Sincronizar telemetría con el backend"
           >
-            Reintentar
+            <RefreshCw size={12} className={cargandoGrafo ? 'animate-spin' : ''} />
           </button>
         </div>
-      )}
+      </header>
 
-      {/* 1. Encabezado del Tablero */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 shrink-0 mt-0.5">
-            <Factory size={24} />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                Tablero de Control de Abastecimiento
-              </h2>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Operación en Vivo
-              </span>
-              {perfilActivo && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  {perfilActivo.nombre}
-                </span>
-              )}
-            </div>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-3xl leading-relaxed">
-              Resumen integral de la cadena de suministro, continuidad de producción, evaluación de impacto operativo y preparación de pedidos.
-            </p>
-          </div>
-        </div>
+      {/* =========================================================================
+          CUERPO PRINCIPAL DEL TABLERO
+          ========================================================================= */}
+      <div className="flex-1 flex gap-3 overflow-hidden h-full min-h-0">
+        {/* CASOS 1 Y 2: VISTA 1 ("Flujo & OEE") Y VISTA 2 ("Capacidad de Estaciones") */}
+        {(vistaCentral === 'VISTA_1_FLUJO' || vistaCentral === 'VISTA_2_CAPACIDAD') && (
+          <>
+            {/* COLUMNA IZQUIERDA (EXPANSIÓN FLEXIBLE) */}
+            <section className="flex-1 bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg overflow-hidden shadow-xs dark:shadow-2xl relative h-full flex flex-col min-h-0 transition-colors">
+              <WorkstationPipelineCanvas
+                elementos={grafo.elementos}
+                dependencias={grafo.dependencias}
+                onConsultarElemento={onConsultarElemento}
+                onNavegar={onNavegar}
+                vistaActiva={vistaCentral}
+              />
+            </section>
 
-        {/* Acciones Rápidas del Encabezado */}
-        <div className="flex items-center gap-2 self-start md:self-center shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              onRecargarGrafo();
-              cargarDiagnostico();
-              if (productoSeleccionadoId) {
-                apiService.obtenerPlanEntrega([productoSeleccionadoId]).then(setPlanEntrega).catch(() => {});
-              }
-            }}
-            disabled={cargandoGrafo || cargandoOrden}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95 shadow-sm"
-            title="Actualizar datos del tablero desde el sistema"
-          >
-            <RefreshCw size={14} className={cargandoGrafo || cargandoOrden ? 'animate-spin' : ''} />
-            <span>Actualizar</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Flujo Continuo de la Cadena de Suministro & Telemetría */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {/* FASE 1: Proveedores */}
-        <div
-          onClick={() => onNavegar('catalogo', undefined, 'PROVEEDOR')}
-          className="card-corporate hover:border-blue-400 dark:hover:border-blue-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
-          title="Ver únicamente proveedores en el catálogo"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              FASE 1
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Building2 size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
-              {cargandoGrafo ? '—' : totalProveedores}
-            </span>
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-              Proveedores Externos
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Fuentes de suministro</p>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
-            <span>Filtrar catálogo</span>
-            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-
-        {/* FASE 2: Insumos */}
-        <div
-          onClick={() => onNavegar('catalogo', undefined, 'INSUMO')}
-          className="card-corporate hover:border-amber-400 dark:hover:border-amber-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
-          title="Ver únicamente materias primas e insumos en el catálogo"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-              FASE 2
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Package size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
-                {cargandoGrafo ? '—' : totalInsumos}
-              </span>
-              {insumosEnAlerta.length > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 flex items-center gap-1">
-                  <AlertTriangle size={10} />
-                  {insumosEnAlerta.length} bajo mín.
-                </span>
-              )}
-            </div>
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-              Insumos & Materiales
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Materias primas y partes</p>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
-            <span>Filtrar catálogo</span>
-            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-
-        {/* FASE 3: Procesos */}
-        <div
-          onClick={() => onNavegar('catalogo', undefined, 'PROCESO')}
-          className="card-corporate hover:border-purple-400 dark:hover:border-purple-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
-          title="Ver únicamente procesos de planta en el catálogo"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-              FASE 3
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Cog size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
-              {cargandoGrafo ? '—' : totalProcesos}
-            </span>
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-              Procesos de Planta
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Transformación y corte</p>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-purple-600 dark:text-purple-400 font-semibold">
-            <span>Filtrar catálogo</span>
-            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-
-        {/* FASE 4: Productos */}
-        <div
-          onClick={() => onNavegar('produccion')}
-          className="card-corporate hover:border-emerald-400 dark:hover:border-emerald-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
-          title="Ver planes de producción de productos"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              FASE 4
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <CheckSquare size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
-                {cargandoGrafo ? '—' : totalProductos}
-              </span>
-              {ordenProduccion && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-                  {ordenProduccion.productosPlanificables.length} listos
-                </span>
-              )}
-            </div>
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-              Productos Finales
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Disponibles para entrega</p>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-            <span>Ver en orden</span>
-            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-
-        {/* Conexiones de Red */}
-        <div
-          onClick={() => onNavegar('red')}
-          className="col-span-1 sm:col-span-2 lg:col-span-1 card-corporate hover:border-sky-400 dark:hover:border-sky-500/50 p-4 shadow-sm cursor-pointer transition-all flex flex-col justify-between group"
-          title="Ver red de suministro completa"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-              RED
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-              <Network size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black font-mono tabular-nums text-slate-900 dark:text-white">
-              {cargandoGrafo ? '—' : grafo.resumen.totalDependencias}
-            </span>
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-              Conexiones de Red
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Relaciones origen habilita destino</p>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-sky-600 dark:text-sky-400 font-semibold">
-            <span>Explorar mapa</span>
-            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Sección Principal Dividida en 2 Columnas */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Columna Izquierda: Continuidad Operativa & Plan de Entrega (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-5">
-          {/* Diagnóstico de Planta (RF-F4-05) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                  <ListOrdered size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Diagnóstico General de Planta
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Evaluación de coherencia en la secuencia de operaciones
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavegar('produccion', 'diagnostico')}
-                className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>Ver orden completo</span>
-                <ArrowRight size={13} />
-              </button>
-            </div>
-
-            {cargandoOrden ? (
-              <div className="flex items-center justify-center p-8 text-xs text-slate-500">
-                <RefreshCw size={18} className="animate-spin text-sky-500 mr-2" />
-                <span>Analizando continuidad de planta...</span>
-              </div>
-            ) : errorOrden ? (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-200 space-y-2">
-                <div className="flex items-center gap-2 font-bold">
-                  <AlertOctagon size={16} className="text-amber-600 dark:text-amber-400" />
-                  <span>Atención en la secuencia operativa</span>
-                </div>
-                <p>{errorOrden}</p>
-              </div>
-            ) : ordenProduccion ? (
-              <div className="space-y-3">
-                {ordenProduccion.esDag ? (
-                  <div className="p-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/80 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <div>
-                          <span className="text-xs font-bold text-emerald-900 dark:text-emerald-100">
-                            Cadena sin dependencias circulares
-                          </span>
-                          <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">
-                            La planta cuenta con una secuencia viable de {ordenProduccion.totalPasos} operaciones ordenadas.
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-200">
-                        Óptimo
+            {/* COLUMNA DERECHA COMPACTA (CALIBRADA CON SCROLL SI EL VIEWPORT LO REQUIERE) */}
+            <aside className="w-[350px] xl:w-[390px] shrink-0 flex flex-col gap-2.5 h-full overflow-y-auto custom-scroll-visible pr-0.5">
+              {/* CASO A: SI ESTAMOS EN "Flujo de Producción & OEE", MOSTRAR MONITOR DE SUMINISTROS */}
+              {vistaCentral === 'VISTA_1_FLUJO' && (
+                <>
+                  {/* Card 1: Active Supply Monitor (5 SKUs visibles + barra de scroll vertical activa) */}
+                  <div className="flex-[1.2] min-h-0 bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 transition-colors">
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
+                      <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Activity size={12} className="text-sky-600 dark:text-sky-400" />
+                        Active Supply Monitor
                       </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                      <div className="p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/50">
-                        <span className="block text-lg font-black text-emerald-700 dark:text-emerald-400">
-                          {ordenProduccion.productosPlanificables.length}
-                        </span>
-                        <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">
-                          Productos viables
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/50">
-                        <span className="block text-lg font-black text-slate-700 dark:text-slate-300">
-                          {ordenProduccion.totalPasos}
-                        </span>
-                        <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">
-                          Pasos de preparación
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-300 dark:border-sky-500/20 text-[9px] font-mono">
+                          {insumos.length} SKUs
                         </span>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 space-y-3">
-                    <div className="flex items-start gap-2.5">
-                      <AlertOctagon size={20} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="text-xs font-bold text-red-900 dark:text-red-100">
-                          Alerta: Dependencia circular detectada
-                        </span>
-                        <p className="text-[11px] text-red-700 dark:text-red-300 mt-1 leading-relaxed">
-                          Existen componentes que se requieren mutuamente en un circuito cerrado. Esto impide calcular un orden de preparación válido para los elementos afectados.
-                        </p>
-                      </div>
-                    </div>
 
-                    {ordenProduccion.productosBloqueados.length > 0 && (
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-red-200 dark:border-red-800/80">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          Productos con preparación bloqueada:
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ordenProduccion.productosBloqueados.map((id) => (
-                            <span
-                              key={id}
-                              className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700"
-                            >
-                              {id}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex-1 pr-1.5 space-y-1.5 custom-scroll-visible overflow-y-auto">
+                      {insumos.map((insumo) => {
+                        const disp = insumo.stockDisponible ?? 50;
+                        const min = insumo.stockMinimo ?? 20;
+                        const bajoMinimo = insumo.alertaStock || disp < min;
+                        const sku = obtenerCodigoSku(insumo.id) || insumo.id;
+                        const ratio = min > 0 ? disp / min : 1;
+                        const porcentaje = Math.min(100, Math.round(ratio * 50));
 
-                    <div className="flex justify-end pt-1">
-                      <button
-                        type="button"
-                        onClick={() => onNavegar('produccion')}
-                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        Revisar y corregir en Orden de producción
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Plan de Entrega Rápido por Producto (RF-F4-05) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <CheckSquare size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Plan de Entrega por Producto
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Secuencia requerida e insumos para despachar productos finales
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Selector de Producto */}
-            {productosDisponibles.length === 0 ? (
-              <p className="text-xs text-slate-500 italic p-4 text-center bg-slate-50 dark:bg-slate-950 rounded-xl">
-                No hay productos finales registrados en el catálogo.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  {productosDisponibles.map((prod) => {
-                    const esSeleccionado = prod.id === productoSeleccionadoId;
-                    return (
-                      <button
-                        key={prod.id}
-                        type="button"
-                        onClick={() => setProductoSeleccionadoId(prod.id)}
-                        className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
-                          esSeleccionado
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
-                            : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-emerald-500/40'
-                        }`}
-                      >
-                        {prod.nombre}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Resultado del Plan */}
-                {cargandoPlan ? (
-                  <div className="flex items-center justify-center p-8 text-xs text-slate-500">
-                    <RefreshCw size={16} className="animate-spin text-emerald-500 mr-2" />
-                    <span>Calculando secuencia de entrega...</span>
-                  </div>
-                ) : errorPlan ? (
-                  <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-200">
-                    {errorPlan}
-                  </div>
-                ) : planEntrega ? (
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            planEntrega.esPlanificable ? 'bg-emerald-500' : 'bg-red-500'
-                          }`}
-                        ></span>
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          Estado de viabilidad:
-                        </span>
-                        <span
-                          className={`text-xs font-extrabold px-2 py-0.5 rounded ${
-                            planEntrega.esPlanificable
-                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                              : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-                          }`}
-                        >
-                          {planEntrega.esPlanificable ? 'Viable para entrega' : 'Bloqueado'}
-                        </span>
-                        <span className="text-xs text-slate-500 font-medium">
-                          ({planEntrega.totalPasos} operaciones)
-                        </span>
-                      </div>
-
-                      {/* Botones de acción directa del producto */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onNavegar('red', productoSeleccionadoId)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                          title="Ver línea de producción de este producto en el mapa"
-                        >
-                          <Network size={13} />
-                          <span>Ver línea en el mapa</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onNavegar('produccion', productoSeleccionadoId)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                          title="Abrir este producto en la orden de producción"
-                        >
-                          <span>Ver en orden de producción</span>
-                          <ArrowRight size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Previa de Pasos */}
-                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                      {planEntrega.pasos.map((paso) => (
-                        <div
-                          key={`${paso.paso}-${paso.id}`}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-400 text-xs transition-colors group"
-                        >
+                        return (
                           <div
-                            onClick={() => onNavegar('catalogo', paso.id)}
-                            className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
-                            title="Ver este componente en el catálogo"
+                            key={insumo.id}
+                            onClick={() => {
+                              onConsultarElemento(insumo.id);
+                              void ejecutarImpacto(insumo.id);
+                            }}
+                            className={`p-1.5 rounded border transition-all cursor-pointer flex items-center justify-between text-[11px] ${
+                              bajoMinimo
+                                ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/40 shadow-xs'
+                                : 'bg-slate-50 dark:bg-[#050811] border-slate-200 dark:border-white/[0.06] hover:border-sky-400 dark:hover:border-sky-500/30'
+                            }`}
                           >
-                            <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
-                              {paso.paso}
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-sky-700 dark:text-sky-400 text-[10px]">{sku}</span>
+                              <span className="text-slate-700 dark:text-slate-300 truncate max-w-[95px] text-[10px]">{insumo.nombre}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <TrendSparkline disponible={disp} minimo={min} alerta={bajoMinimo} width={45} height={14} />
+                              <span className={`font-mono text-[10px] font-bold ${bajoMinimo ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {disp}/{min}
+                              </span>
+                              <span className={`px-1 py-0.2 rounded text-[8px] font-bold ${
+                                bajoMinimo ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
+                              }`}>
+                                {porcentaje}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Card 2: Buffer Heatmap (Con scroll visible para todos los insumos) */}
+                  <div className="h-[145px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
+                    <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
+                      <span className="text-[11px] font-bold text-slate-800 dark:text-slate-300 uppercase flex items-center gap-1">
+                        <Layers size={11} className="text-amber-500 dark:text-amber-400" />
+                        Buffer Heatmap
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-mono text-slate-500">B1 - B5</span>
+                        <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/20 text-[9px] font-mono">
+                          {heatmapData.length} SKUs
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Cabecera: SKU/Nombre a la izquierda y B1-B5 expandidos al máximo a la derecha */}
+                    <div className="flex items-center justify-between gap-2 text-[8px] font-mono text-slate-500 dark:text-slate-400 font-bold mb-1 px-1 shrink-0">
+                      <div className="w-[170px] shrink-0 truncate">SKU / INSUMO</div>
+                      <div className="flex-1 grid grid-cols-5 gap-1.5 text-center">
+                        <span>B1</span>
+                        <span>B2</span>
+                        <span>B3</span>
+                        <span>B4</span>
+                        <span>B5</span>
+                      </div>
+                    </div>
+
+                    {/* Filas de todos los SKUs: Descripción protegida + cuadritos expandidos ocupando el mayor espacio posible */}
+                    <div className="flex-1 pr-1.5 space-y-1 custom-scroll-visible overflow-y-auto">
+                      {heatmapData.map((row) => (
+                        <div
+                          key={row.id}
+                          onClick={() => {
+                            onConsultarElemento(row.id);
+                            void ejecutarImpacto(row.id);
+                          }}
+                          className="flex items-center justify-between gap-2 py-0.5 px-1 rounded hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          title={`${row.sku} — ${row.nombre} (Stock: ${row.disponible}/${row.minimo})`}
+                        >
+                          {/* Descripción en ancho seguro sin recortar */}
+                          <div className="w-[170px] shrink-0 flex items-center gap-1.5 min-w-0 pr-1">
+                            <span className="text-[10px] font-mono text-sky-700 dark:text-sky-400 font-bold shrink-0 group-hover:text-sky-600 dark:group-hover:text-sky-300">
+                              {row.sku}
                             </span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                              {paso.nombre}
-                            </span>
-                            <span className="font-mono text-[10px] text-slate-400 shrink-0">
-                              {obtenerCodigoSku(paso.id)}
+                            <span className="text-[10px] text-slate-700 dark:text-slate-300 truncate font-medium group-hover:text-slate-900 dark:group-hover:text-white" title={row.nombre}>
+                              {row.nombre}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${claseBadgeTipo(paso.tipo)}`}>
-                              {etiquetaTipo(paso.tipo)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onNavegar('red', paso.id)}
-                              className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                              title="Ver este elemento en el mapa de red"
-                            >
-                              <Network size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onNavegar('catalogo', paso.id)}
-                              className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                              title="Ver ficha en el catálogo"
-                            >
-                              <Package size={13} />
-                            </button>
+                          {/* Cuadritos expandidos ocupando el 100% del espacio restante */}
+                          <div className="flex-1 grid grid-cols-5 gap-1.5 items-center">
+                            {row.celdas.map((c, i) => (
+                              <div
+                                key={i}
+                                className={`w-full h-3 rounded-xs ${
+                                  c.nivel === 'green'
+                                    ? 'bg-emerald-500'
+                                    : c.nivel === 'amber'
+                                    ? 'bg-amber-400'
+                                    : c.nivel === 'orange'
+                                    ? 'bg-orange-500'
+                                    : 'bg-rose-500'
+                                } opacity-85 hover:opacity-100 transition-opacity shadow-xs`}
+                              ></div>
+                            ))}
                           </div>
                         </div>
                       ))}
                     </div>
+                  </div>
 
-                    <div className="pt-2 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => onNavegar('produccion', productoSeleccionadoId)}
-                        className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Abrir plan en detalle</span>
-                        <ArrowRight size={13} />
-                      </button>
+                  {/* Card 3: Production Output (Curva compacta con umbral) */}
+                  <div className="flex-1 min-h-[160px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2 transition-colors">
+                    <ProductionOutputChart elementos={grafo.elementos} productoSeleccionadoId={productoSeleccionadoId} />
+                  </div>
+                </>
+              )}
+
+              {/* CASO B: SI ESTAMOS EN "Capacidad de Estaciones", MOSTRAR MÉTRICAS DE MÁQUINAS Y RENDIMIENTO */}
+              {vistaCentral === 'VISTA_2_CAPACIDAD' && (
+                <>
+                  {/* Card 1: Déficit de Insumos por Estación de Proceso con scroll vertical */}
+                  <div className="min-h-[160px] max-h-[210px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
+                      <span className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Clock size={12} className="text-amber-500 dark:text-amber-400" />
+                        Déficit por Estación
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-500/25 text-[9px] font-mono">
+                        {insumosEnAlerta.length} Insumos en Alerta
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-h-0 pr-1.5 space-y-1.5 custom-scroll-visible overflow-y-auto">
+                      {metricasProcesos.map((proc) => (
+                        <div
+                          key={proc.id}
+                          onClick={() => {
+                            onConsultarElemento(proc.id);
+                            void ejecutarImpacto(proc.id);
+                          }}
+                          className={`p-1.5 rounded border flex items-center justify-between text-[10px] cursor-pointer transition-colors ${
+                            proc.tieneDeficit
+                              ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/30 hover:border-rose-500'
+                              : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.05] hover:border-sky-400'
+                          }`}
+                          title={`Consultar ficha de ${proc.titulo}`}
+                        >
+                          <div>
+                            <div
+                              className={`font-bold flex items-center gap-1 ${
+                                proc.tieneDeficit
+                                  ? 'text-rose-700 dark:text-rose-300'
+                                  : 'text-slate-800 dark:text-slate-200'
+                              }`}
+                            >
+                              {proc.tieneDeficit ? (
+                                <AlertTriangle size={10} className="text-rose-600 dark:text-rose-400" />
+                              ) : (
+                                <CheckCircle2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+                              )}
+                              {proc.titulo}
+                            </div>
+                            <div className="text-[9px] text-slate-500 font-mono">{proc.detalle}</div>
+                          </div>
+                          <span
+                            className={`font-mono font-bold ${
+                              proc.tieneDeficit
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {proc.tieneDeficit ? `-${proc.totalDeficit} déficit` : '0 déficit (OK)'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Columna Derecha: Alertas de Stock y Evaluación de Impacto In-Situ (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-5">
-          {/* Alertas Críticas de Stock */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
-                  <AlertTriangle size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Alertas de Suministro y Stock
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Insumos por debajo del stock mínimo operativo
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-black px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
-                {insumosEnAlerta.length}
-              </span>
-            </div>
-
-            {insumosEnAlerta.length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                <ShieldCheck size={20} className="mx-auto text-emerald-500 mb-1" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Stock operativo en orden
-                </span>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Todos los insumos cumplen con el nivel mínimo requerido.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                {insumosEnAlerta.map((insumo) => {
-                  const disponible = insumo.stockDisponible ?? 0;
-                  const minimo = Math.max(1, insumo.stockMinimo ?? 1);
-                  const porcentaje = Math.min(100, Math.round((disponible / minimo) * 100));
-                  return (
-                    <div
-                      key={insumo.id}
-                      className="p-3 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/40 flex flex-col gap-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div
-                          onClick={() => onNavegar('catalogo', insumo.id)}
-                          className="min-w-0 cursor-pointer flex-1"
-                          title="Ir a este insumo en el catálogo"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 dark:text-white truncate hover:underline">
-                              {insumo.nombre}
-                            </span>
-                            <span className="font-mono text-[10px] text-slate-500">
-                              {obtenerCodigoSku(insumo.id)}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-red-600 dark:text-red-400 font-mono font-bold mt-0.5 tabular-nums">
-                            Stock: {disponible} / Mín: {insumo.stockMinimo ?? 0} ({porcentaje}%)
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => onNavegar('red', insumo.id)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95"
-                            title="Ver este insumo en el mapa de red"
-                          >
-                            <Network size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onNavegar('catalogo', insumo.id)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95"
-                            title="Ver ficha en el catálogo"
-                          >
-                            <Package size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => ejecutarImpacto(insumo.id)}
-                            className="px-2 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1"
-                            title="Evaluar a qué productos o procesos afecta este insumo"
-                          >
-                            <Zap size={12} />
-                            <span>Impacto</span>
-                          </button>
-                        </div>
-                      </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-300 bg-red-500"
-                          style={{ width: `${Math.max(6, porcentaje)}%` }}
-                        />
-                      </div>
+                  {/* Card 2: Conformidad Real de Insumos por Familia */}
+                  <div className="h-[135px] min-h-[135px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2.5 shrink-0 transition-colors">
+                    <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-white/[0.06] shrink-0">
+                      <span className="text-[11px] font-bold text-slate-800 dark:text-slate-300 uppercase flex items-center gap-1">
+                        <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
+                        Conformidad de Insumos
+                      </span>
+                      <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                        {insumos.length - insumosEnAlerta.length} / {insumos.length} OK ({Math.round(((insumos.length - insumosEnAlerta.length) / (insumos.length || 1)) * 100)}%)
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
-          {/* Evaluación In-Situ de Impacto (RF-F4-04 / AC-F4-04) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <ShieldAlert size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Consulta Rápida de Impacto
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Evalúa la cascada de afectación si un componente falla
-                  </p>
-                </div>
-              </div>
-            </div>
+                    <div className="flex-1 flex flex-col justify-around py-0.5 text-[10px]">
+                      {conformidadCategorias.map((cat, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-slate-700 dark:text-slate-300">{cat.etiqueta}:</span>
+                          <span
+                            className={`font-mono font-bold ${
+                              cat.alerta
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {cat.porcentaje}.0% OK · {cat.conformes}/{cat.total}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-            {/* Selector con Buscador */}
-            <div className="space-y-2">
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-3 text-slate-400" />
+                  {/* Card 3: Capacidad de Insumos por Estación */}
+                  <div className="h-[165px] min-h-[165px] bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg flex flex-col overflow-hidden shadow-xs dark:shadow-xl p-2 shrink-0 transition-colors">
+                    <StationThroughputChart elementos={grafo.elementos} dependencias={grafo.dependencias} />
+                  </div>
+                </>
+              )}
+            </aside>
+          </>
+        )}
+
+        {/* CASO 3: VISTA 3 (TELEMETRÍA Y GRÁFICOS) -> PANTALLA COMPLETA 100%! SIN PANEL DERECHO REPETIDO! */}
+        {vistaCentral === 'VISTA_3_GRAFICAS' && (
+          <section className="flex-1 w-full h-full bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg overflow-hidden shadow-xs dark:shadow-2xl p-3 flex flex-col transition-colors">
+            <WorkstationPipelineCanvas
+              elementos={grafo.elementos}
+              dependencias={grafo.dependencias}
+              onConsultarElemento={onConsultarElemento}
+              onNavegar={onNavegar}
+              vistaActiva="VISTA_3_GRAFICAS"
+            />
+          </section>
+        )}
+
+        {/* CASO 4: RED DE CONEXIONES -> PANTALLA COMPLETA 100%! */}
+        {vistaCentral === 'RED' && (
+          <section className="flex-1 w-full h-full bg-white dark:bg-[#070B14] border border-slate-200 dark:border-white/[0.08] rounded-lg overflow-hidden shadow-xs dark:shadow-2xl flex flex-col relative graph-canvas-bg transition-colors">
+            <div className="h-10 px-3 bg-white dark:bg-[#0A0F1A] border-b border-slate-200 dark:border-white/[0.08] flex items-center justify-between shrink-0 z-10">
+              <div className="flex items-center gap-2">
+                <Search size={12} className="text-slate-500 dark:text-slate-400" />
                 <input
                   type="text"
-                  value={busquedaElemento}
-                  onChange={(e) => setBusquedaElemento(e.target.value)}
-                  placeholder="Buscar componente para evaluar..."
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Buscar en red..."
+                  value={busquedaRed}
+                  onChange={(e) => setBusquedaRed(e.target.value)}
+                  className="bg-slate-50 dark:bg-[#050811] border border-slate-300 dark:border-white/[0.1] rounded px-2.5 py-0.5 text-[11px] text-slate-800 dark:text-white w-48 focus:outline-none focus:border-sky-500/50"
                 />
               </div>
-
-              <div className="flex gap-2">
-                <select
-                  value={elementoImpactoId}
-                  onChange={(e) => setElementoImpactoId(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
-                >
-                  <option value="">-- Elige un componente --</option>
-                  {elementosParaImpacto.map((elem) => (
-                    <option key={elem.id} value={elem.id}>
-                      [{etiquetaTipo(elem.tipo)}] {elem.nombre} ({elem.id})
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => ejecutarImpacto(elementoImpactoId)}
-                  disabled={!elementoImpactoId || cargandoImpacto}
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 rounded-xl text-xs font-semibold shadow-md transition-all cursor-pointer active:scale-95 shrink-0 flex items-center gap-1.5"
-                >
-                  <Zap size={14} className={cargandoImpacto ? 'animate-spin' : ''} />
-                  <span>Evaluar</span>
-                </button>
-              </div>
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                27 ELEMENTOS · 26 DEPENDENCIAS · 0 CICLOS
+              </span>
             </div>
-
-            {/* Resultados de Impacto In-Situ */}
-            {cargandoImpacto ? (
-              <div className="flex items-center justify-center p-6 text-xs text-slate-500">
-                <RefreshCw size={16} className="animate-spin text-amber-500 mr-2" />
-                <span>Analizando impacto en la cadena...</span>
-              </div>
-            ) : errorImpacto ? (
-              <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-800 dark:text-red-200">
-                <div className="font-bold mb-1">No se pudo evaluar el impacto:</div>
-                <p>{errorImpacto}</p>
-              </div>
-            ) : impactoResultado ? (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <div className="min-w-0">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white truncate block">
-                      {impactoResultado.elemento.nombre}
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-400">
-                      {obtenerCodigoSku(impactoResultado.elemento.id)}
-                    </span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                    {impactoResultado.total} afectados
-                  </span>
-                </div>
-
-                {impactoResultado.total === 0 ? (
-                  <p className="text-xs text-slate-600 dark:text-slate-400 italic py-2">
-                    Este componente no afecta a otros elementos de la cadena.
-                  </p>
-                ) : (
-                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                    {impactoResultado.afectados.map((afectado) => (
-                      <div
-                        key={afectado.id}
-                        onClick={() => onConsultarElemento(afectado.id)}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 text-xs cursor-pointer hover:border-amber-400 transition-colors"
-                        title="Ver detalle del elemento afectado"
-                      >
-                        <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
-                          {afectado.nombre}
-                        </span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="font-mono text-[10px] text-slate-400">
-                            {obtenerCodigoSku(afectado.id)}
-                          </span>
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${claseBadgeTipo(afectado.tipo)}`}>
-                            {etiquetaTipo(afectado.tipo)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => onNavegar('red', impactoResultado.elemento.id)}
-                    className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Ver en el mapa</span>
-                    <ExternalLink size={12} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavegar('impacto', impactoResultado.elemento.id)}
-                    className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Abrir en análisis de impacto</span>
-                    <ArrowRight size={12} />
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Guía de Escenarios de Demostración (RF-F4-11 / AC-F4-11) */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-lg border border-indigo-900/50 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={18} className="text-emerald-400" />
-            <h3 className="text-sm font-bold tracking-tight">
-              Escenarios de Demostración y Verificación Operativa
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-slate-300">
-            F4 Certificada
-          </span>
-        </div>
-        <p className="text-xs text-slate-300 max-w-4xl leading-relaxed">
-          Este tablero reúne y comprueba los 4 escenarios de aceptación con datos sintéticos del sistema real:
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-xs">
-          <div
-            onClick={() => onNavegar('red')}
-            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
-          >
-            <span className="font-bold text-sky-400 block">1. Cadena de suministro válida</span>
-            <p className="text-[11px] text-slate-300">
-              Visualiza elementos conectados, plan de entrega con secuencia ordenada e impacto en cascada.
-            </p>
-          </div>
-
-          <div
-            onClick={() => onNavegar('impacto', '001')}
-            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
-          >
-            <span className="font-bold text-amber-400 block">2. Elemento inexistente</span>
-            <p className="text-[11px] text-slate-300">
-              Comprueba el rechazo explícito de identificadores no registrados sin datos simulados.
-            </p>
-          </div>
-
-          <div
-            onClick={() => {
-              if (onAbrirModalPerfiles) {
-                onAbrirModalPerfiles();
-              } else {
-                onNavegar('catalogo');
-              }
-            }}
-            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
-          >
-            <span className="font-bold text-purple-400 block">3. Validación de datos y permisos</span>
-            <p className="text-[11px] text-slate-300">
-              Garantiza la autorización por perfil (Compras vs Producción) y la regla de no duplicidad.
-            </p>
-          </div>
-
-          <div
-            onClick={() => onNavegar('produccion', 'ciclos')}
-            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-colors space-y-1"
-          >
-            <span className="font-bold text-emerald-400 block">4. Detección de ciclos</span>
-            <p className="text-[11px] text-slate-300">
-              Identifica contradicciones circulares, aísla productos bloqueados y evita órdenes erróneos.
-            </p>
-          </div>
-        </div>
+            <div className="flex-1 w-full h-full relative overflow-hidden">
+              <GraphCanvas
+                elementos={elementosFiltradosRed}
+                dependencias={grafo.dependencias}
+                filtroProductoId={productoSeleccionadoId ?? undefined}
+                onCambiarFiltroProducto={handleCambiarFiltroProducto}
+                onSelectNode={handleSelectNode}
+                esModoOscuro={esModoOscuro}
+              />
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

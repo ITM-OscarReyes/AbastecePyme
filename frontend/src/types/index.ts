@@ -170,7 +170,7 @@ export interface ReporteCicloError {
 }
 
 // F4 — Perfiles, sesión y tablero
-export type PerfilId = 'COMPRAS' | 'PRODUCCION';
+export type PerfilId = 'ADMINISTRADOR' | 'COMPRAS' | 'PRODUCCION' | 'VENTAS';
 
 export interface Perfil {
   id: PerfilId;

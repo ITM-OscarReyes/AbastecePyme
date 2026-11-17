@@ -85,8 +85,10 @@ describe('F4 · Contrato del cliente de API para perfiles y sesión', () => {
 
 describe('F4 · Modal de Control de Acceso y Perfiles Operativos', () => {
   const perfilesDemo: Perfil[] = [
+    { id: 'ADMINISTRADOR', nombre: 'Administrador', puedeEscribir: true },
     { id: 'COMPRAS', nombre: 'Responsable de compras', puedeEscribir: true },
-    { id: 'PRODUCCION', nombre: 'Coordinador de producción', puedeEscribir: false }
+    { id: 'PRODUCCION', nombre: 'Coordinador de producción', puedeEscribir: true },
+    { id: 'VENTAS', nombre: 'Asesor de ventas', puedeEscribir: false }
   ];
 
   it('no se renderiza si isOpen es falso', () => {
@@ -102,22 +104,24 @@ describe('F4 · Modal de Control de Acceso y Perfiles Operativos', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('muestra ambos perfiles operativos y sus permisos cuando está abierto', () => {
+  it('muestra los perfiles operativos y sus permisos cuando está abierto', () => {
     render(
       React.createElement(ModalPerfilesAcceso, {
         isOpen: true,
         onClose: vi.fn(),
-        perfilActivo: perfilesDemo[0],
+        perfilActivo: perfilesDemo[1], // Compras activo
         perfilesDisponibles: perfilesDemo,
         onCambiarPerfil: vi.fn()
       })
     );
 
     expect(screen.getByText('Control de Acceso y Perfiles de Demostración')).toBeDefined();
+    expect(screen.getAllByText('Administrador').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Responsable de compras').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Coordinador de producción').length).toBeGreaterThan(0);
-    expect(screen.getByText('Alta de nuevos proveedores y materiales')).toBeDefined();
-    expect(screen.getByText('Modo protegido: edición y eliminación bloqueadas')).toBeDefined();
+    expect(screen.getAllByText('Asesor de ventas').length).toBeGreaterThan(0);
+    expect(screen.getByText('Alta y gestión de proveedores externos')).toBeDefined();
+    expect(screen.getByText('Consulta de productos terminados disponibles')).toBeDefined();
   });
 
   it('permite cambiar de perfil y cierra la ventana al seleccionar', () => {
@@ -128,13 +132,13 @@ describe('F4 · Modal de Control de Acceso y Perfiles Operativos', () => {
       React.createElement(ModalPerfilesAcceso, {
         isOpen: true,
         onClose: onClose,
-        perfilActivo: perfilesDemo[0],
+        perfilActivo: perfilesDemo[1], // Compras activo
         perfilesDisponibles: perfilesDemo,
         onCambiarPerfil: onCambiarPerfil
       })
     );
 
-    const botonCambiar = screen.getByText('Ingresar como Coordinador de producción');
+    const botonCambiar = screen.getByText('Activar perfil Coordinador de producción');
     fireEvent.click(botonCambiar);
 
     expect(onCambiarPerfil).toHaveBeenCalledWith('PRODUCCION');

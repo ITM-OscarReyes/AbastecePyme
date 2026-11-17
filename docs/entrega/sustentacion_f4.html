@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sustentación Feature 4 — AbastecePyme</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #070B14; color: #E2E8F0; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    .card-foundry { background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-radius: 12px; }
+    .neon-cyan { text-shadow: 0 0 12px rgba(6, 182, 212, 0.6); }
+    .neon-border-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+    .slide-active { display: block; animation: fadeIn 0.3s ease-in-out; }
+    .slide-hidden { display: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #070B14; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+  <!-- TOP BAR -->
+  <header class="border-b border-white/[0.08] bg-[#0A0F1D]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]"></div>
+      <span class="font-bold text-sm tracking-widest text-white uppercase mono">ABASTECEPME · GUÍA MAESTRA DE SUSTENTACIÓN</span>
+      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mono">FEATURE 4</span>
+    </div>
+    <div class="flex items-center gap-2 text-xs mono">
+      <span class="text-slate-400">Modo:</span>
+      <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">100% PRODUCCIÓN REAL</span>
+      <span class="text-slate-500 ml-3">Rama: <span class="text-slate-300">f4-Frontend</span></span>
+    </div>
+  </header>
+
+  <!-- NAVEGACIÓN DE DIAPOSITIVAS / SECCIONES -->
+  <div class="bg-[#0D1527] border-b border-white/[0.05] px-6 py-2 flex items-center gap-2 overflow-x-auto text-xs mono">
+    <button onclick="irDiapositiva(1)" id="btn-tab-1" class="tab-btn px-3 py-1.5 rounded-lg bg-cyan-500 text-slate-950 font-bold flex items-center gap-1.5 transition-all">
+      <span>1.</span> Problema & Valor F4
+    </button>
+    <button onclick="irDiapositiva(2)" id="btn-tab-2" class="tab-btn px-3 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white font-medium flex items-center gap-1.5 transition-all">
+      <span>2.</span> Arquitectura Backend & Frontend
+    </button>
+    <button onclick="irDiapositiva(3)" id="btn-tab-3" class="tab-btn px-3 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white font-medium flex items-center gap-1.5 transition-all">
+      <span>3.</span> Cómo Explicar los 3 Gráficos
+    </button>
+    <button onclick="irDiapositiva(4)" id="btn-tab-4" class="tab-btn px-3 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white font-medium flex items-center gap-1.5 transition-all">
+      <span>4.</span> La Paradoja de los 642 uds Resuelta
+    </button>
+    <button onclick="irDiapositiva(5)" id="btn-tab-5" class="tab-btn px-3 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white font-medium flex items-center gap-1.5 transition-all">
+      <span>5.</span> Gobernanza y Roles (Compras vs Prod)
+    </button>
+    <button onclick="irDiapositiva(6)" id="btn-tab-6" class="tab-btn px-3 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white font-medium flex items-center gap-1.5 transition-all">
+      <span>6.</span> Guion de Sustentación en Vivo (Paso a Paso)
+    </button>
+    <button onclick="irDiapositiva(7)" id="btn-tab-7" class="tab-btn px-3 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white font-medium flex items-center gap-1.5 transition-all">
+      <span>7.</span> Preguntas Trampa del Evaluador
+    </button>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6">
+
+    <!-- SECCIÓN 1: PROBLEMA Y VALOR F4 -->
+    <div id="slide-1" class="slide-active space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-cyan-400">
+        <span class="text-xs font-bold text-cyan-400 uppercase tracking-widest mono">Módulo de Sustentación 1</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">¿Qué es la Feature 4 y qué problema resuelve?</h1>
+        <p class="text-slate-300 mt-2 text-sm leading-relaxed">
+          En las features anteriores (F1, F2, F3) teníamos módulos aislados: catálogo, análisis de impacto y cálculo topológico de orden. 
+          Un gerente de planta tenía que saltar de pestaña en pestaña para saber si podía fabricar hoy o si se detendría la línea.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="card-foundry p-5 border-t-2 border-t-cyan-500">
+          <div class="text-cyan-400 font-bold mono text-sm mb-1">01. Tablero Integrado Único</div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Centraliza en una sola pantalla el estado de la red (F1), la afectación en cascada por fallas (F2) y el plan de entrega secuencial (F3).
+          </p>
+          <div class="mt-3 text-[11px] font-mono text-cyan-300 bg-cyan-950/40 p-2 rounded border border-cyan-800/40">
+            Regla de Oro: Se compone en el cliente sin crear endpoints monolíticos pesados.
+          </div>
+        </div>
+
+        <div class="card-foundry p-5 border-t-2 border-t-amber-500">
+          <div class="text-amber-400 font-bold mono text-sm mb-1">02. Gobernanza de Perfiles</div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Diferencia entre <strong>Responsable de Compras</strong> (con autorización de escritura) y <strong>Coordinador de Producción</strong> (modo de solo consulta).
+          </p>
+          <div class="mt-3 text-[11px] font-mono text-amber-300 bg-amber-950/40 p-2 rounded border border-amber-800/40">
+            Seguridad: Protegido por tokens Bearer en backend (HTTP 401 y 403).
+          </div>
+        </div>
+
+        <div class="card-foundry p-5 border-t-2 border-t-emerald-500">
+          <div class="text-emerald-400 font-bold mono text-sm mb-1">03. Cero Datos Simulados</div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Cada barra, porcentaje y curva responde a los <strong>27 elementos y 37 dependencias reales</strong> del backend. No hay números aleatorios.
+          </p>
+          <div class="mt-3 text-[11px] font-mono text-emerald-300 bg-emerald-950/40 p-2 rounded border border-emerald-800/40">
+            Integridad: Si se actualiza el stock, todo el tablero recalcula automáticamente.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: ARQUITECTURA -->
+    <div id="slide-2" class="slide-hidden space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-blue-400">
+        <span class="text-xs font-bold text-blue-400 uppercase tracking-widest mono">Módulo de Sustentación 2</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">Arquitectura Técnica: Clean Architecture & SOLID</h1>
+        <p class="text-slate-300 mt-2 text-sm">
+          Cómo se estructuró el código para cumplir estrictamente con los lineamientos del proyecto y las pruebas automatizadas.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card-foundry p-5 space-y-3">
+          <h3 class="font-bold text-white text-sm mono text-sky-400 flex items-center gap-2">
+            <span>⚙️ Backend (Python 3.12 + FastAPI)</span>
+          </h3>
+          <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside">
+            <li><strong>Dominio (<code class="text-cyan-300">app/dominio/sesion.py</code>):</strong> Entidad inmutable de sesión con token opaco seguro.</li>
+            <li><strong>Casos de Uso (<code class="text-cyan-300">app/aplicacion/perfiles.py</code>):</strong> <code class="text-slate-200">ListarPerfiles</code>, <code class="text-slate-200">AbrirSesion</code>, <code class="text-slate-200">AutorizarEscritura</code>.</li>
+            <li><strong>Infraestructura:</strong> Repositorio en memoria sin dependencias de base de datos externa para portabilidad total.</li>
+            <li><strong>Seguridad HTTP:</strong> Guardia que rechaza peticiones no autenticadas con <code class="text-rose-400">401 ERR-11</code> y escrituras de producción con <code class="text-amber-400">403 ERR-12</code>.</li>
+          </ul>
+        </div>
+
+        <div class="card-foundry p-5 space-y-3">
+          <h3 class="font-bold text-white text-sm mono text-purple-400 flex items-center gap-2">
+            <span>💻 Frontend (React + TypeScript + Vite)</span>
+          </h3>
+          <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside">
+            <li><strong>Composición Asíncrona:</strong> <code class="text-cyan-300">VistaTablero.tsx</code> consume en paralelo <code class="text-slate-200">GET /grafo</code>, <code class="text-slate-200">GET /orden-produccion</code>, <code class="text-slate-200">GET /plan-entrega</code> e <code class="text-slate-200">GET /impacto/{id}</code>.</li>
+            <li><strong>Sin Algoritmos Duplicados:</strong> El frontend no corre ordenamiento topológico ni recorridos de grafos; solo mapea y presenta los datos devueltos por el backend.</li>
+            <li><strong>Interceptores Axios:</strong> Inyecta automáticamente el token <code class="text-slate-200">Authorization: Bearer</code> en cada petición.</li>
+            <li><strong>28/28 Tests en Verde:</strong> 17 pruebas estáticas de arquitectura, 8 de integración de tablero y 3 de orden de producción.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: CÓMO EXPLICAR LOS 3 GRÁFICOS -->
+    <div id="slide-3" class="slide-hidden space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-cyan-400">
+        <span class="text-xs font-bold text-cyan-400 uppercase tracking-widest mono">Módulo de Sustentación 3</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">Cómo Explicar Cada Gráfico (Convención Industrial)</h1>
+        <p class="text-slate-300 mt-2 text-sm">
+          Aprenda qué responder si el jurado pregunta: <em>"¿Qué significan esas curvas, qué es la línea azul y qué es la roja?"</em>
+        </p>
+      </div>
+
+      <!-- REGLA GENERAL -->
+      <div class="bg-cyan-950/30 border border-cyan-500/40 p-4 rounded-xl flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">💡</span>
+          <span class="text-xs font-mono text-cyan-200">
+            <strong>REGLA MNEMOTÉCNICA PARA LA EXPOSICIÓN:</strong><br>
+            <span class="text-cyan-400">Línea Azul Continua</span> = Lo que tenemos hoy en planta (Stock real o Cobertura %).<br>
+            <span class="text-rose-400">Línea Roja Punteada</span> = Lo que la fábrica exige como mínimo o meta de capacidad plena (100%).
+          </span>
+        </div>
+        <div class="text-right text-xs mono text-slate-400 hidden md:block">
+          <div>Punto Cian = Conforme</div>
+          <div class="text-rose-400 font-bold">Punto Rosa = En Déficit</div>
+        </div>
+      </div>
+
+      <!-- DETALLE DE LOS 3 GRÁFICOS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- G1 -->
+        <div class="card-foundry p-4 space-y-2">
+          <div class="text-xs font-bold text-sky-400 mono">1. Inventario Real (15 SKUs)</div>
+          <div class="text-[11px] text-slate-300">
+            <strong>¿Qué evalúa?</strong> Insumo por insumo en unidades físicas (0 a 300).
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <strong>Línea azul:</strong> Stock disponible.<br>
+            <strong>Línea roja:</strong> Stock mínimo de seguridad.
+          </div>
+          <div class="text-[11px] text-rose-300 bg-rose-950/30 p-2 rounded border border-rose-800/40">
+            <strong>Cómo sustentarlo:</strong> "Miren Tornillos M6: la línea azul está en 30 y la roja en 100. Como 30 &lt; 100, cae por debajo y se marca en rojo avisando un déficit de 70 tornillos."
+          </div>
+        </div>
+
+        <!-- G2 -->
+        <div class="card-foundry p-4 space-y-2">
+          <div class="text-xs font-bold text-cyan-400 mono">2. Cumplimiento por Proveedor</div>
+          <div class="text-[11px] text-slate-300">
+            <strong>¿Qué evalúa?</strong> Nivel de servicio OTIF de cada proveedor (0 a 100%).
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <strong>Línea roja:</strong> Meta fija en 100% (todos los SKUs listos).<br>
+            <strong>Línea azul:</strong> % de insumos entregados sobre mínimo.
+          </div>
+          <div class="text-[11px] text-cyan-300 bg-cyan-950/30 p-2 rounded border border-cyan-800/40">
+            <strong>Cómo sustentarlo:</strong> "Madera y Acero están en 100% tocando la meta. Acabados está al 50% (falta barniz) y Ferretería al 71% (faltan tornillos y correderas). Ambas quedan físicamente abajo."
+          </div>
+        </div>
+
+        <!-- G3 -->
+        <div class="card-foundry p-4 space-y-2">
+          <div class="text-xs font-bold text-indigo-400 mono">3. Cobertura por Estación</div>
+          <div class="text-[11px] text-slate-300">
+            <strong>¿Qué evalúa?</strong> Preparación de insumos para operar cada máquina (0 a 100%).
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <strong>Línea roja:</strong> Capacidad plena al 100%.<br>
+            <strong>Línea azul:</strong> % de insumos conformes de esa estación.
+          </div>
+          <div class="text-[11px] text-indigo-300 bg-indigo-950/30 p-2 rounded border border-indigo-800/40">
+            <strong>Cómo sustentarlo:</strong> "Corte tiene 2/2 insumos (100% de cobertura). Acabado, Mesa y Repisa están al 67% y Escritorio al 75%. Cuatro estaciones están bajo umbral porque dependen de los tornillos y el barniz."
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: LA PARADOJA DE LOS 642 UDS -->
+    <div id="slide-4" class="slide-hidden space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-rose-500">
+        <span class="text-xs font-bold text-rose-400 uppercase tracking-widest mono">Módulo de Sustentación 4 (Clave Crítica)</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">La Paradoja de los 642 uds: ¿Por qué engañaba ese número?</h1>
+        <p class="text-slate-300 mt-2 text-sm leading-relaxed">
+          Esta es la explicación técnica de por qué no se pueden sumar piezas heterogéneas en manufactura y cómo AbastecePyme resolvió el problema.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card-foundry p-5 border border-rose-500/30 space-y-3">
+          <div class="text-rose-400 font-bold mono text-sm">❌ El Enfoque Erróneo (Suma de Piezas)</div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Ferretería entrega 7 cosas distintas. Si sumamos todas las unidades físicas:
+          </p>
+          <div class="text-[11px] font-mono bg-black/40 p-3 rounded space-y-1 text-slate-300">
+            <div>• Arandelas: 300 en stock (mínimo 50) &rarr; <span class="text-emerald-400">+250 sobran</span></div>
+            <div>• Tuercas: 200 en stock (mínimo 50) &rarr; <span class="text-emerald-400">+150 sobran</span></div>
+            <div>• Tornillos: 30 en stock (mínimo 100) &rarr; <span class="text-rose-400 font-bold">-70 FALTAN ⚠️</span></div>
+            <div>• Correderas: 18 en stock (mínimo 20) &rarr; <span class="text-rose-400 font-bold">-2 FALTAN ⚠️</span></div>
+            <div class="pt-2 border-t border-slate-700 text-amber-300">
+              Suma Total: <strong>642 piezas</strong> vs Mínimo: <strong>342 piezas</strong>
+            </div>
+          </div>
+          <div class="text-xs text-rose-300">
+            <strong>El absurdo:</strong> Parecía que sobraban 300 piezas (+300), pero la fábrica no podía armar escritorios porque no había tornillos. ¡Las arandelas no reemplazan a los tornillos!
+          </div>
+        </div>
+
+        <div class="card-foundry p-5 border border-emerald-500/30 space-y-3">
+          <div class="text-emerald-400 font-bold mono text-sm">✅ La Solución Industrial (Nivel de Servicio %)</div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            AbastecePyme eliminó la suma engañosa y adoptó el estándar de <strong>Cumplimiento de Catálogo (OTIF)</strong>:
+          </p>
+          <div class="text-[11px] font-mono bg-black/40 p-3 rounded space-y-2 text-slate-300">
+            <div>• Total de insumos requeridos: <strong>7 SKUs</strong></div>
+            <div>• Insumos que cumplen el mínimo: <strong>5 SKUs (71%)</strong></div>
+            <div>• Insumos en déficit: <strong>2 SKUs</strong></div>
+            <div class="pt-2 border-t border-slate-700 text-cyan-300">
+              Posición en gráfico: <strong>71%</strong> (debajo de la línea de meta al 100%)
+            </div>
+          </div>
+          <div class="text-xs text-emerald-300">
+            <strong>Transparencia total:</strong> Ahora la curva azul cae al 71%, el punto es rojo y el tooltip le dice al comprador exactamente qué pedir: <em>"Faltan 70 tornillos M6 y 2 correderas"</em>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 5: GOBERNANZA Y ROLES -->
+    <div id="slide-5" class="slide-hidden space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-purple-500">
+        <span class="text-xs font-bold text-purple-400 uppercase tracking-widest mono">Módulo de Sustentación 5</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">Gobernanza y Roles: Compras vs Producción</h1>
+        <p class="text-slate-300 mt-2 text-sm">
+          Cómo se implementó la seguridad operativa para proteger la integridad de la planta manufacturera.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card-foundry p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-400 text-sm mono">RESPONSABLE DE COMPRAS</span>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-mono">puede_escribir = True</span>
+          </div>
+          <p class="text-xs text-slate-300">
+            Perfil orientado a la gestión de abastecimiento y contratos con proveedores.
+          </p>
+          <div class="text-xs text-slate-400 space-y-1">
+            <div>✔ Dar de alta nuevos proveedores e insumos.</div>
+            <div>✔ Modificar stocks disponibles y stocks mínimos.</div>
+            <div>✔ Crear y eliminar dependencias en la red.</div>
+            <div>✔ Evaluar análisis de impacto de ruptura.</div>
+          </div>
+        </div>
+
+        <div class="card-foundry p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-cyan-400 text-sm mono">COORDINADOR DE PRODUCCIÓN</span>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-cyan-500/20 text-cyan-300 font-mono">puede_escribir = False</span>
+          </div>
+          <p class="text-xs text-slate-300">
+            Perfil de planta orientado a la planificación y ejecución sin riesgo de alterar el catálogo.
+          </p>
+          <div class="text-xs text-slate-400 space-y-1">
+            <div>✔ Consultar catálogo y mapas de dependencias.</div>
+            <div>✔ Simular planes de producción y órdenes de entrega.</div>
+            <div>✔ Evaluar contingencias de paradas de línea.</div>
+            <div>✖ <strong>Bloqueado:</strong> No puede crear, editar ni borrar componentes (botones deshabilitados con candado y backend emite HTTP 403).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 6: GUION PASO A PASO EN VIVO -->
+    <div id="slide-6" class="slide-hidden space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-emerald-400">
+        <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest mono">Módulo de Sustentación 6</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">Guion de Exposición en Vivo (3 Minutos)</h1>
+        <p class="text-slate-300 mt-2 text-sm">
+          Siga este guion exacto de navegación («dónde dar clic y qué decir») durante la sustentación.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="card-foundry p-4 border-l-2 border-l-cyan-400">
+          <div class="flex items-center gap-2 font-mono text-cyan-300 font-bold text-xs">
+            <span>PASO 1:</span> Abrir la aplicación y mostrar el Tablero Unificado
+          </div>
+          <div class="text-xs text-slate-300 mt-1">
+            <strong>Qué hacer:</strong> Abrir <code class="text-white">http://localhost:3000</code>. La app entra directamente al Tablero (F4).
+          </div>
+          <div class="text-xs text-slate-400 mt-1 bg-black/30 p-2.5 rounded font-mono">
+            <em>"Buenas tardes. Presentamos la Feature 4 de AbastecePyme. En una sola vista inicial, el coordinador de planta y compras tienen el diagnóstico completo: 5 proveedores, 15 insumos y 4 productos finales, conectados en tiempo real con el backend en FastAPI."</em>
+          </div>
+        </div>
+
+        <div class="card-foundry p-4 border-l-2 border-l-indigo-400">
+          <div class="flex items-center gap-2 font-mono text-indigo-300 font-bold text-xs">
+            <span>PASO 2:</span> Cambiar a Vista 3 (Telemetría & Gráficos)
+          </div>
+          <div class="text-xs text-slate-300 mt-1">
+            <strong>Qué hacer:</strong> Dar clic en el selector de vistas a la derecha: <code class="text-white">Telemetría & Gráficos</code>.
+          </div>
+          <div class="text-xs text-slate-400 mt-1 bg-black/30 p-2.5 rounded font-mono">
+            <em>"Aquí vemos la telemetría 100% real de la planta. A la izquierda tenemos el stock individual: la curva azul es el disponible y la roja el mínimo. Se observa de inmediato en rojo los 3 insumos bajo umbral: Barniz protector, Corredera y Tornillos M6."</em>
+          </div>
+        </div>
+
+        <div class="card-foundry p-4 border-l-2 border-l-rose-400">
+          <div class="flex items-center gap-2 font-mono text-rose-300 font-bold text-xs">
+            <span>PASO 3:</span> Demostrar el gráfico de Proveedores y la resolución de la paradoja
+          </div>
+          <div class="text-xs text-slate-300 mt-1">
+            <strong>Qué hacer:</strong> Posar el cursor sobre el punto rojo de <code class="text-white">Ferretería</code>.
+          </div>
+          <div class="text-xs text-slate-400 mt-1 bg-black/30 p-2.5 rounded font-mono">
+            <em>"A la derecha evaluamos a los proveedores según el estándar OTIF. Ferretería está en 71% de cumplimiento (5 de 7 insumos listos). El tooltip desglosa exactamente qué falta: 70 tornillos y 2 correderas. Eliminamos la falsa suma de piezas que antes engañaba al comprador."</em>
+          </div>
+        </div>
+
+        <div class="card-foundry p-4 border-l-2 border-l-amber-400">
+          <div class="flex items-center gap-2 font-mono text-amber-300 font-bold text-xs">
+            <span>PASO 4:</span> Demostrar la Gobernanza de Perfiles
+          </div>
+          <div class="text-xs text-slate-300 mt-1">
+            <strong>Qué hacer:</strong> En el Header, cambiar el perfil de <code class="text-white">COMPRAS</code> a <code class="text-white">PRODUCCIÓN</code>.
+          </div>
+          <div class="text-xs text-slate-400 mt-1 bg-black/30 p-2.5 rounded font-mono">
+            <em>"Finalmente, demostramos la gobernanza de perfiles. Al cambiar al perfil 'Coordinador de producción', los botones de 'Nuevo Componente' y 'Crear relación' se bloquean con candado. El backend rechaza cualquier intento de escritura con HTTP 403, garantizando que el personal de planta no altere la configuración crítica."</em>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 7: PREGUNTAS TRAMPA DEL EVALUADOR -->
+    <div id="slide-7" class="slide-hidden space-y-6">
+      <div class="card-foundry p-6 border-l-4 border-l-amber-500">
+        <span class="text-xs font-bold text-amber-400 uppercase tracking-widest mono">Módulo de Sustentación 7</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">Preguntas Trampa del Jurado y Cómo Responderlas</h1>
+        <p class="text-slate-300 mt-2 text-sm">
+          Prepárese para responder con solvencia técnica a las preguntas más frecuentes de los evaluadores.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="card-foundry p-4">
+          <div class="text-xs font-bold text-white mono text-amber-400">
+            ❓ P1: "¿Por qué crearon gráficos propios en SVG en vez de usar una librería como Chart.js o Recharts?"
+          </div>
+          <p class="text-xs text-slate-300 mt-1">
+            <strong>Respuesta ganadora:</strong> <em>"Por restricciones de arquitectura y rendimiento. La regla del proyecto exige cero librerías externas de grafos que calculen algoritmos en el cliente. Nuestros componentes SVG propios son 100% reactivos, pesan menos de 10 KB, admiten gradientes Foundry nativos y consumen directamente las coordenadas matemáticas exactas calculadas a partir del grafo backend."</em>
+          </p>
+        </div>
+
+        <div class="card-foundry p-4">
+          <div class="text-xs font-bold text-white mono text-amber-400">
+            ❓ P2: "¿El Tablero Integrado tiene un endpoint `/tablero` en el backend?"
+          </div>
+          <p class="text-xs text-slate-300 mt-1">
+            <strong>Respuesta ganadora:</strong> <em>"No, y esa fue una decisión deliberada de arquitectura. Crear un endpoint monolítico agregador viola el principio de responsabilidad única (SRP) y acopla los módulos. El tablero compone asíncronamente en paralelo las APIs REST existentes de F1, F2 y F3, manteniendo los servicios desacoplados y permitiendo que cada panel se actualice de forma independiente."</em>
+          </p>
+        </div>
+
+        <div class="card-foundry p-4">
+          <div class="text-xs font-bold text-white mono text-amber-400">
+            ❓ P3: "¿Cómo evitan que el usuario burle la seguridad cambiando el perfil en el navegador?"
+          </div>
+          <p class="text-xs text-slate-300 mt-1">
+            <strong>Respuesta ganadora:</strong> <em>"La seguridad no reside en el frontend; el frontend solo refleja la interfaz. La seguridad real vive en la capa API de FastAPI: cada solicitud de alta, modificación o borrado exige un token Bearer en memoria. Si una sesión de 'PRODUCCION' envía un POST o DELETE, el backend emite un error HTTP 403 (ERR-12) y aborta la transacción."</em>
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/[0.08] bg-[#0A0F1D]/60 px-6 py-4 flex items-center justify-between text-xs mono text-slate-500">
+    <div>AbastecePyme © 2026 · Solución Industrial para Manufactura</div>
+    <div class="flex items-center gap-3">
+      <span>Presione las pestañas superiores para navegar</span>
+      <span class="text-cyan-400 font-bold">100% Listo para Sustentar</span>
+    </div>
+  </footer>
+
+  <script>
+    function irDiapositiva(num) {
+      for (let i = 1; i <= 7; i++) {
+        const slide = document.getElementById('slide-' + i);
+        const btn = document.getElementById('btn-tab-' + i);
+        if (slide) {
+          slide.classList.remove('slide-active');
+          slide.classList.add('slide-hidden');
+        }
+        if (btn) {
+          btn.classList.remove('bg-cyan-500', 'text-slate-950', 'font-bold');
+          btn.classList.add('bg-slate-800/80', 'text-slate-400', 'font-medium');
+        }
+      }
+      const slideActivo = document.getElementById('slide-' + num);
+      const btnActivo = document.getElementById('btn-tab-' + num);
+      if (slideActivo) {
+        slideActivo.classList.remove('slide-hidden');
+        slideActivo.classList.add('slide-active');
+      }
+      if (btnActivo) {
+        btnActivo.classList.remove('bg-slate-800/80', 'text-slate-400', 'font-medium');
+        btnActivo.classList.add('bg-cyan-500', 'text-slate-950', 'font-bold');
+      }
+    }
+  </script>
+</body>
+</html>

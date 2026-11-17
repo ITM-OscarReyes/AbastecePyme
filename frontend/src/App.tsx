@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { apiService, extraerMensajeError } from './services/api';
 import { HeaderNavbar } from './components/HeaderNavbar';
+import { FoundrySidebar } from './components/FoundrySidebar';
 import type { TabActiva } from './components/HeaderNavbar';
 import { GraphCanvas } from './components/GraphCanvas';
 import { CatalogTable } from './components/CatalogTable';
@@ -24,15 +25,12 @@ import { ModalAyudaOperativa } from './components/ModalAyudaOperativa';
 import { ModalDetalleElemento } from './components/ModalDetalleElemento';
 import { ModalConfirmarRiesgo } from './components/ModalConfirmarRiesgo';
 import { ModalPerfilesAcceso } from './components/ModalPerfilesAcceso';
+import { ModalSolicitudVenta } from './components/ModalSolicitudVenta';
 import { PanelDetalleNodo, MensajeSinSeleccion } from './components/PanelDetalleNodo';
 import { useHistorialImpactos } from './hooks/useHistorialImpactos';
 import {
-  Box,
-  GitCommitHorizontal,
   AlertTriangle,
   RefreshCw,
-  Layers,
-  Sparkles,
   AlertOctagon
 } from 'lucide-react';
 
@@ -80,6 +78,7 @@ interface SolicitudImpacto {
 }
 
 export const App: React.FC = () => {
+  const [sidebarColapsada, setSidebarColapsada] = useState<boolean>(false);
   const [grafo, setGrafo] = useState<RespuestaGrafo>({
     elementos: [],
     dependencias: [],
@@ -108,6 +107,7 @@ export const App: React.FC = () => {
   );
   const [modalAyudaAbierto, setModalAyudaAbierto] = useState<boolean>(false);
   const [modalPerfilesAbierto, setModalPerfilesAbierto] = useState<boolean>(false);
+  const [modalVentaAbierto, setModalVentaAbierto] = useState<boolean>(false);
 
   const [filtroTipoCatalogo, setFiltroTipoCatalogo] = useState<string>('TODOS');
   const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
@@ -565,15 +565,11 @@ export const App: React.FC = () => {
 
   const nodoSeleccionado = grafo.elementos.find((elemento) => elemento.id === nodoSeleccionadoId);
   const elementoDetalle = grafo.elementos.find((elemento) => elemento.id === elementoDetalleId) ?? null;
-  const proveedoresCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PROVEEDOR').length;
-  const insumosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'INSUMO').length;
-  const procesosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PROCESO').length;
-  const productosCount = grafo.elementos.filter((elemento) => elemento.tipo === 'PRODUCTO').length;
   const suministrosEnAlerta = grafo.elementos.filter((elemento) => elemento.alertaStock);
   const puedeEscribir = Boolean(perfilActivo?.puedeEscribir);
 
   return (
-    <div className={`h-dvh overflow-hidden flex flex-col font-sans transition-colors duration-200 ${esModoOscuro ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-sky-500 selection:text-white`}>
+    <div className={`h-dvh overflow-hidden flex flex-col font-sans transition-colors duration-150 ${esModoOscuro ? 'bg-[#06090F] text-slate-100' : 'bg-[#F1F4F9] text-slate-900'} selection:bg-sky-500 selection:text-white`}>
       <HeaderNavbar
         tabActiva={tabActiva}
         onTabChange={handleTabChange}
@@ -588,30 +584,41 @@ export const App: React.FC = () => {
         onCambiarPerfil={manejarCambiarPerfil}
         onAbrirModalPerfiles={() => setModalPerfilesAbierto(true)}
         puedeEscribir={puedeEscribir}
+        onAbrirSolicitudVenta={() => setModalVentaAbierto(true)}
       />
 
-      {errorGlobal && (
-        <div className="shrink-0 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-800 dark:text-red-400 w-full">
-          <div className="flex items-center gap-2 min-w-0">
-            <AlertTriangle size={16} className="shrink-0 text-red-600 dark:text-red-400" />
-            <span className="truncate">{errorGlobal}</span>
-          </div>
-          <button
-            onClick={cargarGrafo}
-            className="shrink-0 flex items-center gap-1 font-semibold hover:underline text-red-700 dark:text-red-300"
-          >
-            <RefreshCw size={12} /> Reintentar
-          </button>
-        </div>
-      )}
+      <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
+        <FoundrySidebar
+          tabActiva={tabActiva}
+          onTabChange={handleTabChange}
+          perfilActivo={perfilActivo}
+          onAbrirModalPerfiles={() => setModalPerfilesAbierto(true)}
+          colapsada={sidebarColapsada}
+          onToggleColapso={() => setSidebarColapsada((prev) => !prev)}
+        />
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {errorGlobal && (
+            <div className="shrink-0 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/20 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-red-800 dark:text-red-400 w-full">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle size={16} className="shrink-0 text-red-600 dark:text-red-400" />
+                <span className="truncate">{errorGlobal}</span>
+              </div>
+              <button
+                onClick={cargarGrafo}
+                className="shrink-0 flex items-center gap-1 font-semibold hover:underline text-red-700 dark:text-red-300"
+              >
+                <RefreshCw size={12} /> Reintentar
+              </button>
+            </div>
+          )}
 
-      <main
-        className={`flex-1 min-h-0 w-full overflow-y-auto ${
+          <main
+        className={`flex-1 min-h-0 w-full ${
           tabActiva === 'tablero'
-            ? 'p-0'
+            ? 'p-0 h-full flex flex-col overflow-hidden'
             : tabActiva === 'red'
-            ? 'p-4 sm:p-6 lg:p-8 flex flex-col gap-4 sm:gap-6'
-            : 'p-4 sm:p-6 lg:p-8 space-y-6'
+            ? 'overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-4 sm:gap-6'
+            : 'overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6'
         }`}
       >
         {tabActiva === 'tablero' && (
@@ -624,6 +631,7 @@ export const App: React.FC = () => {
             onConsultarElemento={(id) => abrirDetalle(id, 'catalogo')}
             perfilActivo={perfilActivo}
             puedeEscribir={puedeEscribir}
+            esModoOscuro={esModoOscuro}
             onAbrirModalElemento={abrirNuevoElemento}
             onAbrirModalDependencia={abrirNuevaDependencia}
             onAbrirModalPerfiles={() => setModalPerfilesAbierto(true)}
@@ -631,49 +639,21 @@ export const App: React.FC = () => {
         )}
 
         {tabActiva !== 'tablero' && (
-          <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Proveedores</span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{proveedoresCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-tight mt-0.5">Suministro externo</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
-                <Box className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
+          <div className="shrink-0 flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/[0.08]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider font-mono">
+                {tabActiva === 'red' && 'Red de Dependencias y Cadena de Suministro'}
+                {tabActiva === 'catalogo' && 'Catálogo Maestro de Componentes'}
+                {tabActiva === 'impacto' && 'Análisis de Impacto y Continuidad'}
+                {tabActiva === 'produccion' && 'Orden y Viabilidad de Producción'}
+              </h2>
             </div>
-
-            <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Materias & Suministros</span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{insumosCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-medium leading-tight mt-0.5">Materiales base</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/20">
-                <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-            </div>
-
-            <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Procesos de Planta</span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{procesosCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-purple-600 dark:text-purple-400 font-medium leading-tight mt-0.5">Estaciones de trabajo</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-500/20">
-                <GitCommitHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-            </div>
-
-            <div className="glass-card p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-2 shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-800">
-              <div className="min-w-0">
-                <span className="block text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide leading-tight">Productos Finales</span>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1 leading-none">{productosCount}</p>
-                <span className="block text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight mt-0.5">Despacho a cliente</span>
-              </div>
-              <div className="shrink-0 p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
+            <div className="text-[10px] sm:text-[11px] font-mono text-slate-500 dark:text-slate-400">
+              {tabActiva === 'red' && `${grafo.elementos.length} elementos · ${grafo.dependencias.length} dependencias`}
+              {tabActiva === 'catalogo' && `${grafo.elementos.length} elementos registrados`}
+              {tabActiva === 'impacto' && 'Evaluación causal de fallas'}
+              {tabActiva === 'produccion' && 'Secuencia acíclica de manufactura'}
             </div>
           </div>
         )}
@@ -791,11 +771,14 @@ export const App: React.FC = () => {
           />
         )}
       </main>
+        </div>
+      </div>
 
       <ModalCrearElemento
         isOpen={modalElementoAbierto}
         elementos={grafo.elementos}
         elementoEditar={elementoEditar}
+        perfilActivo={perfilActivo}
         onClose={cerrarModalElemento}
         onSubmit={handleCrearElemento}
         onSolicitarGuardar={solicitarEditarElemento}
@@ -849,6 +832,12 @@ export const App: React.FC = () => {
         perfilActivo={perfilActivo}
         perfilesDisponibles={perfilesDisponibles}
         onCambiarPerfil={manejarCambiarPerfil}
+      />
+
+      <ModalSolicitudVenta
+        isOpen={modalVentaAbierto}
+        onClose={() => setModalVentaAbierto(false)}
+        productos={grafo.elementos.filter((e) => e.tipo === 'PRODUCTO')}
       />
     </div>
   );

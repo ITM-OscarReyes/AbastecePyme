@@ -251,9 +251,9 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
   return (
     <div className="space-y-6 w-full py-2">
       {/* Encabezado Principal */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm dark:shadow-xl backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 foundry-panel p-4 sm:p-5 border border-slate-200 dark:border-white/[0.08]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <ListOrdered size={22} />
           </div>
           <div>
@@ -269,7 +269,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
         </div>
 
         {/* Selector de subvista */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => setSubVista('plan')}
@@ -301,7 +301,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
       {subVista === 'plan' && (
         <div className="space-y-6">
           {/* Buscador de productos, Selección y Acceso rápido a Historial */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="foundry-panel p-4 border border-slate-200 dark:border-white/[0.08] space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -342,7 +342,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                   }}
                   onFocus={() => setSugerenciasAbiertas(true)}
                   placeholder="Buscar producto por nombre o SKU (ej. Mesa, Escritorio, Repisa)..."
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
                 />
                 {terminoBusqueda && (
                   <button
@@ -360,7 +360,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
 
               {/* Menú flotante de sugerencias */}
               {sugerenciasAbiertas && sugerenciasProductos.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden py-1">
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl overflow-hidden py-1">
                   {sugerenciasProductos.map((prod) => {
                     const yaEstaSeleccionado = productosSeleccionados.includes(prod.id);
                     return (
@@ -414,7 +414,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                     return (
                       <span
                         key={id}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-xs"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-xs"
                       >
                         <span>{prod ? prod.nombre : id}</span>
                         <span className="text-[10px] opacity-75 font-mono">
@@ -476,7 +476,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
           </div>
 
           {cargandoPlan && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center space-y-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-10 text-center space-y-3">
               <RefreshCw size={28} className="animate-spin text-emerald-600 dark:text-emerald-400 mx-auto" />
               <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                 Calculando plan de entrega y precedencias de los productos seleccionados...
@@ -485,7 +485,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
           )}
 
           {!cargandoPlan && errorPlan && (
-            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-5 flex items-start gap-3">
+            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg p-5 flex items-start gap-3">
               <AlertTriangle className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" size={18} />
               <div>
                 <h4 className="text-xs font-bold text-rose-800 dark:text-rose-300">No se pudo generar el plan de entrega</h4>
@@ -501,7 +501,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                 {planData.productos.map((prod) => (
                   <div
                     key={prod.id}
-                    className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
+                    className={`p-4 rounded-lg border flex flex-col justify-between gap-3 ${
                       prod.estado === 'PLANIFICABLE'
                         ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
                         : 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/60'
@@ -547,7 +547,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
 
               {/* Alerta de bloqueo si existen ciclos en los requerimientos */}
               {planData.ciclos.length > 0 && (
-                <div className="bg-rose-950/30 border border-rose-800/60 rounded-xl p-5 space-y-3">
+                <div className="bg-rose-950/30 border border-rose-800/60 rounded-lg p-5 space-y-3">
                   <div className="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase">
                     <ShieldAlert size={16} />
                     <span>Dependencia circular detectada en los requisitos solicitados</span>
@@ -572,7 +572,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
 
               {/* Pasos de preparación para la entrega */}
               {planData.pasos.length > 0 ? (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="foundry-panel p-4 border border-slate-200 dark:border-white/[0.08] space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <Sparkles size={16} className="text-emerald-600 dark:text-emerald-400" />
@@ -592,7 +592,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                     {planData.pasos.map((paso) => (
                       <div
                         key={paso.id}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800"
+                        className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800"
                       >
                         <div className="flex items-center gap-3">
                           <span className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center">
@@ -623,7 +623,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center">
+                <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-8 text-center">
                   <p className="text-xs text-slate-500">
                     No hay pasos disponibles porque todos los productos solicitados están bloqueados por dependencias circulares.
                   </p>
@@ -648,7 +648,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
               type="button"
               onClick={cargarDiagnostico}
               disabled={cargandoDiagnostico}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
             >
               <RefreshCw size={13} className={cargandoDiagnostico ? 'animate-spin' : ''} />
               <span>Actualizar diagnóstico</span>
@@ -656,14 +656,14 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
           </div>
 
           {cargandoDiagnostico && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-10 text-center">
               <RefreshCw size={28} className="animate-spin text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
               <p className="text-xs text-slate-500">Evaluando la red completa de la planta...</p>
             </div>
           )}
 
           {!cargandoDiagnostico && errorDiagnostico && (
-            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-5 flex items-start gap-3">
+            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg p-5 flex items-start gap-3">
               <AlertTriangle className="text-rose-600 shrink-0 mt-0.5" size={18} />
               <div>
                 <h4 className="text-xs font-bold text-rose-800 dark:text-rose-300">Error al consultar diagnóstico</h4>
@@ -676,7 +676,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
             <div className="space-y-6">
               {/* Tarjeta de Estado del Diagnóstico */}
               <div
-                className={`p-6 rounded-2xl border ${
+                className={`p-6 rounded-lg border ${
                   diagnosticoData.esDag
                     ? 'bg-emerald-500/10 border-emerald-500/30'
                     : 'bg-rose-500/10 border-rose-500/30'
@@ -717,7 +717,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
               {/* Si hay ciclos: reporte detallado */}
               {!diagnosticoData.esDag && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-950/80 border border-rose-900/60 rounded-xl p-4 space-y-3">
+                  <div className="bg-slate-950/80 border border-rose-900/60 rounded-lg p-4 space-y-3">
                     <span className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
                       <RefreshCw size={14} className="animate-spin" />
                       <span>Dependencias circulares detectadas</span>
@@ -738,7 +738,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <div className="bg-slate-950/80 border border-slate-800 rounded-lg p-4 space-y-3">
                     <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                       <AlertTriangle size={14} />
                       <span>Elementos bloqueados ({diagnosticoData.elementosBloqueados.length})</span>
@@ -756,7 +756,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
 
               {/* Si es DAG: secuencia completa */}
               {diagnosticoData.esDag && diagnosticoData.totalPasos > 0 && (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="foundry-panel p-4 border border-slate-200 dark:border-white/[0.08] space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -793,7 +793,7 @@ export const VistaOrdenProduccion: React.FC<VistaOrdenProduccionProps> = ({
                     {pasosFiltradosDiagnostico.map((paso) => (
                       <div
                         key={paso.id}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800"
+                        className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800"
                       >
                         <div className="flex items-center gap-3">
                           <span className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center">

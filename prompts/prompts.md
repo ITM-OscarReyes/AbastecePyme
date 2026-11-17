@@ -587,6 +587,42 @@ Actúa como `tester` de AbastecePyme y verifica de forma objetiva la Feature 3 (
 - Pruebas bloqueadas y su razón.
 - Cobertura de criterios de aceptación y conclusión final.
 
+---
+
+## 15 — Implementación, Analítica Industrial y Refinamiento de F4 (frontend-builder & data-analyst)
+
+Actúa como `frontend-builder` y analista de datos de AbastecePyme. Tu misión es perfeccionar la Feature 4 (F4 — Tablero de abastecimiento integrado) garantizando que todos los datos visualizados provengan estrictamente del grafo real del backend (`GET /api/v1/grafo`), erradicando cualquier telemetría simulada o datos ficticios, y resolviendo cualquier contradicción matemática o visual en los gráficos industriales.
+
+**Contexto:**
+- `docs/brief.md` es la fuente de verdad. La especificación técnica derivada está en `docs/requirements.md` y `docs/api-contract.md` §10.
+- F1, F2 y F3 están completamente implementadas y verificadas.
+- La rama de trabajo es `f4-Frontend`.
+
+**Alcance y Tareas Realizadas:**
+1. **Erradicación de Datos Simulados**: Conectar 100% de los componentes de las tres vistas del tablero (`Flujo de Producción & OEE`, `Capacidad de Estaciones`, `Telemetría & Gráficos`) a los elementos y dependencias reales del grafo de manufactura.
+2. **Normalización a Tasa de Cobertura Operativa (%) en Estaciones (`StationThroughputChart.tsx`)**:
+   - Escala fija de 0% a 100%.
+   - Línea de meta discontinua roja en 100% (Capacidad Plena de Insumos).
+   - Estaciones con déficit (Acabado 67%, Mesa 67%, Repisa 67%, Escritorio 75%) ubicadas física y visualmente por debajo de la línea roja.
+3. **Resolución de la Paradoja de Agregación en Proveedores (`ProcurementOverviewChart.tsx`)**:
+   - Eliminar la suma engañosa de unidades heterogéneas (`642 uds vs 342 uds`) que ocultaba faltantes de tornillos tras excesos de arandelas.
+   - Adoptar el estándar de Tasa de Cumplimiento OTIF (0-100%) con línea de meta al 100%.
+   - Tooltip transparente que detalla los insumos faltantes específicos (`Tornillo M6: 30/100, faltan 70`, `Corredera: 18/20, faltan 2`, `Barniz: 12/15, faltan 3`).
+4. **Optimización Tipográfica y Prevención de Recortes**:
+   - Limpieza del eje X en `ProductionOutputChart.tsx`: marcas sutiles (*ticks*) en insumos conformes y rotulado destacado en rojo y negrita únicamente en los insumos críticos.
+   - Reposicionamiento dinámico del tooltip en `StationThroughputChart.tsx` hacia la mitad inferior para evitar recortes con el borde superior.
+   - Títulos y badges compactos con `whitespace-nowrap` evitando el truncado de la palabra `Déficit`.
+5. **Gobernanza de Perfiles y Seguridad de Acceso**:
+   - Diferenciación efectiva entre `COMPRAS` (con token Bearer de escritura) y `PRODUCCION` (modo consulta protegido por HTTP 403).
+6. **Herramienta Interactiva de Sustentación**:
+   - Creación de `docs/entrega/sustentacion_f4.html` para la defensa técnica ante evaluadores.
+
+**Verificación:**
+- Compilación limpia con Vite (`npm run build`) con 0 errores.
+- 28/28 pruebas unitarias y de arquitectura en verde (`vitest run`).
+
+---
+
 ## 16 — Verificación de F4 (tester)
 
 Actúa como `tester` / QA de AbastecePyme y verifica de forma objetiva la Feature 4 (F4 — Tablero de abastecimiento) en la rama `f4-supply-dashboard`. Analiza, diseña, implementa y ejecuta las pruebas necesarias exclusivamente para F4 y entrega un informe de resultados. No modifiques código de producción.

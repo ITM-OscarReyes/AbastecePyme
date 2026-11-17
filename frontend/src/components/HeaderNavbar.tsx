@@ -1,25 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Network,
-  Package,
-  ShieldAlert,
-  Plus,
-  Link2,
-  Factory,
   HelpCircle,
-  ListOrdered,
+  Bell,
   Sun,
   Moon,
-  Menu,
-  X,
-  LayoutDashboard,
-  UserCheck,
-  Shield,
-  ChevronDown,
+  MoreVertical,
+  Plus,
+  Link2,
   Check,
-  KeyRound
+  ChevronDown,
+  ShoppingBag
 } from 'lucide-react';
 import type { Perfil, PerfilId } from '../types';
+import { LogoAbastecePyme } from './LogoAbastecePyme';
 
 export type TabActiva = 'tablero' | 'red' | 'catalogo' | 'impacto' | 'produccion';
 
@@ -37,11 +30,10 @@ interface HeaderNavbarProps {
   onCambiarPerfil?: (perfilId: PerfilId) => void;
   onAbrirModalPerfiles?: () => void;
   puedeEscribir?: boolean;
+  onAbrirSolicitudVenta?: () => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
-  tabActiva,
-  onTabChange,
   onAbrirModalElemento,
   onAbrirModalDependencia,
   onAbrirAyuda,
@@ -52,427 +44,282 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   perfilesDisponibles = [],
   onCambiarPerfil,
   onAbrirModalPerfiles,
-  puedeEscribir = false
+  puedeEscribir = false,
+  onAbrirSolicitudVenta
 }) => {
-  const [menuMovilAbierto, setMenuMovilAbierto] = useState<boolean>(false);
+  const [fechaHoraUtc, setFechaHoraUtc] = useState<string>('');
+  const [menuAccionesAbierto, setMenuAccionesAbierto] = useState<boolean>(false);
   const [menuPerfilAbierto, setMenuPerfilAbierto] = useState<boolean>(false);
   const refMenuPerfil = useRef<HTMLDivElement>(null);
 
-  // Cerrar menús al presionar Escape o clic exterior
   useEffect(() => {
-    const manejarEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (menuPerfilAbierto) setMenuPerfilAbierto(false);
-        if (menuMovilAbierto) setMenuMovilAbierto(false);
-      }
+    const actualizar = () => {
+      const d = new Date();
+      const meses = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      const m = meses[d.getUTCMonth()];
+      const dia = d.getUTCDate();
+      const horas = String(d.getUTCHours()).padStart(2, '0');
+      const min = String(d.getUTCMinutes()).padStart(2, '0');
+      setFechaHoraUtc(`${m} ${dia}, ${horas}:${min} GMT`);
     };
+    actualizar();
+    const interval = setInterval(actualizar, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
+  // Cerrar menú al hacer clic afuera
+  useEffect(() => {
     const manejarClicExterior = (e: MouseEvent) => {
-      if (
-        menuPerfilAbierto &&
-        refMenuPerfil.current &&
-        !refMenuPerfil.current.contains(e.target as Node)
-      ) {
+      if (refMenuPerfil.current && !refMenuPerfil.current.contains(e.target as Node)) {
         setMenuPerfilAbierto(false);
       }
     };
-
-    window.addEventListener('keydown', manejarEscape);
     document.addEventListener('mousedown', manejarClicExterior);
-    return () => {
-      window.removeEventListener('keydown', manejarEscape);
-      document.removeEventListener('mousedown', manejarClicExterior);
-    };
-  }, [menuPerfilAbierto, menuMovilAbierto]);
-
-  const seleccionarTab = (tab: TabActiva) => {
-    onTabChange(tab);
-    setMenuMovilAbierto(false);
-  };
-
-  const seleccionarPerfil = (perfilId: PerfilId) => {
-    onCambiarPerfil?.(perfilId);
-    setMenuPerfilAbierto(false);
-  };
+    return () => document.removeEventListener('mousedown', manejarClicExterior);
+  }, []);
 
   return (
-    <header className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 sticky top-0 z-40 shadow-sm dark:shadow-xl transition-colors duration-200">
-      <div className="w-full px-3 sm:px-6 lg:px-8">
-        {/* Fila superior: identidad, perfil y acciones */}
-        <div className="flex items-center justify-between min-h-16 py-2.5 gap-2 sm:gap-4">
-          {/* Identidad de la Empresa y Aplicación */}
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            {/* Botón de navegación móvil (accesible en pantallas < 768px, objetivo táctil min 44x44px) */}
-            <button
-              type="button"
-              onClick={() => setMenuMovilAbierto((prev) => !prev)}
-              className="md:hidden flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 shrink-0"
-              aria-label={menuMovilAbierto ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
-              aria-expanded={menuMovilAbierto}
-              title="Menú de navegación de secciones"
-            >
-              {menuMovilAbierto ? <X size={20} /> : <Menu size={20} />}
-            </button>
+    <header className="h-12 bg-white dark:bg-[#06090F] border-b border-slate-200 dark:border-white/[0.08] px-4 flex items-center justify-between select-none z-40 shrink-0 font-mono transition-colors">
+      {/* Izquierda: Logo Oficial AbastecePyme + SYSTEM NOMINAL + Fecha GMT */}
+      <div className="flex items-center gap-4">
+        <LogoAbastecePyme size={24} mostrarTexto={true} />
 
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-emerald-500 p-0.5 shadow-md shadow-sky-500/20 shrink-0">
-              <div className="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Factory className="text-sky-600 dark:text-sky-400" size={20} />
-              </div>
-            </div>
-            <div className="hidden sm:block min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-black tracking-tight text-slate-900 dark:text-white truncate">
-                  AbastecePyme
-                </h1>
-                <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded whitespace-nowrap">
-                  Planta Activa
-                </span>
-              </div>
-              <p className="hidden xl:block text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
-                Control de Abastecimiento & Continuidad de Producción
-              </p>
-            </div>
-          </div>
-
-          {/* Acciones de Operación, Selector de Perfil y Estado */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Estado de conexión con el sistema */}
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-medium">
-              <span className={`w-2 h-2 rounded-full ${apiConectada ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 animate-pulse'}`}></span>
-              <span className={apiConectada ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-amber-700 dark:text-amber-400 font-semibold'}>
-                {apiConectada ? 'Sistema Sincronizado' : 'Sin Conexión'}
-              </span>
-            </div>
-
-            {/* Selector de Perfil (RF-F4-07 / RF-F4-09) */}
-            <div className="relative" ref={refMenuPerfil}>
-              <button
-                type="button"
-                onClick={() => setMenuPerfilAbierto((prev) => !prev)}
-                className={`flex items-center gap-2 h-11 min-h-[44px] px-2.5 sm:px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
-                  perfilActivo?.puedeEscribir
-                    ? 'bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60'
-                    : 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
-                }`}
-                title="Cambiar perfil de usuario"
-                aria-expanded={menuPerfilAbierto}
-                aria-haspopup="true"
-              >
-                {perfilActivo?.puedeEscribir ? (
-                  <UserCheck size={16} className="text-sky-600 dark:text-sky-400 shrink-0" />
-                ) : (
-                  <Shield size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                )}
-                <div className="text-left hidden sm:block">
-                  <div className="text-[11px] font-bold leading-tight">
-                    {perfilActivo?.nombre ?? 'Seleccionar perfil'}
-                  </div>
-                  <div className="text-[9px] uppercase tracking-wider opacity-75">
-                    {perfilActivo?.puedeEscribir ? 'Edición permitida' : 'Solo consulta'}
-                  </div>
-                </div>
-                <ChevronDown size={14} className="opacity-60 shrink-0" />
-              </button>
-
-              {menuPerfilAbierto && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-left">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Perfil operativo
-                    </span>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                      Elige el rol para operar la planta:
-                    </p>
-                  </div>
-                  <div className="py-1 space-y-1">
-                    {perfilesDisponibles.map((perfil) => {
-                      const esSeleccionado = perfilActivo?.id === perfil.id;
-                      return (
-                        <button
-                          key={perfil.id}
-                          type="button"
-                          onClick={() => seleccionarPerfil(perfil.id)}
-                          className={`w-full flex items-start gap-3 p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${
-                            esSeleccionado
-                              ? 'bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/80 text-sky-900 dark:text-sky-100 font-semibold'
-                              : 'hover:bg-slate-100 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <div className="mt-0.5 shrink-0">
-                            {perfil.id === 'COMPRAS' ? (
-                              <UserCheck size={16} className="text-sky-600 dark:text-sky-400" />
-                            ) : (
-                              <Shield size={16} className="text-emerald-600 dark:text-emerald-400" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold">{perfil.nombre}</span>
-                              {esSeleccionado && (
-                                <Check size={14} className="text-sky-600 dark:text-sky-400" />
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-0.5 leading-snug">
-                              {perfil.puedeEscribir
-                                ? 'Permite registrar, modificar y eliminar elementos y relaciones en la cadena.'
-                                : 'Modo de consulta y evaluación de impacto; protege la configuración de planta contra modificaciones.'}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {onAbrirModalPerfiles && (
-                    <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMenuPerfilAbierto(false);
-                          onAbrirModalPerfiles();
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <KeyRound size={14} className="text-sky-500" />
-                        <span>Ver control de acceso detallado</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Selector Dark / Light Mode - Con objetivo táctil de 44x44px */}
-            <button
-              type="button"
-              onClick={onToggleModoOscuro}
-              className="flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-500 dark:text-amber-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer active:scale-95 shadow-sm"
-              title={esModoOscuro ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
-              aria-label="Alternar tema de interfaz"
-            >
-              {esModoOscuro ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
-            {onAbrirAyuda && (
-              <button
-                type="button"
-                onClick={onAbrirAyuda}
-                className="flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3 lg:py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shadow-sm"
-                title="Abrir Guía Operativa y Atajos de Teclado (?)"
-                aria-label="Guía operativa"
-              >
-                <HelpCircle size={16} className="text-sky-400" />
-                <span className="hidden lg:inline">Guía</span>
-                <kbd className="hidden xl:inline text-[9px] font-mono px-1 bg-white dark:bg-slate-900 rounded text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                  ?
-                </kbd>
-              </button>
-            )}
-
-            {/* Acciones de modificación protegidas por perfil (RF-F4-09) */}
-            <button
-              type="button"
-              onClick={puedeEscribir ? onAbrirModalElemento : undefined}
-              disabled={!puedeEscribir}
-              className={`flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3.5 lg:py-2 rounded-xl text-xs font-semibold shadow-lg transition-all ${
-                puedeEscribir
-                  ? 'bg-sky-600 hover:bg-sky-500 text-white shadow-sky-600/20 active:scale-95 cursor-pointer'
-                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-75'
-              }`}
-              title={
-                puedeEscribir
-                  ? 'Registrar nuevo proveedor, suministro, proceso o producto'
-                  : 'Acción restringida: solo disponible para Responsable de compras'
-              }
-              aria-label="Nuevo Componente"
-            >
-              <Plus size={16} />
-              <span className="hidden lg:inline">Nuevo Componente</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={puedeEscribir ? onAbrirModalDependencia : undefined}
-              disabled={!puedeEscribir}
-              className={`flex items-center justify-center gap-1.5 w-11 h-11 min-w-[44px] min-h-[44px] lg:w-auto lg:px-3.5 lg:py-2 rounded-xl text-xs font-semibold shadow-lg transition-all ${
-                puedeEscribir
-                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20 active:scale-95 cursor-pointer'
-                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-75'
-              }`}
-              title={
-                puedeEscribir
-                  ? 'Crear relación entre componentes del catálogo'
-                  : 'Acción restringida: solo disponible para Responsable de compras'
-              }
-              aria-label="Crear relación"
-            >
-              <Link2 size={16} />
-              <span className="hidden lg:inline">Crear relación</span>
-            </button>
-          </div>
+        {/* Badge SYSTEM NOMINAL de Palantir Foundry */}
+        <div className="hidden sm:flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+          <span className="led-indicator led-green"></span>
+          <span>{apiConectada ? 'SYSTEM NOMINAL' : 'CONNECTING...'}</span>
         </div>
 
-        {/* Navegación de escritorio: segunda fila a ancho completo (>= 768px) con 5 secciones */}
-        <nav className="hidden md:flex items-center gap-1 w-full bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800 mb-2 overflow-x-auto">
+        {/* Timestamp GMT */}
+        <span className="hidden md:inline text-[11px] font-medium text-slate-500 dark:text-slate-400 tracking-wider">
+          {fechaHoraUtc || 'NOV 15, 18:38 GMT'}
+        </span>
+      </div>
+
+      {/* Derecha: Acciones rapidas, Ayuda, Notificaciones, Selector de Perfiles y Menu */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {perfilActivo?.id === 'VENTAS' ? (
           <button
             type="button"
-            onClick={() => seleccionarTab('tablero')}
-            className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              tabActiva === 'tablero'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/80 dark:border-transparent'
-                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-800'
-            }`}
-            title="Tablero general de abastecimiento (Atajo: 0)"
+            onClick={onAbrirSolicitudVenta}
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold border border-emerald-500 shadow-xs dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-300 dark:border-emerald-500/40 text-[11px] transition-all cursor-pointer mr-1"
+            title="Solicitar preparación o producción de un producto terminado a Planta"
           >
-            <LayoutDashboard size={14} />
-            <span>Tablero</span>
-            <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">0</kbd>
+            <ShoppingBag size={13} className="text-white dark:text-emerald-300" />
+            <span>SOLICITAR PRODUCCIÓN</span>
           </button>
-          <button
-            type="button"
-            onClick={() => seleccionarTab('red')}
-            className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              tabActiva === 'red'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/80 dark:border-transparent'
-                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-800'
-            }`}
-            title="Cadena de Suministro (Atajo: 1)"
-          >
-            <Network size={14} />
-            <span>Cadena de Suministro</span>
-            <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">1</kbd>
-          </button>
-          <button
-            type="button"
-            onClick={() => seleccionarTab('catalogo')}
-            className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              tabActiva === 'catalogo'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/80 dark:border-transparent'
-                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-800'
-            }`}
-            title="Materiales y Procesos (Atajo: 2)"
-          >
-            <Package size={14} />
-            <span>Materiales & Procesos</span>
-            <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">2</kbd>
-          </button>
-          <button
-            type="button"
-            onClick={() => seleccionarTab('impacto')}
-            className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              tabActiva === 'impacto'
-                ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm border border-slate-200/80 dark:border-transparent'
-                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-800'
-            }`}
-            title="Análisis de Impacto (Atajo: 3)"
-          >
-            <ShieldAlert size={14} />
-            <span>Análisis de impacto</span>
-            <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">3</kbd>
-          </button>
-          <button
-            type="button"
-            onClick={() => seleccionarTab('produccion')}
-            className={`flex items-center gap-2 px-2.5 lg:px-3 py-2 min-h-[38px] rounded-lg text-[11px] lg:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              tabActiva === 'produccion'
-                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/80 dark:border-transparent'
-                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-800'
-            }`}
-            title="Orden de Preparación y Producción (Atajo: 4)"
-          >
-            <ListOrdered size={14} />
-            <span>Orden de producción</span>
-            <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700/50">4</kbd>
-          </button>
-        </nav>
-
-        {/* Menú Móvil Desplegable (< 768px): Garantiza acceso a las 5 secciones */}
-        {menuMovilAbierto && (
-          <nav
-            aria-label="Navegación móvil"
-            className="md:hidden py-3 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-1.5 animate-in fade-in duration-150"
-          >
+        ) : puedeEscribir && (
+          <div className="hidden lg:flex items-center gap-1.5 mr-1">
             <button
               type="button"
-              onClick={() => seleccionarTab('tablero')}
-              className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                tabActiva === 'tablero'
-                  ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+              onClick={onAbrirModalElemento}
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold border border-[#0284C7] shadow-xs dark:bg-sky-500/20 dark:hover:bg-sky-500/30 dark:text-sky-300 dark:border-sky-500/40 text-[11px] transition-all cursor-pointer"
+              title="Registrar nuevo elemento en la red de abastecimiento"
             >
-              <div className="flex items-center gap-2.5">
-                <LayoutDashboard size={16} />
-                <span>Tablero General</span>
-              </div>
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">0</kbd>
+              <Plus size={13} className="text-white dark:text-sky-300" />
+              <span>NUEVO ELEMENTO</span>
             </button>
-
             <button
               type="button"
-              onClick={() => seleccionarTab('red')}
-              className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                tabActiva === 'red'
-                  ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+              onClick={onAbrirModalDependencia}
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-white/[0.1] dark:text-slate-200 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+              title="Conectar dos elementos con dependencia"
             >
-              <div className="flex items-center gap-2.5">
-                <Network size={16} />
-                <span>Cadena de Suministro</span>
-              </div>
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">1</kbd>
+              <Link2 size={13} />
+              <span>CONEXIÓN</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => seleccionarTab('catalogo')}
-              className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                tabActiva === 'catalogo'
-                  ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Package size={16} />
-                <span>Materiales & Procesos</span>
-              </div>
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">2</kbd>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => seleccionarTab('impacto')}
-              className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                tabActiva === 'impacto'
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <ShieldAlert size={16} />
-                <span>Análisis de impacto</span>
-              </div>
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">3</kbd>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => seleccionarTab('produccion')}
-              className={`flex items-center justify-between px-4 py-3 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                tabActiva === 'produccion'
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <ListOrdered size={16} />
-                <span>Orden de producción</span>
-              </div>
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">4</kbd>
-            </button>
-          </nav>
+          </div>
         )}
+
+        {/* Boton Ayuda (?) */}
+        <button
+          type="button"
+          onClick={onAbrirAyuda}
+          className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+          title="Guía Operativa de Planta"
+        >
+          <HelpCircle size={16} />
+        </button>
+
+        {/* Boton Notificaciones con punto rojo */}
+        <div className="relative">
+          <button
+            type="button"
+            className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+            title="Telemetría y Alertas de Sistema"
+          >
+            <Bell size={16} />
+          </button>
+          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#06090F] animate-pulse"></span>
+        </div>
+
+        {/* Toggle Modo Oscuro / Claro interactivo */}
+        <button
+          type="button"
+          onClick={onToggleModoOscuro}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/[0.1] transition-all cursor-pointer shadow-xs"
+          title={esModoOscuro ? 'Modo Oscuro activo (clic para cambiar a Claro)' : 'Modo Claro activo (clic para cambiar a Oscuro)'}
+        >
+          {esModoOscuro ? (
+            <>
+              <Moon size={13} className="text-sky-400" />
+              <span className="text-[10px] font-bold text-sky-400">OSCURO</span>
+            </>
+          ) : (
+            <>
+              <Sun size={13} className="text-amber-500" />
+              <span className="text-[10px] font-bold text-amber-600">CLARO</span>
+            </>
+          )}
+        </button>
+
+        {/* SELECTOR DE PERFILES REALES (ADMINISTRADOR / COMPRAS / PRODUCCIÓN / VENTAS) */}
+        <div className="relative" ref={refMenuPerfil}>
+          <button
+            type="button"
+            onClick={() => setMenuPerfilAbierto((prev) => !prev)}
+            className="flex items-center gap-2 pl-2 pr-2 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-slate-200 dark:border-white/[0.08] transition-colors cursor-pointer text-left"
+            title="Alternar entre perfil Administrador, Compras, Producción o Ventas"
+          >
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              perfilActivo?.id === 'ADMINISTRADOR'
+                ? 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-400/40'
+                : perfilActivo?.id === 'COMPRAS'
+                ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/40'
+                : perfilActivo?.id === 'PRODUCCION'
+                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/40'
+                : perfilActivo?.id === 'VENTAS'
+                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-400/40'
+                : 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/40'
+            }`}>
+              {perfilActivo ? perfilActivo.nombre.charAt(0) : 'C'}
+            </div>
+            <div className="hidden sm:flex flex-col">
+              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                {perfilActivo ? perfilActivo.nombre : 'Responsable de compras'}
+              </span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400 leading-tight">
+                {perfilActivo?.id === 'ADMINISTRADOR'
+                  ? 'CONTROL TOTAL'
+                  : perfilActivo?.id === 'COMPRAS'
+                  ? 'PROVEEDORES E INSUMOS'
+                  : perfilActivo?.id === 'PRODUCCION'
+                  ? 'PROCESOS Y PRODUCTOS'
+                  : perfilActivo?.id === 'VENTAS'
+                  ? 'COMERCIAL Y PEDIDOS'
+                  : perfilActivo?.puedeEscribir ? 'EDICIÓN TOTAL' : 'SOLO LECTURA'}
+              </span>
+            </div>
+            <ChevronDown size={12} className="text-slate-500 dark:text-slate-400" />
+          </button>
+
+          {/* Menú flotante de perfiles reales */}
+          {menuPerfilAbierto && (
+            <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#0D121D] border border-slate-200 dark:border-white/[0.1] rounded-lg shadow-2xl py-1.5 z-50 text-xs">
+              <div className="px-3 py-1.5 border-b border-slate-100 dark:border-white/[0.08] text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                Gobernanza y Perfiles de Acceso
+              </div>
+              {perfilesDisponibles.map((p) => {
+                const activo = perfilActivo?.id === p.id;
+                const descripcionRol =
+                  p.id === 'ADMINISTRADOR'
+                    ? 'Control total y configuración de red'
+                    : p.id === 'COMPRAS'
+                    ? 'Gestión de proveedores e insumos'
+                    : p.id === 'PRODUCCION'
+                    ? 'Gestión de procesos y productos finales'
+                    : p.id === 'VENTAS'
+                    ? 'Consulta de catálogo y solicitud de pedidos'
+                    : p.puedeEscribir ? 'Permiso de edición' : 'Modo protegido';
+
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      onCambiarPerfil?.(p.id);
+                      setMenuPerfilAbierto(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors cursor-pointer ${
+                      activo ? 'bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-bold text-[11px]">{p.nombre}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-slate-400">
+                        {descripcionRol}
+                      </p>
+                    </div>
+                    {activo && <Check size={14} className="text-sky-600 dark:text-sky-400 shrink-0" />}
+                  </button>
+                );
+              })}
+              <div className="pt-1.5 mt-1 border-t border-slate-100 dark:border-white/[0.08] px-3 py-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAbrirModalPerfiles?.();
+                    setMenuPerfilAbierto(false);
+                  }}
+                  className="w-full text-center text-[10px] font-bold text-sky-600 dark:text-sky-400 hover:underline py-1 cursor-pointer"
+                >
+                  Ver matriz de permisos detallada
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Menú ⋮ de Acciones */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuAccionesAbierto((prev) => !prev)}
+            className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+            title="Opciones de consola"
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          {menuAccionesAbierto && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#0D121D] border border-slate-200 dark:border-white/[0.1] rounded-lg shadow-2xl py-1 z-50 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  onAbrirModalPerfiles?.();
+                  setMenuAccionesAbierto(false);
+                }}
+                className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              >
+                Gobernanza de Perfiles
+              </button>
+              {puedeEscribir && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAbrirModalElemento();
+                      setMenuAccionesAbierto(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                  >
+                    + Registrar Elemento
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAbrirModalDependencia();
+                      setMenuAccionesAbierto(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                  >
+                    + Crear Dependencia
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
